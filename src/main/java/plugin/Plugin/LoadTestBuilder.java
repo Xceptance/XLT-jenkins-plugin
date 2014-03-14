@@ -32,7 +32,7 @@ import javax.servlet.ServletException;
  * 
  * @author Michael Aleithe
  */
-public class ConfigurationReader extends Builder {
+public class LoadTestBuilder extends Builder {
 
     private final String testsuite;
 
@@ -46,7 +46,7 @@ public class ConfigurationReader extends Builder {
 
     // Fields in config.jelly must match the parameter names in the "DataBoundConstructor"
     @DataBoundConstructor
-    public ConfigurationReader(String testsuite, String testConfiguration, Boolean errorSelected, Boolean throughputSelected, Boolean responseTimeSelected) {
+    public LoadTestBuilder(String testsuite, String testConfiguration, Boolean errorSelected, Boolean throughputSelected, Boolean responseTimeSelected) {
         
     	this.testsuite = testsuite;
         this.testProfileSelected = testConfiguration;
