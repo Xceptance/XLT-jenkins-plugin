@@ -1,0 +1,56 @@
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+  <!--
+    This jelly script is used for per-project configuration.
+
+    See global.jelly for a general discussion about jelly script.
+  -->
+
+  <!--
+    Creates a text field that shows the value of the "name" property.
+    When submitted, it will be passed to the corresponding constructor parameter.
+  -->
+
+
+  <f:entry title="Testsuite" field="testsuite">
+    	<f:textbox />
+  </f:entry>
+  
+  
+  
+  <f:section title="Load Test Configuration"> 
+   
+  	<f:entry title="test configuration profile" field="testConfiguration">    
+    	<select name="testConfiguration">
+        	<f:option value="profile1" selected="true">profile 1</f:option>
+        	<f:option value="profile2" selected="false">profile 2</f:option>
+        	<f:option value="profile3" selected="false">profile 3</f:option>
+        	<f:option value="profile4" selected="false">profile 4</f:option>
+        	<f:option value="profile5" selected="false">profile 5</f:option>
+    	</select>  	
+  	</f:entry>
+  	 	
+  </f:section>
+  
+
+  <f:section title="Result Evaluation">
+  
+  	<f:entry title="Compare based on">
+  
+  		<f:entry field="errorSelected">
+   			<f:checkbox name="errorSelected" title="Errors"/>
+  		</f:entry>
+
+  		<f:entry field="throughputSelected">
+   			<f:checkbox name="throughputSelected" title="Throughput"/>
+  		</f:entry>
+
+  		<f:entry field="responseTimeSelected">
+   			<f:checkbox name="responseTimeSelected" title="Response Times"/>
+  		</f:entry>
+  
+  	</f:entry>
+
+  </f:section>
+  
+
+</j:jelly>

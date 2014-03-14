@@ -1,0 +1,65 @@
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+  <!--
+    This jelly script is used for per-project configuration.
+
+    See global.jelly for a general discussion about jelly script.
+  -->
+
+  <!--
+    Creates a text field that shows the value of the "name" property.
+    When submitted, it will be passed to the corresponding constructor parameter.
+  -->
+
+
+  <f:entry title="Testsuite" field="testsuite">
+    	<f:textbox />
+  </f:entry>
+  
+  
+  
+  <f:section title="Load Test Configuration"> 
+   
+  	<f:entry name="durationConfiguration" title="Duration" field="durationConfiguration">    
+    	<select name="duration">
+        	<option value="configuration_1">15min</option>
+        	<option value="configuration_2">1h</option>
+        	<option value="configuration_3">2h</option>
+        	<option value="configuration_4">4h</option>
+        	<option value="configuration_5">8h</option>
+    	</select>  	
+  	</f:entry>
+
+  	<f:entry name="loadConfiguration" title="Target Load" field="loadConfiguration">    
+    	<select name="load">
+        	<option value="configuration_1">dry run (single user)</option>
+        	<option value="configuration_2">20%</option>
+        	<option value="configuration_3">50%</option>
+        	<option value="configuration_4">100%</option>
+    	</select>  	
+  	</f:entry>
+  	 	
+  </f:section>
+  
+
+  <f:section title="Result Evaluation">
+  
+  	<f:entry title="Compare based on">
+  
+  		<f:entry>
+   			<f:checkbox name="selected" checked="${instance.selected}" title="Errors"/>
+  		</f:entry>
+
+  		<f:entry>
+   			<f:checkbox name="selected" checked="${instance.selected}" title="Throughput"/>
+  		</f:entry>
+
+  		<f:entry>
+   			<f:checkbox name="selected" checked="${instance.selected}" title="Response Times"/>
+  		</f:entry>
+  
+  	</f:entry>
+
+  </f:section>
+  
+
+</j:jelly>
