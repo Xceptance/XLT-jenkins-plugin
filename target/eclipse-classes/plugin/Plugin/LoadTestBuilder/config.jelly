@@ -10,11 +10,11 @@
     When submitted, it will be passed to the corresponding constructor parameter.
   -->
 
-
+  <!--
   <f:entry title="Testsuite" field="testsuite">
     	<f:textbox />
   </f:entry>
-  
+  -->
   
   
   <f:section title="Load Test Configuration"> 

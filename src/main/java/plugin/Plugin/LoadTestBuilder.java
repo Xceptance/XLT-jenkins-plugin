@@ -34,7 +34,7 @@ import javax.servlet.ServletException;
  */
 public class LoadTestBuilder extends Builder {
 
-    private final String testsuite;
+    //private final String testsuite;
 
     private final String testConfiguration;
     
@@ -46,9 +46,9 @@ public class LoadTestBuilder extends Builder {
 
     // Fields in config.jelly must match the parameter names in the "DataBoundConstructor"
     @DataBoundConstructor
-    public LoadTestBuilder(String testsuite, String testConfiguration, Boolean errorSelected, Boolean throughputSelected, Boolean responseTimeSelected) {
+    public LoadTestBuilder( String testConfiguration, Boolean errorSelected, Boolean throughputSelected, Boolean responseTimeSelected) {
         
-    	this.testsuite = testsuite;
+    	//this.testsuite = testsuite;
         this.testConfiguration = testConfiguration;
         this.errorSelected = errorSelected;
         this.throughputSelected = throughputSelected;
@@ -57,9 +57,9 @@ public class LoadTestBuilder extends Builder {
     }
 
    
-    public String getName() {
-        return testsuite;
-    }
+//    public String getName() {
+//        return testsuite;
+//    }
 
     public String getTestprofileSelected() {
         return testConfiguration;
@@ -83,15 +83,13 @@ public class LoadTestBuilder extends Builder {
     public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) throws IOException, InterruptedException {
 
     	// plot adjustments of XLT Plugin
-    	listener.getLogger().println("test-suite    : " + testsuite);
-    	listener.getLogger().println("test-profile  : " + testConfiguration);
+    	//listener.getLogger().println("test-suite    : " + testsuite);
+    	listener.getLogger().println("testConfig    : " + testConfiguration);
     	listener.getLogger().println("errors        : " + errorSelected);
     	listener.getLogger().println("throughput    : " + throughputSelected);
     	listener.getLogger().println("response times: " + responseTimeSelected);
     	
-    	
-    	// replace the complete line for testsuite in mastercontroller.properties
-    	String actualTestsuite = new String("beispiel");
+
     	
     	// perform XLT      	    	
     	ProcessBuilder builder = new ProcessBuilder("./mastercontroller.sh", "-auto", "-embedded", "-report", "-testPropertiesFile", testConfiguration);
