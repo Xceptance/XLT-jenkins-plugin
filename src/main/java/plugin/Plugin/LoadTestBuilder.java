@@ -36,7 +36,7 @@ public class LoadTestBuilder extends Builder {
 
     private final String testsuite;
 
-    private final String testProfileSelected;
+    private final String testConfiguration;
     
     private final boolean errorSelected;
     
@@ -49,7 +49,7 @@ public class LoadTestBuilder extends Builder {
     public LoadTestBuilder(String testsuite, String testConfiguration, Boolean errorSelected, Boolean throughputSelected, Boolean responseTimeSelected) {
         
     	this.testsuite = testsuite;
-        this.testProfileSelected = testConfiguration;
+        this.testConfiguration = testConfiguration;
         this.errorSelected = errorSelected;
         this.throughputSelected = throughputSelected;
         this.responseTimeSelected = responseTimeSelected;
@@ -62,7 +62,7 @@ public class LoadTestBuilder extends Builder {
     }
 
     public String getTestprofileSelected() {
-        return testProfileSelected;
+        return testConfiguration;
     }
     
     public Boolean getErrorSelected() {
@@ -84,7 +84,7 @@ public class LoadTestBuilder extends Builder {
 
     	// plot adjustments of XLT Plugin
     	listener.getLogger().println("test-suite    : " + testsuite);
-    	listener.getLogger().println("test-profile  : " + testProfileSelected);
+    	listener.getLogger().println("test-profile  : " + testConfiguration);
     	listener.getLogger().println("errors        : " + errorSelected);
     	listener.getLogger().println("throughput    : " + throughputSelected);
     	listener.getLogger().println("response times: " + responseTimeSelected);
@@ -94,7 +94,7 @@ public class LoadTestBuilder extends Builder {
     	String actualTestsuite = new String("beispiel");
     	
     	// perform XLT      	    	
-    	ProcessBuilder builder = new ProcessBuilder("./mastercontroller.sh", "-auto", "-embedded", "-report", "-testPropertiesFile", testProfileSelected + ".properties");
+    	ProcessBuilder builder = new ProcessBuilder("./mastercontroller.sh", "-auto", "-embedded", "-report", "-testPropertiesFile", testConfiguration);
     	
     	File path = new File("/home/maleithe/xlt-4.3.2_jenkins/bin");    	
     	builder.directory(path);    	

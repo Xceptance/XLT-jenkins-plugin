@@ -18,7 +18,8 @@
   
   
   <f:section title="Load Test Configuration"> 
-   
+
+  <!--   
   	<f:entry title="test configuration profile" field="testConfiguration">    
     	<select name="testConfiguration">
         	<f:option value="profile1" selected="true">profile 1</f:option>
@@ -28,6 +29,12 @@
         	<f:option value="profile5" selected="false">profile 5</f:option>
     	</select>  	
   	</f:entry>
+  -->
+
+  <f:entry title="test configuration" field="testConfiguration">
+    	<f:textbox />
+  </f:entry>
+  
   	 	
   </f:section>
   
