@@ -10,6 +10,10 @@ import hudson.model.Run;
 import hudson.tasks.Builder;
 import hudson.tasks.BuildStepDescriptor;
 
+
+
+
+
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import java.io.BufferedReader;
@@ -57,7 +61,12 @@ public class LoadTestBuilder extends Builder {
         
     	
     	//TODO  Unzip XLT on a defined directory as a global XLT
-  
+    	
+    	
+//    	ReadableByteChannel rbc = Channels.newChannel(getClass().getResourceAsStream("xlt-4.3.3.zip"));
+//    	FileOutputStream fos = new FileOutputStream("xlt-4.3.3.zip");
+//    	fos.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
+    	
     	
 //    	Run r;
 //    	r.getPreviousBuildInProgress();
@@ -69,7 +78,36 @@ public class LoadTestBuilder extends Builder {
         this.throughputSelected = throughputSelected;
         this.responseTimeSelected = responseTimeSelected;
         
-        //System.err.println("error");
+    	//getClass().getResource("http://localhost:8080/plugin/Plugin/xlt-4.3.3.zip");
+    	
+    	URL url = new URL("http://localhost:8080/plugin/Plugin/xlt-4.3.3.zip");
+    	
+    	// Unpack XLT from *.zip
+//    	try
+//    	{
+//    		ZipFile xltZip = new ZipFile(url.toString());
+//    		xltZip.extractAll("/home/maleithe/workspace/Beispiel");    		
+//    	}
+//    	catch(ZipException e)
+//    	{
+//    		e.printStackTrace();
+//    	}
+
+    	
+    	
+//    	int i;
+//    	String b =  "";
+//    	while ((i = input.read()) != -1){
+//    		b+= (char) i;
+//		}
+//    	
+//    	input.close();
+//    	
+//    	System.out.println(b);
+//        
+//        //System.out.println(getClass().getResource("xlt-4.3.3.zip").toString());
+//        
+//        //System.err.println("error");
     
     }
  
@@ -117,8 +155,19 @@ public class LoadTestBuilder extends Builder {
     	build.getModuleRoot();
     	
     	listener.getLogger().println(build.getModuleRoot());
-    	
+    	//listener.getLogger().println(class);
     	    	
+    	//listener.getLogger().println(LoadTestBuilder.class.getResource("http://localhost:8080/Plugin/xlt-4.3.3.zip").toString());
+    	//listener.getLogger().println(LoadTestBuilder.class.getResource("http://localhost:8080/jenkins/Plugin/xlt-4.3.3.zip").toString());
+    	//listener.getLogger().println(LoadTestBuilder.class.getResource("http://localhost/Plugin/xlt-4.3.3.zip").toString());
+    	listener.getLogger().println(LoadTestBuilder.class.getResource("http://localhost:8080/Plugin/xlt-4.3.3.zip").toString());
+    	getClass().getResource("http://localhost:8080/Plugin/xlt-4.3.3.zip");
+    	
+    	//build.getNumber()
+    	
+    	//ClassLoader.getSystemResource("xlt-4.3.3.zip");
+    	
+    		
 //    	// Download XLT from XC-website
 //    	URL xcSite = new URL("https://www.xceptance.com/products/xlt/download.html");
 //    	ReadableByteChannel rbc = Channels.newChannel(xcSite.openStream());
