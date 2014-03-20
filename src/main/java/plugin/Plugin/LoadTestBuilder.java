@@ -4,26 +4,28 @@ import hudson.Launcher;
 import hudson.Extension;
 import hudson.model.AbstractBuild;
 import hudson.model.BuildListener;
+import hudson.model.Result;
 import hudson.model.AbstractProject;
+import hudson.model.Run;
 import hudson.tasks.Builder;
 import hudson.tasks.BuildStepDescriptor;
-import hudson.util.FormValidation;
-import hudson.util.ListBoxModel.Option;
-import net.sf.json.JSONObject;
+
 import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.QueryParameter;
-import org.kohsuke.stapler.StaplerRequest;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.nio.channels.Channels;
+import java.nio.channels.ReadableByteChannel;
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Arrays;
 import java.util.List;
 
-import javax.servlet.ServletException;
 
 
 /**
@@ -43,22 +45,41 @@ public class LoadTestBuilder extends Builder {
     private final boolean throughputSelected;
     
     private final boolean responseTimeSelected;
+    
+//    private boolean spielerei = false;
+//    
+//    private List<String> qualityList = Arrays.asList("Advanced", "World!", "Throughput", "Error");
 
     // Fields in config.jelly must match the parameter names in the "DataBoundConstructor"
+    
     @DataBoundConstructor
-    public LoadTestBuilder( String testConfiguration, Boolean errorSelected, Boolean throughputSelected, Boolean responseTimeSelected) {
+    public LoadTestBuilder( String testConfiguration, Boolean errorSelected, Boolean throughputSelected, Boolean responseTimeSelected) throws IOException {
         
+    	
+    	//TODO  Unzip XLT on a defined directory as a global XLT
+  
+    	
+//    	Run r;
+//    	r.getPreviousBuildInProgress();
+//    	r.getDisplayName().toString();
+    	
     	//this.testsuite = testsuite;
         this.testConfiguration = testConfiguration;
         this.errorSelected = errorSelected;
         this.throughputSelected = throughputSelected;
         this.responseTimeSelected = responseTimeSelected;
+        
+        //System.err.println("error");
     
     }
-
-   
-//    public String getName() {
-//        return testsuite;
+ 
+   // spielerei
+//    public Boolean getSpielerei() {
+//        return spielerei;
+//    }
+    
+//    public List<String> getQualityList() {
+//        return qualityList;
 //    }
 
     public String getTestprofileSelected() {
@@ -82,6 +103,9 @@ public class LoadTestBuilder extends Builder {
     @Override
     public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) throws IOException, InterruptedException {
 
+    	//TODO make a copy of XLT to the specific job directory before starting mastercontroller
+    	//getClass().get
+    	
     	// plot adjustments of XLT Plugin
     	//listener.getLogger().println("test-suite    : " + testsuite);
     	listener.getLogger().println("testConfig    : " + testConfiguration);
@@ -89,45 +113,72 @@ public class LoadTestBuilder extends Builder {
     	listener.getLogger().println("throughput    : " + throughputSelected);
     	listener.getLogger().println("response times: " + responseTimeSelected);
     	
+    	
+    	build.getModuleRoot();
+    	
+    	listener.getLogger().println(build.getModuleRoot());
+    	
+    	    	
+//    	// Download XLT from XC-website
+//    	URL xcSite = new URL("https://www.xceptance.com/products/xlt/download.html");
+//    	ReadableByteChannel rbc = Channels.newChannel(xcSite.openStream());
+//    	
+//    	try
+//    	{
+//    			FileOutputStream fos = new FileOutputStream(build.getModuleRoot() + "/xlt-4.3.3.zip");
+//    			fos.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
+//    	}
+//    	catch(Exception e)
+//    	{
+//    			listener.getLogger().println(e.getMessage());
+//    	}
+    	
+    	
+
 
     	
-    	// perform XLT      	    	
-    	ProcessBuilder builder = new ProcessBuilder("./mastercontroller.sh", "-auto", "-embedded", "-report", "-testPropertiesFile", testConfiguration);
+//    	// perform XLT      	    	
+//    	ProcessBuilder builder = new ProcessBuilder("./mastercontroller.sh", "-auto", "-embedded", "-report", "-testPropertiesFile", testConfiguration);
+//    	
+//    	File path = new File("/home/maleithe/xlt-4.3.2_jenkins/bin");    	
+//    	builder.directory(path);    	
+//    	Process process = builder.start();
+//    	
+//    	// print XLT console output in Jenkins   	
+//    	InputStream is = process.getInputStream();
+//    	BufferedReader br = new BufferedReader(new InputStreamReader(is));
+//    	String line;
+//    	String lastline = null;
+//    	
+//    	while ((line = br.readLine()) != null)
+//    	{
+//    		if (line != null)
+//    		{	
+//    			lastline = line;    			
+//    			listener.getLogger().println(lastline);	
+//    		}
+//    		
+//    		try
+//    		{
+//    			process.exitValue();
+//    		}
+//    		catch(Exception e)
+//    		{
+//    			continue;
+//    		}
+//    		break;
+//    	}
+//    	
+//    	
+//    	// waiting until XLT is finished
+//    	process.waitFor();
+//    	
+//    	listener.getLogger().println("XLT_FINISHED");
     	
-    	File path = new File("/home/maleithe/xlt-4.3.2_jenkins/bin");    	
-    	builder.directory(path);    	
-    	Process process = builder.start();
-    	
-    	// print XLT console output in Jenkins   	
-    	InputStream is = process.getInputStream();
-    	BufferedReader br = new BufferedReader(new InputStreamReader(is));
-    	String line;
-    	String lastline = null;
-    	
-    	while ((line = br.readLine()) != null)
-    	{
-    		if (line != null)
-    		{	
-    			lastline = line;    			
-    			listener.getLogger().println(lastline);	
-    		}
-    		
-    		try
-    		{
-    			process.exitValue();
-    		}
-    		catch(Exception e)
-    		{
-    			continue;
-    		}
-    		break;
-    	}
     	
     	
-    	// waiting until XLT is finished
-    	process.waitFor();
     	
-    	listener.getLogger().println("XLT_FINISHED");
+		//build.setResult(Result.ABORTED);
     	
     	
     	return true;
