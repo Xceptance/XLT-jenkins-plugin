@@ -14,7 +14,13 @@ import hudson.tasks.BuildStepDescriptor;
 
 
 
+import net.lingala.zip4j.core.ZipFile;
+import net.lingala.zip4j.exception.ZipException;
+
+import org.apache.commons.io.FileUtils;
 import org.kohsuke.stapler.DataBoundConstructor;
+
+import sun.security.krb5.SCDynamicStoreConfig;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -78,36 +84,31 @@ public class LoadTestBuilder extends Builder {
         this.throughputSelected = throughputSelected;
         this.responseTimeSelected = responseTimeSelected;
         
-    	//getClass().getResource("http://localhost:8080/plugin/Plugin/xlt-4.3.3.zip");
     	
-    	URL url = new URL("http://localhost:8080/plugin/Plugin/xlt-4.3.3.zip");
+    	//URL url = new URL("http://localhost:8080/plugin/Plugin/xlt-4.3.3.zip");
     	
+        
+        
+        
+        
     	// Unpack XLT from *.zip
-//    	try
-//    	{
-//    		ZipFile xltZip = new ZipFile(url.toString());
-//    		xltZip.extractAll("/home/maleithe/workspace/Beispiel");    		
-//    	}
-//    	catch(ZipException e)
-//    	{
-//    		e.printStackTrace();
-//    	}
+    	
+        String url = new String("/home/maleithe/.jenkins/plugins/Plugin/xlt-4.3.3.zip");
+        
+        try
+    	{
+    		ZipFile xltZip = new ZipFile(url);
+    		xltZip.extractAll("/home/maleithe/.jenkins");    		
+    	}
+    	catch(ZipException e)
+    	{
+    		e.printStackTrace();
+    	}
+    	
+    	
 
     	
     	
-//    	int i;
-//    	String b =  "";
-//    	while ((i = input.read()) != -1){
-//    		b+= (char) i;
-//		}
-//    	
-//    	input.close();
-//    	
-//    	System.out.println(b);
-//        
-//        //System.out.println(getClass().getResource("xlt-4.3.3.zip").toString());
-//        
-//        //System.err.println("error");
     
     }
  
@@ -142,7 +143,21 @@ public class LoadTestBuilder extends Builder {
     public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) throws IOException, InterruptedException {
 
     	//TODO make a copy of XLT to the specific job directory before starting mastercontroller
-    	//getClass().get
+    	
+    	// generate certain directory
+    	
+    	String targetDirectory = build.getModuleRoot().toString()+ "/" + Integer.toString(build.getNumber());
+    	
+    	File directory = new File(targetDirectory);    	
+    	directory.mkdirs();
+    	
+    	// copy XLT to certain directory
+    	File srcDir = new File("/home/maleithe/.jenkins/xlt-4.3.3"); 
+    	File destDir = new File(targetDirectory);
+    	
+    	FileUtils.copyDirectory(srcDir, destDir, true);
+    	
+ 
     	
     	// plot adjustments of XLT Plugin
     	//listener.getLogger().println("test-suite    : " + testsuite);
@@ -155,18 +170,8 @@ public class LoadTestBuilder extends Builder {
     	build.getModuleRoot();
     	
     	listener.getLogger().println(build.getModuleRoot());
-    	//listener.getLogger().println(class);
-    	    	
-    	//listener.getLogger().println(LoadTestBuilder.class.getResource("http://localhost:8080/Plugin/xlt-4.3.3.zip").toString());
-    	//listener.getLogger().println(LoadTestBuilder.class.getResource("http://localhost:8080/jenkins/Plugin/xlt-4.3.3.zip").toString());
-    	//listener.getLogger().println(LoadTestBuilder.class.getResource("http://localhost/Plugin/xlt-4.3.3.zip").toString());
-    	listener.getLogger().println(LoadTestBuilder.class.getResource("http://localhost:8080/Plugin/xlt-4.3.3.zip").toString());
-    	getClass().getResource("http://localhost:8080/Plugin/xlt-4.3.3.zip");
-    	
-    	//build.getNumber()
-    	
-    	//ClassLoader.getSystemResource("xlt-4.3.3.zip");
-    	
+
+
     		
 //    	// Download XLT from XC-website
 //    	URL xcSite = new URL("https://www.xceptance.com/products/xlt/download.html");
