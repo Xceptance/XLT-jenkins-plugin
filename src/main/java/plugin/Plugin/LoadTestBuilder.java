@@ -142,11 +142,13 @@ public class LoadTestBuilder extends Builder {
     @Override
     public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) throws IOException, InterruptedException {
 
-    	//TODO make a copy of XLT to the specific job directory before starting mastercontroller
+    	//TODO make a copy of XLT to the specific job dire//ctory before starting mastercontroller
     	
     	// generate certain directory
     	
-    	String targetDirectory = build.getModuleRoot().toString()+ "/" + Integer.toString(build.getNumber());
+    	String targetDirectory = build.getModuleRoot().toString() + "/" + Integer.toString(build.getNumber());
+    	
+    	listener.getLogger().println(targetDirectory);
     	
     	File directory = new File(targetDirectory);    	
     	directory.mkdirs();
@@ -191,43 +193,51 @@ public class LoadTestBuilder extends Builder {
 
 
     	
-//    	// perform XLT      	    	
-//    	ProcessBuilder builder = new ProcessBuilder("./mastercontroller.sh", "-auto", "-embedded", "-report", "-testPropertiesFile", testConfiguration);
-//    	
-//    	File path = new File("/home/maleithe/xlt-4.3.2_jenkins/bin");    	
-//    	builder.directory(path);    	
-//    	Process process = builder.start();
-//    	
-//    	// print XLT console output in Jenkins   	
-//    	InputStream is = process.getInputStream();
-//    	BufferedReader br = new BufferedReader(new InputStreamReader(is));
-//    	String line;
-//    	String lastline = null;
-//    	
-//    	while ((line = br.readLine()) != null)
-//    	{
-//    		if (line != null)
-//    		{	
-//    			lastline = line;    			
-//    			listener.getLogger().println(lastline);	
-//    		}
-//    		
-//    		try
-//    		{
-//    			process.exitValue();
-//    		}
-//    		catch(Exception e)
-//    		{
-//    			continue;
-//    		}
-//    		break;
-//    	}
-//    	
-//    	
-//    	// waiting until XLT is finished
-//    	process.waitFor();
-//    	
-//    	listener.getLogger().println("XLT_FINISHED");
+    	// perform XLT      	    	
+    	ProcessBuilder builder = new ProcessBuilder("./mastercontroller.sh", "-auto", "-embedded", "-report", "-testPropertiesFile", testConfiguration, "-Dcom.xceptance.xlt.mastercontroller.testSuitePath=" + targetDirectory + "/../");
+    	
+    	File path = new File(targetDirectory + "/bin");
+    	
+		
+		// access files
+		for (File child : path.listFiles())
+		{
+			child.setExecutable(true);
+		}
+    	
+    	builder.directory(path);    	
+    	Process process = builder.start();
+    	
+    	// print XLT console output in Jenkins   	
+    	InputStream is = process.getInputStream();
+    	BufferedReader br = new BufferedReader(new InputStreamReader(is));
+    	String line;
+    	String lastline = null;
+    	
+    	while ((line = br.readLine()) != null)
+    	{
+    		if (line != null)
+    		{	
+    			lastline = line;    			
+    			listener.getLogger().println(lastline);	
+    		}
+    		
+    		try
+    		{
+    			process.exitValue();
+    		}
+    		catch(Exception e)
+    		{
+    			continue;
+    		}
+    		break;
+    	}
+    	
+    	
+    	// waiting until XLT is finished
+    	process.waitFor();
+    	
+    	listener.getLogger().println("XLT_FINISHED");
     	
     	
     	
