@@ -90,10 +90,8 @@ public class LoadTestBuilder extends Builder {
     @Override
     public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) throws IOException, InterruptedException {
 
-    	//TODO make a copy of XLT to the specific job directory before starting mastercontroller
-    	
     	// generate certain directory
-    	String targetDirectory = build.getModuleRoot().toString() + "/" + Integer.toString(build.getNumber());
+    	String targetDirectory = build.getModuleRoot().toString() + "/../nodes/" + Integer.toString(build.getNumber());
     	
     	listener.getLogger().println(targetDirectory);
     	
@@ -115,7 +113,7 @@ public class LoadTestBuilder extends Builder {
     	
     	
     	// perform XLT      	    	
-    	ProcessBuilder builder = new ProcessBuilder("./mastercontroller.sh", "-auto", "-embedded", "-report", "-testPropertiesFile", testConfiguration, "-Dcom.xceptance.xlt.mastercontroller.testSuitePath=" + targetDirectory + "/../");
+    	ProcessBuilder builder = new ProcessBuilder("./mastercontroller.sh", "-auto", "-report", "-testPropertiesFile", testConfiguration, "-Dcom.xceptance.xlt.mastercontroller.testSuitePath=" + build.getModuleRoot().toString(), "-Dcom.xceptance.xlt.mastercontroller.agentcontrollers.ac1.url=https://ec2-23-22-214-58.compute-1.amazonaws.com:8500");
     	
     	File path = new File(targetDirectory + "/bin");
     	
