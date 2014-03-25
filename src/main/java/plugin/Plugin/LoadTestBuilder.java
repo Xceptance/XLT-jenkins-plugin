@@ -39,113 +39,60 @@ import java.util.List;
 
 
 /**
- * Readout the configuration of XLT in Jenkins.
+ * Readout the configuration of XLT in Jenkins, perform load testing and plot build results on project page.
  *
  * 
  * @author Michael Aleithe
  */
 public class LoadTestBuilder extends Builder {
 
-    //private final String testsuite;
-
     private final String testConfiguration;
-    
-    private final boolean errorSelected;
-    
-    private final boolean throughputSelected;
-    
-    private final boolean responseTimeSelected;
-    
-//    private boolean spielerei = false;
-//    
-//    private List<String> qualityList = Arrays.asList("Advanced", "World!", "Throughput", "Error");
+       
+    private List<String> qualityList;
 
-    // Fields in config.jelly must match the parameter names in the "DataBoundConstructor"
-    
+   
     @DataBoundConstructor
-    public LoadTestBuilder( String testConfiguration, Boolean errorSelected, Boolean throughputSelected, Boolean responseTimeSelected) throws IOException {
-        
-    	
-    	//TODO  Unzip XLT on a defined directory as a global XLT
-    	
-    	
-//    	ReadableByteChannel rbc = Channels.newChannel(getClass().getResourceAsStream("xlt-4.3.3.zip"));
-//    	FileOutputStream fos = new FileOutputStream("xlt-4.3.3.zip");
-//    	fos.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
-    	
-    	
-//    	Run r;
-//    	r.getPreviousBuildInProgress();
-//    	r.getDisplayName().toString();
-    	
-    	//this.testsuite = testsuite;
+    public LoadTestBuilder(List <String> qualitiesToPush, String testConfiguration) 
+    {
+            	
+    	this.qualityList = qualitiesToPush;
         this.testConfiguration = testConfiguration;
-        this.errorSelected = errorSelected;
-        this.throughputSelected = throughputSelected;
-        this.responseTimeSelected = responseTimeSelected;
-        
-    	
-    	//URL url = new URL("http://localhost:8080/plugin/Plugin/xlt-4.3.3.zip");
-    	
-        
-        
-        
-        
-    	// Unpack XLT from *.zip
-    	
-        String url = new String("/home/maleithe/.jenkins/plugins/Plugin/xlt-4.3.3.zip");
-        
-        try
-    	{
-    		ZipFile xltZip = new ZipFile(url);
-    		xltZip.extractAll("/home/maleithe/.jenkins");    		
-    	}
-    	catch(ZipException e)
-    	{
-    		e.printStackTrace();
-    	}
-    	
-    	
+                
 
-    	
-    	
-    
+//        // Unpack XLT from *.zip
+//        String url = new String("/home/maleithe/.jenkins/plugins/Plugin/xlt-4.3.3.zip");
+//        
+//        try
+//    	{
+//    		ZipFile xltZip = new ZipFile(url);
+//    		xltZip.extractAll("/home/maleithe/.jenkins");    		
+//    	}
+//    	catch(ZipException e)
+//    	{
+//    		e.printStackTrace();
+//    	}
+    	    
     }
- 
-   // spielerei
-//    public Boolean getSpielerei() {
-//        return spielerei;
-//    }
     
-//    public List<String> getQualityList() {
-//        return qualityList;
-//    }
+
+
+
+    public List<String> getQualityList() {
+        return qualityList;
+    }
 
     public String getTestprofileSelected() {
         return testConfiguration;
     }
     
-    public Boolean getErrorSelected() {
-        return errorSelected;
-    }
+
     
-    public Boolean getThroughputSelected() {
-        return throughputSelected;
-    }
-    
-    public Boolean getResponseTimeSelected() {
-        return responseTimeSelected;
-    }
-
-
-
     @Override
     public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) throws IOException, InterruptedException {
 
-    	//TODO make a copy of XLT to the specific job dire//ctory before starting mastercontroller
+    	//TODO make a copy of XLT to the specific job directory before starting mastercontroller
     	
     	// generate certain directory
-    	
     	String targetDirectory = build.getModuleRoot().toString() + "/" + Integer.toString(build.getNumber());
     	
     	listener.getLogger().println(targetDirectory);
@@ -153,45 +100,19 @@ public class LoadTestBuilder extends Builder {
     	File directory = new File(targetDirectory);    	
     	directory.mkdirs();
     	
+    	String srcXlt = new String(build.getModuleRoot().toString() + "/../../../../xlt-4.3.3");
+    	
+    	listener.getLogger().println(srcXlt);
+    	
+    	
     	// copy XLT to certain directory
-    	File srcDir = new File("/home/maleithe/.jenkins/xlt-4.3.3"); 
+    	File srcDir = new File(srcXlt); 
     	File destDir = new File(targetDirectory);
     	
     	FileUtils.copyDirectory(srcDir, destDir, true);
     	
  
     	
-    	// plot adjustments of XLT Plugin
-    	//listener.getLogger().println("test-suite    : " + testsuite);
-    	listener.getLogger().println("testConfig    : " + testConfiguration);
-    	listener.getLogger().println("errors        : " + errorSelected);
-    	listener.getLogger().println("throughput    : " + throughputSelected);
-    	listener.getLogger().println("response times: " + responseTimeSelected);
-    	
-    	
-    	build.getModuleRoot();
-    	
-    	listener.getLogger().println(build.getModuleRoot());
-
-
-    		
-//    	// Download XLT from XC-website
-//    	URL xcSite = new URL("https://www.xceptance.com/products/xlt/download.html");
-//    	ReadableByteChannel rbc = Channels.newChannel(xcSite.openStream());
-//    	
-//    	try
-//    	{
-//    			FileOutputStream fos = new FileOutputStream(build.getModuleRoot() + "/xlt-4.3.3.zip");
-//    			fos.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
-//    	}
-//    	catch(Exception e)
-//    	{
-//    			listener.getLogger().println(e.getMessage());
-//    	}
-    	
-    	
-
-
     	
     	// perform XLT      	    	
     	ProcessBuilder builder = new ProcessBuilder("./mastercontroller.sh", "-auto", "-embedded", "-report", "-testPropertiesFile", testConfiguration, "-Dcom.xceptance.xlt.mastercontroller.testSuitePath=" + targetDirectory + "/../");
