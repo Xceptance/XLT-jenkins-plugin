@@ -45,7 +45,7 @@
   </f:entry>
 
 
-
+  <!--
     <f:block>
       <f:hetero-list name="publisher" hasHeader="true"
                      descriptors="${h.getPublisherDescriptors(it)}"
@@ -60,7 +60,8 @@
         descriptors="${h.getParameterDescriptors()}" items="${instance.parameterDefinitions}"
         addCaption="${%Add Parameter}" />
     </f:block>
-   
+ -->
+     
   <f:entry title="Test quality" field="parsers">
   
 	<f:repeatable field="qualitiesToPush"
@@ -97,9 +98,9 @@
 
   </f:entry>
   
-
-  </f:section>     
   
+  </f:section>     
+  <!--
   
 
   <f:section title="Result Evaluation">
@@ -121,6 +122,6 @@
   	</f:entry>
 
   </f:section>
-  
+  -->
 
 </j:jelly>
