@@ -91,7 +91,7 @@ public class LoadTestBuilder extends Builder {
     public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) throws IOException, InterruptedException {
 
     	// generate certain directory
-    	String targetDirectory = build.getModuleRoot().toString() + "/../nodes/" + Integer.toString(build.getNumber());
+    	String targetDirectory = build.getModuleRoot().toString() + "/../xlt-iteration-number/" + Integer.toString(build.getNumber());
     	
     	listener.getLogger().println(targetDirectory);
     	
@@ -161,7 +161,7 @@ public class LoadTestBuilder extends Builder {
     	
     	
     	
-		//build.setResult(Result.ABORTED);
+		// build.setResult(Result.ABORTED);
     	
     	
     	return true;
