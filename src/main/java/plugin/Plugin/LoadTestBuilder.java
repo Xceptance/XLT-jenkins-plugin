@@ -49,14 +49,17 @@ public class LoadTestBuilder extends Builder {
     private final String testConfiguration;
        
     private List<String> qualityList;
+    
+    private final String machineHost;
 
    
     @DataBoundConstructor
-    public LoadTestBuilder(List <String> qualitiesToPush, String testConfiguration) 
+    public LoadTestBuilder(List <String> qualitiesToPush, String testConfiguration, String machineHost) 
     {
             	
     	this.qualityList = qualitiesToPush;
         this.testConfiguration = testConfiguration;
+        this.machineHost = machineHost;
                 
 
 //        // Unpack XLT from *.zip
@@ -85,7 +88,9 @@ public class LoadTestBuilder extends Builder {
         return testConfiguration;
     }
     
-
+    public String getMachineHost() {
+        return machineHost;
+    }
     
     @Override
     public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) throws IOException, InterruptedException {
@@ -113,7 +118,7 @@ public class LoadTestBuilder extends Builder {
     	
     	
     	// perform XLT      	    	
-    	ProcessBuilder builder = new ProcessBuilder("./mastercontroller.sh", "-auto", "-report", "-testPropertiesFile", testConfiguration, "-Dcom.xceptance.xlt.mastercontroller.testSuitePath=" + build.getModuleRoot().toString(), "-Dcom.xceptance.xlt.mastercontroller.agentcontrollers.ac1.url=https://ec2-23-22-214-58.compute-1.amazonaws.com:8500");
+    	ProcessBuilder builder = new ProcessBuilder("./mastercontroller.sh", "-auto", "-embedded", "-report", "-testPropertiesFile", testConfiguration, "-Dcom.xceptance.xlt.mastercontroller.testSuitePath=" + build.getModuleRoot().toString(), "-Dcom.xceptance.xlt.mastercontroller.agentcontrollers.ac1.url=" + machineHost);
     	
     	File path = new File(targetDirectory + "/bin");
     	

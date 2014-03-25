@@ -99,7 +99,19 @@
   </f:entry>
   
   
-  </f:section>     
+  </f:section>   
+  
+
+
+  <f:section title="Hardware Configuration"> 
+  
+    <f:entry title="host-url" field="machineHost">
+    	<f:textbox />
+  
+  </f:entry>
+  
+  </f:section>
+    
   <!--
   
 
