@@ -3,10 +3,14 @@ package plugin.Plugin;
 import hudson.Launcher;
 import hudson.Extension;
 import hudson.model.AbstractBuild;
+import hudson.model.Action;
 import hudson.model.BuildListener;
 import hudson.model.Result;
 import hudson.model.AbstractProject;
 import hudson.model.Run;
+import hudson.plugins.plot.Plot;
+import hudson.plugins.plot.Series;
+import hudson.plugins.plot.XMLSeries;
 import hudson.tasks.Builder;
 import hudson.tasks.BuildStepDescriptor;
 
@@ -34,6 +38,7 @@ import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 
 
@@ -52,6 +57,7 @@ public class LoadTestBuilder extends Builder {
     
     private final String machineHost;
 
+    private final List<Plot> plots = new ArrayList<Plot>();
    
     @DataBoundConstructor
     public LoadTestBuilder(List <String> qualitiesToPush, String testConfiguration, String machineHost) 
@@ -61,6 +67,14 @@ public class LoadTestBuilder extends Builder {
         this.testConfiguration = testConfiguration;
         this.machineHost = machineHost;
                 
+        Plot plot = new Plot(null,null,"XLT","3","xltPlot1","line",false);		
+        plot.series = new ArrayList<Series>();	
+        
+        Plot plot2 = new Plot(null,null,"XLT","3","xltPlot2","line",false);		
+        plot2.series = new ArrayList<Series>();
+        
+        plots.add(plot);
+        plots.add(plot2);
 
 //        // Unpack XLT from *.zip
 //        String url = new String("/home/maleithe/.jenkins/plugins/Plugin/xlt-4.3.3.zip");
@@ -77,8 +91,16 @@ public class LoadTestBuilder extends Builder {
     	    
     }
     
+    public List<Plot> getPlots(){
+    	return plots;
+    }
 
-
+    @Override
+    public Collection<? extends Action> getProjectActions(AbstractProject<?, ?> project) {
+    	ArrayList<Action> actions = new ArrayList<Action>();
+    	actions.add(new XLTChartAction(project, this));
+    	return actions;
+    }
 
     public List<String> getQualityList() {
         return qualityList;
@@ -94,7 +116,12 @@ public class LoadTestBuilder extends Builder {
     
     @Override
     public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) throws IOException, InterruptedException {
-
+    	plots.get(0).series.add(new XMLSeries("testreport.xml", "/testreport/transactions/transaction/max", "NODE", ""));
+    	plots.get(1).series.add(new XMLSeries("testreport.xml", "/testreport/transactions/transaction/min", "NODE", ""));		
+    	for (Plot eachPlot : plots) {
+    		eachPlot.addBuild(build, System.out);
+    	}	
+    	
     	// generate certain directory
     	String targetDirectory = build.getModuleRoot().toString() + "/../xlt-iteration-number/" + Integer.toString(build.getNumber());
     	
