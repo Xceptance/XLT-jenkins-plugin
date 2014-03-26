@@ -121,6 +121,15 @@ public class LoadTestBuilder extends Builder {
     	for (Plot eachPlot : plots) {
     		eachPlot.addBuild(build, System.out);
     	}	
+
+
+    	XltRecorderAction printReportAction = new XltRecorderAction();
+    	printReportAction.setReportPath(build.getProject().getBuildDir().toPath().toString());
+    	
+    	build.getActions().add(printReportAction);
+    	
+
+    	
     	
     	// generate certain directory
     	String targetDirectory = build.getModuleRoot().toString() + "/../xlt-iteration-number/" + Integer.toString(build.getNumber());
@@ -190,10 +199,14 @@ public class LoadTestBuilder extends Builder {
     	
     	listener.getLogger().println("XLT_FINISHED");
     	
+
     	
+    	// view report link on build page
+    	build.getActions().add(new XltRecorderAction());
     	
     	
 		// build.setResult(Result.ABORTED);
+    	//build.setResult(Result.)
     	
     	
     	return true;
