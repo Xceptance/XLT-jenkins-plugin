@@ -4,99 +4,131 @@ import hudson.Launcher;
 import hudson.Extension;
 import hudson.model.AbstractBuild;
 import hudson.model.BuildListener;
+import hudson.model.Result;
 import hudson.model.AbstractProject;
+import hudson.model.Run;
 import hudson.tasks.Builder;
 import hudson.tasks.BuildStepDescriptor;
-import hudson.util.FormValidation;
-import hudson.util.ListBoxModel.Option;
-import net.sf.json.JSONObject;
+
+
+
+
+
+import net.lingala.zip4j.core.ZipFile;
+import net.lingala.zip4j.exception.ZipException;
+
+import org.apache.commons.io.FileUtils;
 import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.QueryParameter;
-import org.kohsuke.stapler.StaplerRequest;
+
+import sun.security.krb5.SCDynamicStoreConfig;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.nio.channels.Channels;
+import java.nio.channels.ReadableByteChannel;
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Arrays;
 import java.util.List;
 
-import javax.servlet.ServletException;
 
 
 /**
- * Readout the configuration of XLT in Jenkins.
+ * Readout the configuration of XLT in Jenkins, perform load testing and plot build results on project page.
  *
  * 
  * @author Michael Aleithe
  */
 public class LoadTestBuilder extends Builder {
 
-    private final String testsuite;
-
-    private final String testProfileSelected;
+    private final String testConfiguration;
+       
+    private List<String> qualityList;
     
-    private final boolean errorSelected;
-    
-    private final boolean throughputSelected;
-    
-    private final boolean responseTimeSelected;
-
-    // Fields in config.jelly must match the parameter names in the "DataBoundConstructor"
-    @DataBoundConstructor
-    public LoadTestBuilder(String testsuite, String testConfiguration, Boolean errorSelected, Boolean throughputSelected, Boolean responseTimeSelected) {
-        
-    	this.testsuite = testsuite;
-        this.testProfileSelected = testConfiguration;
-        this.errorSelected = errorSelected;
-        this.throughputSelected = throughputSelected;
-        this.responseTimeSelected = responseTimeSelected;
-    
-    }
+    private final String machineHost;
 
    
-    public String getName() {
-        return testsuite;
+    @DataBoundConstructor
+    public LoadTestBuilder(List <String> qualitiesToPush, String testConfiguration, String machineHost) 
+    {
+            	
+    	this.qualityList = qualitiesToPush;
+        this.testConfiguration = testConfiguration;
+        this.machineHost = machineHost;
+                
+
+//        // Unpack XLT from *.zip
+//        String url = new String("/home/maleithe/.jenkins/plugins/Plugin/xlt-4.3.3.zip");
+//        
+//        try
+//    	{
+//    		ZipFile xltZip = new ZipFile(url);
+//    		xltZip.extractAll("/home/maleithe/.jenkins");    		
+//    	}
+//    	catch(ZipException e)
+//    	{
+//    		e.printStackTrace();
+//    	}
+    	    
+    }
+    
+
+
+
+    public List<String> getQualityList() {
+        return qualityList;
     }
 
     public String getTestprofileSelected() {
-        return testProfileSelected;
+        return testConfiguration;
     }
     
-    public Boolean getErrorSelected() {
-        return errorSelected;
+    public String getMachineHost() {
+        return machineHost;
     }
     
-    public Boolean getThroughputSelected() {
-        return throughputSelected;
-    }
-    
-    public Boolean getResponseTimeSelected() {
-        return responseTimeSelected;
-    }
-
-
-
     @Override
     public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) throws IOException, InterruptedException {
 
-    	// plot adjustments of XLT Plugin
-    	listener.getLogger().println("test-suite    : " + testsuite);
-    	listener.getLogger().println("test-profile  : " + testProfileSelected);
-    	listener.getLogger().println("errors        : " + errorSelected);
-    	listener.getLogger().println("throughput    : " + throughputSelected);
-    	listener.getLogger().println("response times: " + responseTimeSelected);
+    	// generate certain directory
+    	String targetDirectory = build.getModuleRoot().toString() + "/../xlt-iteration-number/" + Integer.toString(build.getNumber());
+    	
+    	listener.getLogger().println(targetDirectory);
+    	
+    	File directory = new File(targetDirectory);    	
+    	directory.mkdirs();
+    	
+    	String srcXlt = new String(build.getModuleRoot().toString() + "/../../../../xlt-4.3.3");
+    	
+    	listener.getLogger().println(srcXlt);
     	
     	
-    	// replace the complete line for testsuite in mastercontroller.properties
-    	String actualTestsuite = new String("beispiel");
+    	// copy XLT to certain directory
+    	File srcDir = new File(srcXlt); 
+    	File destDir = new File(targetDirectory);
+    	
+    	FileUtils.copyDirectory(srcDir, destDir, true);
+    	
+ 
+    	
     	
     	// perform XLT      	    	
-    	ProcessBuilder builder = new ProcessBuilder("./mastercontroller.sh", "-auto", "-embedded", "-report", "-testPropertiesFile", testProfileSelected + ".properties");
+    	ProcessBuilder builder = new ProcessBuilder("./mastercontroller.sh", "-auto", "-embedded", "-report", "-testPropertiesFile", testConfiguration, "-Dcom.xceptance.xlt.mastercontroller.testSuitePath=" + build.getModuleRoot().toString(), "-Dcom.xceptance.xlt.mastercontroller.agentcontrollers.ac1.url=" + machineHost);
     	
-    	File path = new File("/home/maleithe/xlt-4.3.2_jenkins/bin");    	
+    	File path = new File(targetDirectory + "/bin");
+    	
+		
+		// access files
+		for (File child : path.listFiles())
+		{
+			child.setExecutable(true);
+		}
+    	
     	builder.directory(path);    	
     	Process process = builder.start();
     	
@@ -130,6 +162,11 @@ public class LoadTestBuilder extends Builder {
     	process.waitFor();
     	
     	listener.getLogger().println("XLT_FINISHED");
+    	
+    	
+    	
+    	
+		// build.setResult(Result.ABORTED);
     	
     	
     	return true;
