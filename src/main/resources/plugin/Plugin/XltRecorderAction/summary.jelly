@@ -1,10 +1,19 @@
-<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:i="jelly:fmt" xmlns:local="local">
-ejrioj    
+<j:jelly 
+	xmlns:j="jelly:core" 
+	xmlns:st="jelly:stapler" 
+	xmlns:d="jelly:define" 
+	xmlns:l="/lib/layout" 
+	xmlns:t="/lib/hudson" 
+	xmlns:f="/lib/form" 
+	xmlns:i="jelly:fmt" 
+	xmlns:local="local">
+    
     <tr>
-    itepoweitpo
-        <td><div>
-        	<a href="${from.getReportPath()}/bla.txt">bla</a>
-        </div></td>
+        <td>
+        	<div>
+        		<a href="bla.txt">bla</a>
+        	</div>
+        </td>
     </tr>
-    efefrfrfrgfrfr
+    
 </j:jelly>

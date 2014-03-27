@@ -1,11 +1,13 @@
 package plugin.Plugin;
 
+import hudson.FilePath;
 import hudson.Launcher;
 import hudson.Extension;
 import hudson.model.AbstractBuild;
 import hudson.model.Action;
 import hudson.model.BuildListener;
 import hudson.model.Result;
+import hudson.model.WorkspaceBrowser;
 import hudson.model.AbstractProject;
 import hudson.model.Run;
 import hudson.plugins.plot.Plot;
@@ -23,6 +25,8 @@ import net.lingala.zip4j.exception.ZipException;
 
 import org.apache.commons.io.FileUtils;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.w3c.dom.Document;
+import org.xml.sax.SAXException;
 
 import sun.security.krb5.SCDynamicStoreConfig;
 
@@ -40,6 +44,14 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathExpression;
+import javax.xml.xpath.XPathExpressionException;
+import javax.xml.xpath.XPathFactory;
 
 
 
@@ -128,7 +140,10 @@ public class LoadTestBuilder extends Builder {
     	
     	build.getActions().add(printReportAction);
     	
-
+    	
+//    	String outputPath = build.getEnvironment(listener).expand("link to report");
+//    	FilePath xltreport = new FilePath(build.getWorkspace().getChannel(), outputPath);
+//    	xltreport.mkdirs();
     	
     	
     	// generate certain directory
@@ -199,10 +214,57 @@ public class LoadTestBuilder extends Builder {
     	
     	listener.getLogger().println("XLT_FINISHED");
     	
+    	
+    	// copy xlt-report to build directory
+    	File srcXltReport = new File(build.getModuleRoot().toString() + "/../xlt-iteration-number/" + Integer.toString(build.getNumber()) + "/reports/");
+    	File[] files = srcXltReport.listFiles();
+    	File lastFile = files[files.length-1];
+    	srcXltReport = lastFile;
+    	File destXltReport = new File(build.getModuleRoot().toString() + "/../builds/" + Integer.toString(build.getNumber()) + "/report");
+    	
+    	FileUtils.copyDirectory(srcXltReport, destXltReport, true);
+    	
+    	// take specific testreport.xml
+    	File testReportFileXml = new File(destXltReport.toString() + "/testreport.xml");
+    	
+    	DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+    	try 
+    	{
+			DocumentBuilder docBuilder = factory.newDocumentBuilder();
+			Document doc = docBuilder.parse(testReportFileXml);
+	    	XPathFactory xpathfactory = XPathFactory.newInstance();
+	    	XPath xpath = xpathfactory.newXPath();
+	    	
+	    	XPathExpression expr = xpath.compile("/testreport/summary/requests/mean");
+	    	
+	    	listener.getLogger().println(expr.evaluate(doc));
+	    	
+	    	//if ()
+			
+	    	
+			
+		} 
+    	catch (ParserConfigurationException e) 
+    	{
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} 
+    	catch (SAXException e) 
+    	{
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} 
+    	catch (XPathExpressionException e) 
+    	{
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+    	
+    	
 
     	
     	// view report link on build page
-    	build.getActions().add(new XltRecorderAction());
+    	//build.getActions().add(new XltRecorderAction());
     	
     	
 		// build.setResult(Result.ABORTED);
