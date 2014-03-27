@@ -5,42 +5,31 @@ import hudson.Extension;
 import hudson.model.AbstractBuild;
 import hudson.model.Action;
 import hudson.model.BuildListener;
-import hudson.model.Result;
 import hudson.model.AbstractProject;
-import hudson.model.Run;
 import hudson.plugins.plot.Plot;
 import hudson.plugins.plot.Series;
 import hudson.plugins.plot.XMLSeries;
 import hudson.tasks.Builder;
 import hudson.tasks.BuildStepDescriptor;
 
-
-
-
-
-import net.lingala.zip4j.core.ZipFile;
-import net.lingala.zip4j.exception.ZipException;
-
 import org.apache.commons.io.FileUtils;
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.kohsuke.stapler.DataBoundConstructor;
-
-import sun.security.krb5.SCDynamicStoreConfig;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileOutputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.nio.channels.Channels;
-import java.nio.channels.ReadableByteChannel;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Hashtable;
 import java.util.List;
-
+import java.util.Map;
+import java.util.Scanner;
 
 
 /**
@@ -56,25 +45,22 @@ public class LoadTestBuilder extends Builder {
     private List<String> qualityList;
     
     private final String machineHost;
+    
+    private JSONObject config = new JSONObject();
 
-    private final List<Plot> plots = new ArrayList<Plot>();
+    private final Map<String,Plot> plots = new Hashtable<String, Plot>();
+    
+    public enum CONFIG_PARAMETER { xPath };
+    
+    private XLTChartAction chartAction;
    
     @DataBoundConstructor
     public LoadTestBuilder(List <String> qualitiesToPush, String testConfiguration, String machineHost) 
     {
-            	
+            	System.out.println("new LoadTestBuilder");
     	this.qualityList = qualitiesToPush;
         this.testConfiguration = testConfiguration;
         this.machineHost = machineHost;
-                
-        Plot plot = new Plot(null,null,"XLT","3","xltPlot1","line",false);		
-        plot.series = new ArrayList<Series>();	
-        
-        Plot plot2 = new Plot(null,null,"XLT","3","xltPlot2","line",false);		
-        plot2.series = new ArrayList<Series>();
-        
-        plots.add(plot);
-        plots.add(plot2);
 
 //        // Unpack XLT from *.zip
 //        String url = new String("/home/maleithe/.jenkins/plugins/Plugin/xlt-4.3.3.zip");
@@ -92,14 +78,61 @@ public class LoadTestBuilder extends Builder {
     }
     
     public List<Plot> getPlots(){
-    	return plots;
+    	return new ArrayList<Plot>(plots.values());
     }
 
     @Override
     public Collection<? extends Action> getProjectActions(AbstractProject<?, ?> project) {
+    	System.out.println("LoadTestBuilder.getProjectActions");
+    	
     	ArrayList<Action> actions = new ArrayList<Action>();
-    	actions.add(new XLTChartAction(project, this));
+    	
+    	updateConfig(project);
+    	List<String> names = getConfigNames();
+    	for (String name : names) {
+	        Plot plot = new Plot("","","XLT","3","xltPlot"+name,"line",false);		
+	        plot.series = new ArrayList<Series>();
+	        plots.put(name, plot);
+    	}
+    	chartAction = new XLTChartAction(project, getPlots());
+    	
+    	actions.add(chartAction);
     	return actions;
+    }
+    
+    private void updateConfig(AbstractProject<?, ?> project){
+    	System.out.println("LoadTestBuilder.updateConfig");
+    	
+		 File configFile = new File(project.getRootDir(),"xltConfig.json");
+		 if(configFile.exists() && configFile.isFile()){
+			 try {
+				 String content = "";
+				 Scanner scanner = new Scanner(configFile);
+				 scanner.useDelimiter("\\Z");
+				 while(scanner.hasNext()){
+					 content += scanner.next();
+				 }
+				 scanner.close();
+				 config = new JSONObject(content);
+			} catch (FileNotFoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (JSONException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		 }
+    }
+    
+    public String getConfigValue(String configName, CONFIG_PARAMETER parameter) throws JSONException{
+    	return config.getJSONObject(configName).getString(parameter.name());
+    }
+    
+    public List<String> getConfigNames(){
+    	String[] names = JSONObject.getNames(config);
+    	if(names == null || names.length == 0)
+    		return new ArrayList<String>();
+    	return Arrays.asList(names);
     }
 
     public List<String> getQualityList() {
@@ -114,22 +147,46 @@ public class LoadTestBuilder extends Builder {
         return machineHost;
     }
     
-    @Override
-    public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) throws IOException, InterruptedException {
-    	plots.get(0).series.add(new XMLSeries("testreport.xml", "/testreport/transactions/transaction/max", "NODE", ""));
-    	plots.get(1).series.add(new XMLSeries("testreport.xml", "/testreport/transactions/transaction/min", "NODE", ""));		
-    	for (Plot eachPlot : plots) {
-    		eachPlot.addBuild(build, System.out);
-    	}	
-
-
-    	XltRecorderAction printReportAction = new XltRecorderAction();
-    	printReportAction.setReportPath(build.getProject().getBuildDir().toPath().toString());
-    	
+    private void postTestExecution(AbstractBuild<?,?> build){
+    	XltRecorderAction printReportAction = new XltRecorderAction(build);
+    	printReportAction.setReportPath(build.getProject().getBuildDir().toPath().toString());    	
     	build.getActions().add(printReportAction);
     	
-
-    	
+    	List<String> names = getConfigNames();
+    	for (String name : names) {
+			try {
+				String xPath = getConfigValue(name, CONFIG_PARAMETER.xPath);
+				int last = xPath.lastIndexOf("[");
+				String valuePath = xPath;
+				if(last > -1){
+					valuePath = xPath.substring(0, last);
+				}
+				System.out.println(name+" : "+xPath+" : "+valuePath);
+				
+				//TODO: validate xPath and set build state
+								
+				Plot plot = plots.get(name);
+				plot.series.add(new XMLSeries("testreport.xml", valuePath, "NODE", ""));
+			} catch (JSONException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+    	for (Plot eachPlot : getPlots()) {
+	        eachPlot.addBuild(build, System.out);
+		}
+    }
+    
+    @Override
+    public boolean prebuild(AbstractBuild<?, ?> build, BuildListener listener) {
+    	System.out.println("LoadTestBuilder.prebuild");
+    	updateConfig(build.getProject());
+    	return true;
+    }    
+    
+    @Override
+    public boolean perform(AbstractBuild<?,?> build, Launcher launcher, BuildListener listener) throws IOException, InterruptedException {
+    	System.out.println("LoadTestBuilder.perform");
     	
     	// generate certain directory
     	String targetDirectory = build.getModuleRoot().toString() + "/../xlt-iteration-number/" + Integer.toString(build.getNumber());
@@ -200,10 +257,7 @@ public class LoadTestBuilder extends Builder {
     	listener.getLogger().println("XLT_FINISHED");
     	
 
-    	
-    	// view report link on build page
-    	build.getActions().add(new XltRecorderAction());
-    	
+    	postTestExecution(build);    	
     	
 		// build.setResult(Result.ABORTED);
     	//build.setResult(Result.)
