@@ -58,7 +58,6 @@ import javax.xml.xpath.XPathFactory;
 
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.transform.Result;
 import javax.xml.transform.Source;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerConfigurationException;
@@ -102,19 +101,6 @@ public class LoadTestBuilder extends Builder {
     	this.qualityList = qualitiesToPush;
         this.testConfiguration = testConfiguration;
         this.machineHost = machineHost;
-
-//        // Unpack XLT from *.zip
-//        String url = new String("/home/maleithe/.jenkins/plugins/Plugin/xlt-4.3.3.zip");
-//        
-//        try
-//    	{
-//    		ZipFile xltZip = new ZipFile(url);
-//    		xltZip.extractAll("/home/maleithe/.jenkins");    		
-//    	}
-//    	catch(ZipException e)
-//    	{
-//    		e.printStackTrace();
-//    	}
     	    
     }
     
@@ -158,7 +144,7 @@ public class LoadTestBuilder extends Builder {
 			} catch (FileNotFoundException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
-			} catch (JSONException e) {
+			} catch (JSONException e) { 
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
@@ -189,15 +175,24 @@ public class LoadTestBuilder extends Builder {
     }
     
     private void postTestExecution(AbstractBuild<?,?> build){
-    	XltRecorderAction printReportAction = new XltRecorderAction(build);
+    	XltRecorderAction printReportAction = new XltRecorderAction();
     	printReportAction.setReportPath(build.getProject().getBuildDir().toPath().toString());    	
     	build.getActions().add(printReportAction);
 
+    	List<String> failedAlerts = new ArrayList<String>();
+    	
     	try{
-			//TODO: copy testreport.xml to workspace
+			// copy testreport.xml to workspace
+        	
+    		
+    		
+    		File destXltReport = new File(build.getModuleRoot().toString() + "/../builds/" + Integer.toString(build.getNumber()) + "/report");
+    		File testReportFileXml = new File(destXltReport.toString() + "/testreport.xml");
+    		File dataFile = new File(new File(build.getProject().getWorkspace().toURI()),"testreport.xml");        	
+        	FileUtils.copyFile(testReportFileXml, dataFile);
 
-
-	    	File dataFile = new File(new File(build.getProject().getWorkspace().toURI()),"testreport.xml");
+        	
+	    	
 			Document dataXml =DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(dataFile);
 	    	List<String> names = getConfigNames();
 	    	for (String name : names) {
@@ -210,8 +205,14 @@ public class LoadTestBuilder extends Builder {
 					}
 					System.out.println(name+" : "+xPath+" : "+valuePath);					
 					
-					String value = XPathFactory.newInstance().newXPath().evaluate(valuePath, dataXml);				
-					//TODO: validate value and collect failed validations then set the build state
+					String value = XPathFactory.newInstance().newXPath().evaluate(valuePath, dataXml);
+					
+					// validate value and collect failed validations then set the build state
+					if (value == null || value.isEmpty())
+					{
+						failedAlerts.add(name + " " + xPath);
+					}
+					
 					
 					Element node = (Element)XPathFactory.newInstance().newXPath().evaluate(valuePath, dataXml, XPathConstants.NODE);
 					node.setAttribute("name", name);
@@ -228,7 +229,7 @@ public class LoadTestBuilder extends Builder {
 			}
 	    	
 			Transformer transformer = TransformerFactory.newInstance().newTransformer();
-			Result output = new StreamResult(dataFile);
+			javax.xml.transform.Result output = new StreamResult(dataFile);
 			Source input = new DOMSource(dataXml);
 	
 			transformer.transform(input, output);
@@ -259,6 +260,12 @@ public class LoadTestBuilder extends Builder {
     	for (Plot eachPlot : getPlots()) {
 	        eachPlot.addBuild(build, System.out);
 		}
+    	
+    	if (!failedAlerts.isEmpty())
+    	{
+    		build.setResult(Result.FAILURE);
+    	}
+    	
     }
     
     @Override
@@ -271,22 +278,13 @@ public class LoadTestBuilder extends Builder {
     @Override
     public boolean perform(AbstractBuild<?,?> build, Launcher launcher, BuildListener listener) throws IOException, InterruptedException {
     	System.out.println("LoadTestBuilder.perform");
-
-    	
-    	//TODO: remove this later
-    	postTestExecution(build);    	
-
     	
     	// generate certain directory
     	String targetDirectory = build.getModuleRoot().toString() + "/../xlt-iteration-number/" + Integer.toString(build.getNumber());
-    	
-    	listener.getLogger().println(targetDirectory);
-    	
+       	listener.getLogger().println(targetDirectory); 	
     	File directory = new File(targetDirectory);    	
-    	directory.mkdirs();
-    	
+    	directory.mkdirs();    	
     	String srcXlt = new String(build.getModuleRoot().toString() + "/../../../../xlt-4.3.3");
-    	
     	listener.getLogger().println(srcXlt);
     	
     	
@@ -297,8 +295,6 @@ public class LoadTestBuilder extends Builder {
     	FileUtils.copyDirectory(srcDir, destDir, true);
     	
  
-    	
-    	
     	// perform XLT      	    	
     	ProcessBuilder builder = new ProcessBuilder("./mastercontroller.sh", "-auto", "-embedded", "-report", "-testPropertiesFile", testConfiguration, "-Dcom.xceptance.xlt.mastercontroller.testSuitePath=" + build.getModuleRoot().toString(), "-Dcom.xceptance.xlt.mastercontroller.agentcontrollers.ac1.url=" + machineHost);
     	
@@ -339,6 +335,8 @@ public class LoadTestBuilder extends Builder {
     		break;
     	}
     	
+    	//TODO print error-console in jenkins
+    	
     	
     	// waiting until XLT is finished
     	process.waitFor();
@@ -355,55 +353,10 @@ public class LoadTestBuilder extends Builder {
     	
     	FileUtils.copyDirectory(srcXltReport, destXltReport, true);
     	
-    	// take specific testreport.xml
-    	File testReportFileXml = new File(destXltReport.toString() + "/testreport.xml");
-    	
-    	DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-    	try 
-    	{
-			DocumentBuilder docBuilder = factory.newDocumentBuilder();
-			Document doc = docBuilder.parse(testReportFileXml);
-	    	XPathFactory xpathfactory = XPathFactory.newInstance();
-	    	XPath xpath = xpathfactory.newXPath();
-	    	
-	    	XPathExpression expr = xpath.compile("/testreport/summary/requests/mean");
-	    	
-	    	listener.getLogger().println(expr.evaluate(doc));
-	    	
-	    	//if ()
-			
-	    	
-			
-		} 
-    	catch (ParserConfigurationException e) 
-    	{
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} 
-    	catch (SAXException e) 
-    	{
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} 
-    	catch (XPathExpressionException e) 
-    	{
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-    	
-    	
 
-    	
-    	// view report link on build page
-    	//build.getActions().add(new XltRecorderAction());
-    	
     	postTestExecution(build);    	
 
-    	
-		// build.setResult(Result.ABORTED);
-    	//build.setResult(Result.)
-    	
-    	
+    	    	
     	return true;
     }
 
@@ -416,7 +369,6 @@ public class LoadTestBuilder extends Builder {
     }
 
 
- // This indicates to Jenkins that this is an implementation of an extension point.
     @Extension 
     public static final class DescriptorImpl extends BuildStepDescriptor<Builder> {
         /**
@@ -456,26 +408,6 @@ public class LoadTestBuilder extends Builder {
             return "XLT Plugin";
         }
 
-//        @Override
-//        public boolean configure(StaplerRequest req, JSONObject formData) throws FormException {
-//            // To persist global configuration information,
-//            // set that to properties and call save().
-//            useFrench = formData.getBoolean("useFrench");
-//            // ^Can also use req.bindJSON(this, formData);
-//            //  (easier when there are many fields; need set* methods for this, like setUseFrench)
-//            save();
-//            return super.configure(req,formData);
-//        }
-
-//        /**
-//         * This method returns true if the global configuration says we should speak French.
-//         *
-//         * The method name is bit awkward because global.jelly calls this method to determine
-//         * the initial state of the checkbox by the naming convention.
-//         */
-//        public boolean getUseFrench() {
-//            return useFrench;
-//        }
     }
 }
 
