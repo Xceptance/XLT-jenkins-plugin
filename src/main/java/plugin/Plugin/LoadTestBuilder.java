@@ -183,16 +183,13 @@ public class LoadTestBuilder extends Builder {
     	
     	try{
 			// copy testreport.xml to workspace
-        	
-    		
     		
     		File destXltReport = new File(build.getModuleRoot().toString() + "/../builds/" + Integer.toString(build.getNumber()) + "/report");
     		File testReportFileXml = new File(destXltReport.toString() + "/testreport.xml");
     		File dataFile = new File(new File(build.getProject().getWorkspace().toURI()),"testreport.xml");        	
         	FileUtils.copyFile(testReportFileXml, dataFile);
 
-        	
-	    	
+        
 			Document dataXml =DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(dataFile);
 	    	List<String> names = getConfigNames();
 	    	for (String name : names) {
@@ -353,6 +350,10 @@ public class LoadTestBuilder extends Builder {
     	
     	FileUtils.copyDirectory(srcXltReport, destXltReport, true);
     	
+    	// copy xlt-report to workspace
+    	File workspaceDestXltReport = new File(build.getModuleRoot().toString() + "/report");
+    	
+    	FileUtils.copyDirectory(srcXltReport, workspaceDestXltReport, true);
 
     	postTestExecution(build);    	
 
