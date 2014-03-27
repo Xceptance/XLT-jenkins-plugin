@@ -14,10 +14,10 @@ import hudson.plugins.plot.PlotReport;
 public class XLTChartAction implements Action{
 	
 	private final PlotReport report;
-	
-	public XLTChartAction(AbstractProject<?, ?> project, LoadTestBuilder builder) {
+		
+	public XLTChartAction(AbstractProject<?, ?> project, List<Plot> plots) {		
 		report = new PlotReport(project, "XLT", new ArrayList<Plot>());
-		report.getPlots().addAll(builder.getPlots());
+		report.getPlots().addAll(plots);
 	}
 
 	public String getDisplayName() {
@@ -36,7 +36,7 @@ public class XLTChartAction implements Action{
 	public List<Plot> getPlots(){
 		return report.getPlots();
 	}
-	
+		
 	// called from jelly files
 	public void doGetPlot(StaplerRequest req, StaplerResponse rsp) {		
 		report.doGetPlot(req, rsp);

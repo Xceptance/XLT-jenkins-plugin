@@ -1,12 +1,12 @@
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
-    
+<center><h3>${%XLT Summary}</h3>
 <j:set var="width" value="750"/>
-<j:set var="height" value="450"/>
+<j:set var="height" value="500"/>
 
-<j:forEach var="plot" items="${from.plots}" varStatus="loopStat">
+<j:forEach var="plot" items="${it.plots}" varStatus="loopStat">
 	<div>
 		<img src="getPlot?index=${loopStat.index}&amp;width=${width}&amp;height=${height}" lazymap="getPlotMap?index=${loopStat.index}&amp;width=${width}&amp;height=${height}"/>
 	</div>
 </j:forEach>
-    
+</center>
 </j:jelly>
