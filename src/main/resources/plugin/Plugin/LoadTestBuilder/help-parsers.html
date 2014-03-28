@@ -1,0 +1,43 @@
+<html>
+	<body>
+		<p>Create a file with the name <b>xltConfig.json</b> at the project location. Edit the file and then save the project.
+		<pre>
+	{	
+		"criterias":{
+			"Requests Max < 10s":{
+				"xPath":"/testreport/summary/requests/max[number() < 10000]",
+				"plotID":"summary"	
+			},	
+					
+			"Requests Mean":{
+				"xPath":"/testreport/summary/requests/mean",
+				"plotID":"summary"	
+			}	
+			
+			"Homepage Max < 5s":{
+				"xPath":"/testreport/actions/action[./name[text() = 'Homepage']]/max[number() < 5000]",
+				"plotID":"homepage"	
+			}
+			
+			"Homepage Mean":{
+				"xPath":"/testreport/actions/action[./name[text() = 'Homepage']]/mean",
+				"plotID":"homepage"	
+			}
+		},
+		
+		"plots":{
+			"summary":{
+				"enabled":"yes",
+				"buildCount":"5"
+			},
+			
+			"homepage":{
+				"enabled":"yes",
+				"buildCount":"10"		
+			}	
+		}	
+	}
+</pre>
+		 
+	</body>
+</html>
