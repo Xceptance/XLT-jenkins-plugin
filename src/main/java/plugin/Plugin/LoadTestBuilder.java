@@ -90,7 +90,9 @@ public class LoadTestBuilder extends Builder {
 
     private final Map<String,Plot> plots = new Hashtable<String, Plot>();
     
-    public enum CONFIG_PARAMETER { xPath };
+    public enum CONFIG_CRITERIA_PARAMETER { xPath, plotID};
+    public enum CONFIG_PLOT_PARAMETER { enabled, buildCount};    
+    public enum CONFIG_SECTIONS_PARAMETER { criterias, plots};
     
     private XLTChartAction chartAction;
    
@@ -107,7 +109,31 @@ public class LoadTestBuilder extends Builder {
     public List<Plot> getPlots(){
     	return new ArrayList<Plot>(plots.values());
     }
-
+    
+    private Plot getPlot(String configName){
+		try {
+			String plotID = getCriteriaConfigValue(configName, CONFIG_CRITERIA_PARAMETER.plotID);
+			if(!plots.containsKey(plotID)){
+				String plotCount = getPlotConfigValue(configName, CONFIG_PLOT_PARAMETER.buildCount);
+			
+				Plot plot = new Plot("","","XLT",plotCount,"xltPlot"+plotID,"line",false);		
+				plot.series = new ArrayList<Series>();
+				plots.put(plotID, plot);
+			}
+			if("yes".equals(getPlotConfigValue(configName, CONFIG_PLOT_PARAMETER.enabled))){
+				return plots.get(plotID);
+			}
+		} catch (JSONException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}    	
+		return null;
+    }
+    
+    private void createPlot(String configName){
+    	getPlot(configName);
+    }
+    
     @Override
     public Collection<? extends Action> getProjectActions(AbstractProject<?, ?> project) {
     	System.out.println("LoadTestBuilder.getProjectActions");
@@ -117,9 +143,7 @@ public class LoadTestBuilder extends Builder {
     	updateConfig(project);
     	List<String> names = getConfigNames();
     	for (String name : names) {
-	        Plot plot = new Plot("","","XLT","3","xltPlot"+name,"line",false);		
-	        plot.series = new ArrayList<Series>();
-	        plots.put(name, plot);
+    		createPlot(name);
     	}
     	chartAction = new XLTChartAction(project, getPlots());
     	
@@ -151,12 +175,22 @@ public class LoadTestBuilder extends Builder {
 		 }
     }
     
-    public String getConfigValue(String configName, CONFIG_PARAMETER parameter) throws JSONException{
-    	return config.getJSONObject(configName).getString(parameter.name());
+    public String getCriteriaConfigValue(String configName, CONFIG_CRITERIA_PARAMETER parameter) throws JSONException{
+    	return config.getJSONObject(CONFIG_SECTIONS_PARAMETER.criterias.name()).getJSONObject(configName).getString(parameter.name());
     }
     
+    public String getPlotConfigValue(String configName, CONFIG_PLOT_PARAMETER parameter) throws JSONException{
+    	String plotConfigName = getCriteriaConfigValue(configName, CONFIG_CRITERIA_PARAMETER.plotID);
+    	return config.getJSONObject(CONFIG_SECTIONS_PARAMETER.plots.name()).getJSONObject(plotConfigName).getString(parameter.name());
+    }
+    
+    
     public List<String> getConfigNames(){
-    	String[] names = JSONObject.getNames(config);
+    	JSONObject criteriaSection = config.optJSONObject(CONFIG_SECTIONS_PARAMETER.criterias.name());
+    	String[] names = null;
+    	if(criteriaSection != null){
+    		names = JSONObject.getNames(criteriaSection);
+    	}
     	if(names == null || names.length == 0)
     		return new ArrayList<String>();
     	return Arrays.asList(names);
@@ -180,7 +214,7 @@ public class LoadTestBuilder extends Builder {
     	build.getActions().add(printReportAction);
 
     	List<String> failedAlerts = new ArrayList<String>();
-    	
+    	updateConfig(build.getProject());
     	try{
 			// copy testreport.xml to workspace
     		
@@ -194,7 +228,7 @@ public class LoadTestBuilder extends Builder {
 	    	List<String> names = getConfigNames();
 	    	for (String name : names) {
 				try {
-					String xPath = getConfigValue(name, CONFIG_PARAMETER.xPath);
+					String xPath = getCriteriaConfigValue(name, CONFIG_CRITERIA_PARAMETER.xPath);
 					int last = xPath.lastIndexOf("[");
 					String valuePath = xPath;
 					if(last > -1){
@@ -213,8 +247,10 @@ public class LoadTestBuilder extends Builder {
 					Element node = (Element)XPathFactory.newInstance().newXPath().evaluate(valuePath, dataXml, XPathConstants.NODE);
 					node.setAttribute("name", name);
 					
-					Plot plot = plots.get(name);
-					plot.series.add(new XMLSeries("testreport.xml", valuePath, "NODE", ""));
+					Plot plot = getPlot(name);
+					if(plot != null){
+						plot.series.add(new XMLSeries("testreport.xml", valuePath, "NODE", ""));
+					}
 				} catch (JSONException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -271,7 +307,6 @@ public class LoadTestBuilder extends Builder {
     @Override
     public boolean prebuild(AbstractBuild<?, ?> build, BuildListener listener) {
     	System.out.println("LoadTestBuilder.prebuild");
-    	updateConfig(build.getProject());
     	return true;
     }    
     
