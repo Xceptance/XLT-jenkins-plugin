@@ -1,0 +1,30 @@
+{	
+	"criterias":{
+		"max":{
+			"xPath":"/testreport/transactions/transaction/max",
+			"plotID":"myPlot1"	
+		},	
+		
+		"min":{
+			"xPath":"testreport/requests/request[(./name[text()='Homepage <production-web>']) and (./max[number() < 5000])]/mean[number() < 1]",
+			"plotID":"myPlot1"	
+		},	
+		
+		"mean":{
+			"xPath":"testreport/requests/request/mean",
+			"plotID":"myPlot2"	
+		}	
+	},
+	
+	"plots":{
+		"myPlot1":{
+			"enabled":"yes",
+			"buildCount":"5"
+		},
+		
+		"myPlot2":{
+			"enabled":"yes",
+			"buildCount":"3"		
+		}	
+	}	
+}
