@@ -206,7 +206,7 @@ public class LoadTestBuilder extends Builder {
 					// validate value and collect failed validations then set the build state
 					if (value == null || value.isEmpty())
 					{
-						failedAlerts.add(name + " " + xPath);
+						failedAlerts.add("Condition failed: "+name + " : " + xPath);
 					}
 					
 					
