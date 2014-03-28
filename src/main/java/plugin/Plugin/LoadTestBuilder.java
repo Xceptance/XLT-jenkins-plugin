@@ -172,6 +172,9 @@ public class LoadTestBuilder extends Builder {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
+		 }else{
+			 //TODO
+			 System.out.println("no config file found at: "+configFile.getAbsolutePath());
 		 }
     }
     
@@ -209,70 +212,76 @@ public class LoadTestBuilder extends Builder {
     }
     
     private void postTestExecution(AbstractBuild<?,?> build, BuildListener listener){
+    	List<String> failedAlerts = new ArrayList<String>();
+    	
     	XltRecorderAction printReportAction = new XltRecorderAction();
     	printReportAction.setReportPath(build.getProject().getBuildDir().toPath().toString());    	
     	build.getActions().add(printReportAction);
 
-    	List<String> failedAlerts = new ArrayList<String>();
     	updateConfig(build.getProject());
     	try{
 			// copy testreport.xml to workspace
-    		
-    		File destXltReport = new File(build.getModuleRoot().toString() + "/../builds/" + Integer.toString(build.getNumber()) + "/report");
-    		File testReportFileXml = new File(destXltReport.toString() + "/testreport.xml");
-    		File dataFile = new File(new File(build.getProject().getWorkspace().toURI()),"testreport.xml");        	
-        	FileUtils.copyFile(testReportFileXml, dataFile);
-
-        
-			Document dataXml =DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(dataFile);
-	    	List<String> names = getConfigNames();
-	    	for (String name : names) {
-				try {
-					String xPath = getCriteriaConfigValue(name, CONFIG_CRITERIA_PARAMETER.xPath);
-					int last = xPath.lastIndexOf("[");
-					String valuePath = xPath;
-					if(last > -1){
-						valuePath = xPath.substring(0, last);
+    		File testReportFileXml = new File(new File(build.getModuleRoot().toString() + "/../builds/" + Integer.toString(build.getNumber()) + "/report"),"/testreport.xml");
+    		File dataFile = new File(new File(build.getProject().getWorkspace().toURI()),"testreport.xml");
+    		if(!testReportFileXml.exists()){
+    			failedAlerts.add("No test data found at: "+testReportFileXml.getAbsolutePath());
+    		}else{
+    			//FileUtils.copyFile(testReportFileXml, dataFile);
+	    		if(!testReportFileXml.exists()){
+	    			failedAlerts.add("Expected copy of test data at: "+dataFile.getAbsolutePath());
+	    		}else{		        	
+					Document dataXml =DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(dataFile);
+			    	List<String> names = getConfigNames();
+			    	for (String name : names) {
+						try {
+							String xPath = getCriteriaConfigValue(name, CONFIG_CRITERIA_PARAMETER.xPath);
+							int last = xPath.lastIndexOf("[");
+							String valuePath = xPath;
+							if(last > -1){
+								valuePath = xPath.substring(0, last);
+							}
+							System.out.println(name+" : "+xPath+" : "+valuePath);					
+							
+							String value = XPathFactory.newInstance().newXPath().evaluate(xPath, dataXml);					
+							// validate value and collect failed validations then set the build state
+							if (value == null || value.isEmpty())
+							{
+								failedAlerts.add("Condition failed: "+name + " : " + xPath);
+							}
+							
+							Element node = (Element)XPathFactory.newInstance().newXPath().evaluate(valuePath, dataXml, XPathConstants.NODE);
+							node.setAttribute("name", name);
+							
+							Plot plot = getPlot(name);
+							if(plot != null){
+								plot.series.add(new XMLSeries("testreport.xml", valuePath, "NODE", ""));
+							}
+						} catch (JSONException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						} catch (XPathExpressionException e) {
+							e.printStackTrace();
+							String message = name + " xPath evaluation failed \n" +e.getMessage();					
+							failedAlerts.add(message);
+						}
 					}
-					System.out.println(name+" : "+xPath+" : "+valuePath);					
-					
-					String value = XPathFactory.newInstance().newXPath().evaluate(xPath, dataXml);					
-					// validate value and collect failed validations then set the build state
-					if (value == null || value.isEmpty())
-					{
-						failedAlerts.add("Condition failed: "+name + " : " + xPath);
-					}
-					
-					
-					Element node = (Element)XPathFactory.newInstance().newXPath().evaluate(valuePath, dataXml, XPathConstants.NODE);
-					node.setAttribute("name", name);
-					
-					Plot plot = getPlot(name);
-					if(plot != null){
-						plot.series.add(new XMLSeries("testreport.xml", valuePath, "NODE", ""));
-					}
-				} catch (JSONException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				} catch (XPathExpressionException e) {
-					e.printStackTrace();
-					String message = name + " xPath evaluation failed \n" +e.getMessage();					
-					failedAlerts.add(message);
-				}
-			}
-	    	
-			Transformer transformer = TransformerFactory.newInstance().newTransformer();
-			javax.xml.transform.Result output = new StreamResult(dataFile);
-			Source input = new DOMSource(dataXml);
-	
-			transformer.transform(input, output);
+			    	
+					Transformer transformer = TransformerFactory.newInstance().newTransformer();
+					javax.xml.transform.Result output = new StreamResult(dataFile);
+					Source input = new DOMSource(dataXml);
 			
+					transformer.transform(input, output);
+					
+			    	//must happen after everything is in place... this will start the data collection for the plot
+			    	for (Plot eachPlot : getPlots()) {
+				        eachPlot.addBuild(build, System.out);
+					}
+	    		}
+    		}
     	}catch(IOException e){
-    		e.printStackTrace();
-    	} catch (InterruptedException e1) {
 			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		} catch (SAXException e1) {
+    		e.printStackTrace();
+    	} catch (SAXException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		} catch (ParserConfigurationException e1) {
@@ -287,11 +296,9 @@ public class LoadTestBuilder extends Builder {
 		} catch (TransformerException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		}
-
-    	//must happen after everything is in place... this will start the data collection for the plot
-    	for (Plot eachPlot : getPlots()) {
-	        eachPlot.addBuild(build, System.out);
+		} catch (InterruptedException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
 		}
     	
     	if (!failedAlerts.isEmpty())
