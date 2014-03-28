@@ -8,12 +8,12 @@
 		"Requests Mean":{
 			"xPath":"/testreport/summary/requests/mean",
 			"plotID":"summary"	
-		}	
+		},	
 		
 		"Homepage Max < 5s":{
 			"xPath":"/testreport/actions/action[./name[text() = 'Homepage']]/max[number() < 5000]",
 			"plotID":"homepage"	
-		}
+		},
 		
 		"Homepage Mean":{
 			"xPath":"/testreport/actions/action[./name[text() = 'Homepage']]/mean",
