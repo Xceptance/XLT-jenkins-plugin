@@ -174,7 +174,7 @@ public class LoadTestBuilder extends Builder {
         return machineHost;
     }
     
-    private void postTestExecution(AbstractBuild<?,?> build){
+    private void postTestExecution(AbstractBuild<?,?> build, BuildListener listener){
     	XltRecorderAction printReportAction = new XltRecorderAction();
     	printReportAction.setReportPath(build.getProject().getBuildDir().toPath().toString());    	
     	build.getActions().add(printReportAction);
@@ -220,8 +220,9 @@ public class LoadTestBuilder extends Builder {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				} catch (XPathExpressionException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
+					String message = name + " xPath evaluation failed \n" +e.getMessage();					
+					failedAlerts.add(message);
 				}
 			}
 	    	
@@ -261,8 +262,11 @@ public class LoadTestBuilder extends Builder {
     	if (!failedAlerts.isEmpty())
     	{
     		build.setResult(Result.FAILURE);
-    	}
-    	
+    		for (String eachAlert : failedAlerts) {
+    			listener.getLogger().println(eachAlert);
+    			System.out.println(eachAlert);
+    		}
+    	}    	
     }
     
     @Override
@@ -355,7 +359,7 @@ public class LoadTestBuilder extends Builder {
     	
     	FileUtils.copyDirectory(srcXltReport, workspaceDestXltReport, true);
 
-    	postTestExecution(build);    	
+    	postTestExecution(build, listener);    	
 
     	    	
     	return true;
