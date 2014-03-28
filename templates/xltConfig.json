@@ -1,30 +1,35 @@
 {	
 	"criterias":{
-		"max":{
-			"xPath":"/testreport/transactions/transaction/max",
-			"plotID":"myPlot1"	
+		"Requests Max < 10s":{
+			"xPath":"/testreport/summary/requests/max[number() < 10000]",
+			"plotID":"summary"	
 		},	
-		
-		"min":{
-			"xPath":"testreport/requests/request[(./name[text()='Homepage <production-web>']) and (./max[number() < 5000])]/mean[number() < 1]",
-			"plotID":"myPlot1"	
-		},	
-		
-		"mean":{
-			"xPath":"testreport/requests/request/mean",
-			"plotID":"myPlot2"	
+				
+		"Requests Mean":{
+			"xPath":"/testreport/summary/requests/mean",
+			"plotID":"summary"	
 		}	
+		
+		"Homepage Max < 5s":{
+			"xPath":"/testreport/actions/action[./name[text() = 'Homepage']]/max[number() < 5000]",
+			"plotID":"homepage"	
+		}
+		
+		"Homepage Mean":{
+			"xPath":"/testreport/actions/action[./name[text() = 'Homepage']]/mean",
+			"plotID":"homepage"	
+		}
 	},
 	
 	"plots":{
-		"myPlot1":{
+		"summary":{
 			"enabled":"yes",
 			"buildCount":"5"
 		},
 		
-		"myPlot2":{
+		"homepage":{
 			"enabled":"yes",
-			"buildCount":"3"		
+			"buildCount":"10"		
 		}	
 	}	
 }
