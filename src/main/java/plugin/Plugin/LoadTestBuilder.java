@@ -202,8 +202,7 @@ public class LoadTestBuilder extends Builder {
 					}
 					System.out.println(name+" : "+xPath+" : "+valuePath);					
 					
-					String value = XPathFactory.newInstance().newXPath().evaluate(valuePath, dataXml);
-					
+					String value = XPathFactory.newInstance().newXPath().evaluate(xPath, dataXml);					
 					// validate value and collect failed validations then set the build state
 					if (value == null || value.isEmpty())
 					{
