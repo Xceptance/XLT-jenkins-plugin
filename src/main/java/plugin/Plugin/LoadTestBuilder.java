@@ -303,9 +303,20 @@ public class LoadTestBuilder extends Builder {
     	
     	FileUtils.copyDirectory(srcDir, destDir, true);
     	
- 
+
     	// perform XLT      	    	
-    	ProcessBuilder builder = new ProcessBuilder("./mastercontroller.sh", "-auto", "-embedded", "-report", "-testPropertiesFile", testConfiguration, "-Dcom.xceptance.xlt.mastercontroller.testSuitePath=" + build.getModuleRoot().toString(), "-Dcom.xceptance.xlt.mastercontroller.agentcontrollers.ac1.url=" + machineHost);
+
+    	ProcessBuilder builder;
+    	
+    	// check if machineHost is localhost
+    	if(machineHost.contains("localhost"))
+    	{
+    		builder = new ProcessBuilder("./mastercontroller.sh", "-auto", "-embedded", "-report", "-testPropertiesFile", testConfiguration, "-Dcom.xceptance.xlt.mastercontroller.testSuitePath=" + build.getModuleRoot().toString(), "-Dcom.xceptance.xlt.mastercontroller.agentcontrollers.ac1.url=" + machineHost);
+    	}
+    	else
+    	{
+    		builder = new ProcessBuilder("./mastercontroller.sh", "-auto", "-report", "-testPropertiesFile", testConfiguration, "-Dcom.xceptance.xlt.mastercontroller.testSuitePath=" + build.getModuleRoot().toString(), "-Dcom.xceptance.xlt.mastercontroller.agentcontrollers.ac1.url=" + machineHost);
+    	}
     	
     	File path = new File(targetDirectory + "/bin");
     	
@@ -349,6 +360,8 @@ public class LoadTestBuilder extends Builder {
     	
     	// waiting until XLT is finished
     	process.waitFor();
+    	
+    	//TODO if not null Failed
     	
     	listener.getLogger().println("XLT_FINISHED");
     	
