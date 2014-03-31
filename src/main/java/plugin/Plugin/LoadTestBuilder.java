@@ -339,9 +339,14 @@ public class LoadTestBuilder extends Builder {
         {
             commandLine.add("./mastercontroller.sh");
         }
+     
+        // check if machineHost is localhost
+        if(machineHost.contains("localhost"))
+        {
+        	commandLine.add("-embedded");
+        }
         
         commandLine.add("-auto");
-        commandLine.add("-embedded");
         commandLine.add("-report");
         commandLine.add("-testPropertiesFile");
         commandLine.add(testConfiguration);
@@ -359,7 +364,12 @@ public class LoadTestBuilder extends Builder {
 			child.setExecutable(true);
 		}
     	
-    	builder.directory(path);    	
+    	builder.directory(path);
+    	
+    	// print error-stream in jenkins-console
+    	builder.redirectErrorStream(true);
+
+        // start XLT
     	Process process = builder.start();
     	
     	// print XLT console output in Jenkins   	
@@ -387,12 +397,14 @@ public class LoadTestBuilder extends Builder {
     		break;
     	}
     	
-    	//TODO print error-console in jenkins
     	
+    	// waiting until XLT is finished and set FAILED in case of unexpected termination
+    	if(process.waitFor()!=0)
+    	{
+    		build.setResult(Result.FAILURE);
+    	}
     	
-    	// waiting until XLT is finished
-    	process.waitFor();
-    	
+    	    	
     	listener.getLogger().println("XLT_FINISHED");
     	
     	
