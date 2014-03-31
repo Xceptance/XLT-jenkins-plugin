@@ -209,8 +209,7 @@ public class LoadTestBuilder extends Builder {
     private void postTestExecution(AbstractBuild<?,?> build, BuildListener listener){
     	List<String> failedAlerts = new ArrayList<String>();
     	
-    	XltRecorderAction printReportAction = new XltRecorderAction();
-    	printReportAction.setReportPath(build.getProject().getBuildDir().toPath().toString());    	
+    	XltRecorderAction printReportAction = new XltRecorderAction(build);
     	build.getActions().add(printReportAction);
 
     	updateConfig(build.getProject());
