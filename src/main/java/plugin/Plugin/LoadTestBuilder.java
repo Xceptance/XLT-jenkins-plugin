@@ -301,14 +301,6 @@ public class LoadTestBuilder extends Builder {
     	System.out.println("LoadTestBuilder.perform");
     	
     	
-    	// delete report directory if exist
-    	File workspaceDestXltReport = new File(build.getModuleRoot().toString() + "/report");
-    	
-    	if(workspaceDestXltReport.exists())
-    	{
-    		FileUtils.deleteDirectory(workspaceDestXltReport);
-    	}
-    	
     	// generate certain directory
     	String targetDirectory = build.getModuleRoot().toString() + "/../xlt-iteration-number/" + Integer.toString(build.getNumber());
        	listener.getLogger().println(targetDirectory); 	
@@ -416,9 +408,7 @@ public class LoadTestBuilder extends Builder {
     	
     	FileUtils.copyDirectory(srcXltReport, destXltReport, true);
     	
-    	// copy xlt-report to workspace    	
-    	FileUtils.copyDirectory(srcXltReport, workspaceDestXltReport, true);
-
+    	
     	postTestExecution(build, listener);    	
 
     	    	
