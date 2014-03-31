@@ -312,8 +312,6 @@ public class LoadTestBuilder extends Builder {
     public boolean perform(AbstractBuild<?,?> build, Launcher launcher, BuildListener listener) throws IOException, InterruptedException {
     	System.out.println("LoadTestBuilder.perform");
     	
-    	postTestExecution(build, listener);
-    	
     	// generate certain directory
     	File destDir = new File(build.getProject().getRootDir(),"xlt-iteration-number/"+ Integer.toString(build.getNumber()));
        	listener.getLogger().println(destDir.getAbsolutePath());
