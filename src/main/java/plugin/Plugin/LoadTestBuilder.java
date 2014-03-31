@@ -294,6 +294,7 @@ public class LoadTestBuilder extends Builder {
     	
     	if (!failedAlerts.isEmpty())
     	{
+    		listener.getLogger().println("set failes by alerts");
     		build.setResult(Result.FAILURE);
     		for (String eachAlert : failedAlerts) {
     			listener.getLogger().println(eachAlert);
@@ -400,6 +401,7 @@ public class LoadTestBuilder extends Builder {
     	{
     		build.setResult(Result.FAILURE);
     	}
+    	listener.getLogger().println(process.waitFor());
     	
     	    	
     	listener.getLogger().println("XLT_FINISHED");
