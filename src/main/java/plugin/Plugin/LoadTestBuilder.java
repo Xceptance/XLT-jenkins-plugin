@@ -1,6 +1,5 @@
 package plugin.Plugin;
 
-import hudson.FilePath;
 import hudson.Launcher;
 import hudson.Extension;
 import hudson.model.AbstractBuild;
@@ -8,7 +7,6 @@ import hudson.model.Action;
 import hudson.model.BuildListener;
 
 import hudson.model.Result;
-import hudson.model.WorkspaceBrowser;
 
 import hudson.model.AbstractProject;
 import hudson.plugins.plot.Plot;
@@ -25,11 +23,7 @@ import org.w3c.dom.Document;
 
 import org.xml.sax.SAXException;
 
-import sun.security.krb5.SCDynamicStoreConfig;
-
 import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.xml.sax.SAXException;
 
 
 import java.io.BufferedReader;
@@ -90,8 +84,8 @@ public class LoadTestBuilder extends Builder {
 
     private final Map<String,Plot> plots = new Hashtable<String, Plot>();
     
-    public enum CONFIG_CRITERIA_PARAMETER { xPath, plotID};
-    public enum CONFIG_PLOT_PARAMETER { enabled, buildCount};    
+    public enum CONFIG_CRITERIA_PARAMETER { xPath, plotID, condition, name};
+    public enum CONFIG_PLOT_PARAMETER { enabled, buildCount, title};    
     public enum CONFIG_SECTIONS_PARAMETER { criterias, plots};
     
     private XLTChartAction chartAction;
@@ -115,8 +109,9 @@ public class LoadTestBuilder extends Builder {
 			String plotID = getCriteriaConfigValue(configName, CONFIG_CRITERIA_PARAMETER.plotID);
 			if(!plots.containsKey(plotID)){
 				String plotCount = getPlotConfigValue(configName, CONFIG_PLOT_PARAMETER.buildCount);
-			
-				Plot plot = new Plot("","","XLT",plotCount,"xltPlot"+plotID,"line",false);		
+				String title = getPlotConfigValue(configName, CONFIG_PLOT_PARAMETER.title);
+				
+				Plot plot = new Plot(title,"","XLT",plotCount,"xltPlot"+plotID,"line",false);		
 				plot.series = new ArrayList<Series>();
 				plots.put(plotID, plot);
 			}
@@ -235,26 +230,25 @@ public class LoadTestBuilder extends Builder {
 			    	for (String name : names) {
 						try {
 							String xPath = getCriteriaConfigValue(name, CONFIG_CRITERIA_PARAMETER.xPath);
-							int last = xPath.lastIndexOf("[");
-							String valuePath = xPath;
-							if(last > -1){
-								valuePath = xPath.substring(0, last);
-							}
-							System.out.println(name+" : "+xPath+" : "+valuePath);					
+							String condition = getCriteriaConfigValue(name, CONFIG_CRITERIA_PARAMETER.condition);							
+							String conditionPath = xPath+condition;
 							
-							String value = XPathFactory.newInstance().newXPath().evaluate(xPath, dataXml);					
+							System.out.println(name+" : "+conditionPath+" : "+xPath);					
+
+							String value =  XPathFactory.newInstance().newXPath().evaluate(conditionPath, dataXml);
 							// validate value and collect failed validations then set the build state
-							if (value == null || value.isEmpty())
+							if (value != null && value.isEmpty())
 							{
 								failedAlerts.add("Condition failed: "+name + " : " + xPath);
 							}
 							
-							Element node = (Element)XPathFactory.newInstance().newXPath().evaluate(valuePath, dataXml, XPathConstants.NODE);
-							node.setAttribute("name", name);
+							Element node = (Element)XPathFactory.newInstance().newXPath().evaluate(xPath, dataXml, XPathConstants.NODE);
+							String label = getCriteriaConfigValue(name, CONFIG_CRITERIA_PARAMETER.name);
+							node.setAttribute("name", label);							
 							
 							Plot plot = getPlot(name);
 							if(plot != null){
-								plot.series.add(new XMLSeries("testreport.xml", valuePath, "NODE", ""));
+								plot.series.add(new XMLSeries("testreport.xml", xPath, "NODE", ""));
 							}
 						} catch (JSONException e) {
 							// TODO Auto-generated catch block
