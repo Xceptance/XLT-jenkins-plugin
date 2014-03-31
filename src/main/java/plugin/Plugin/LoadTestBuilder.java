@@ -19,6 +19,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -40,6 +41,8 @@ import javax.xml.transform.stream.StreamResult;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
+
+import jenkins.model.Jenkins;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.SystemUtils;
@@ -199,14 +202,15 @@ public class LoadTestBuilder extends Builder {
     	build.getActions().add(printReportAction);
 
     	updateConfig(build.getProject());
+    	File dataFile = null;
     	try{
 			// copy testreport.xml to workspace
-    		File testReportFileXml = new File(new File(build.getModuleRoot().toString() + "/../builds/" + Integer.toString(build.getNumber()) + "/report"),"/testreport.xml");
-    		File dataFile = new File(new File(build.getProject().getWorkspace().toURI()),"testreport.xml");
+    		File testReportFileXml = new File(build.getRootDir(), "report/testreport.xml");
+    		dataFile = new File(new File(build.getModuleRoot().toURI()),"testreport.xml");    		
     		if(!testReportFileXml.exists()){
     			failedAlerts.add("No test data found at: "+testReportFileXml.getAbsolutePath());
     		}else{
-    			//FileUtils.copyFile(testReportFileXml, dataFile);
+    			FileUtils.copyFile(testReportFileXml, dataFile);
 	    		if(!dataFile.exists()){
 	    			failedAlerts.add("Expected copy of test data at: "+dataFile.getAbsolutePath());
 	    		}else{		        	
@@ -278,6 +282,14 @@ public class LoadTestBuilder extends Builder {
 		} catch (InterruptedException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
+		}finally{
+			if(dataFile != null){
+				try {
+					Files.deleteIfExists(dataFile.toPath());
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
 		}
     	
     	if (!failedAlerts.isEmpty())
@@ -300,22 +312,18 @@ public class LoadTestBuilder extends Builder {
     public boolean perform(AbstractBuild<?,?> build, Launcher launcher, BuildListener listener) throws IOException, InterruptedException {
     	System.out.println("LoadTestBuilder.perform");
     	
+    	postTestExecution(build, listener);
     	
     	// generate certain directory
-    	String targetDirectory = build.getModuleRoot().toString() + "/../xlt-iteration-number/" + Integer.toString(build.getNumber());
-       	listener.getLogger().println(targetDirectory); 	
-    	File directory = new File(targetDirectory);    	
-    	directory.mkdirs();    	
-    	String srcXlt = new String(build.getModuleRoot().toString() + "/../../../../xlt-4.3.3");
-    	listener.getLogger().println(srcXlt);
-    	
+    	File destDir = new File(build.getProject().getRootDir(),"xlt-iteration-number/"+ Integer.toString(build.getNumber()));
+       	listener.getLogger().println(destDir.getAbsolutePath());
+    	destDir.mkdirs();    	    	
     	
     	// copy XLT to certain directory
-    	File srcDir = new File(srcXlt); 
-    	File destDir = new File(targetDirectory);
+    	File srcDir = new File(Jenkins.getInstance().getRootDir(),"xlt-4.3.3");
+    	listener.getLogger().println(srcDir.getAbsolutePath());
     	
     	FileUtils.copyDirectory(srcDir, destDir, true);
-    	
  
         // perform XLT              
         List<String> commandLine = new ArrayList<String>();
@@ -346,7 +354,7 @@ public class LoadTestBuilder extends Builder {
 
         ProcessBuilder builder = new ProcessBuilder(commandLine);
     	
-    	File path = new File(targetDirectory + "/bin");
+    	File path = new File(destDir + "/bin");
     	
 		
 		// access files
@@ -400,17 +408,15 @@ public class LoadTestBuilder extends Builder {
     	
     	
     	// copy xlt-report to build directory
-    	File srcXltReport = new File(build.getModuleRoot().toString() + "/../xlt-iteration-number/" + Integer.toString(build.getNumber()) + "/reports/");
+    	File srcXltReport = new File(destDir, "reports");
     	File[] files = srcXltReport.listFiles();
     	File lastFile = files[files.length-1];
     	srcXltReport = lastFile;
-    	File destXltReport = new File(build.getModuleRoot().toString() + "/../builds/" + Integer.toString(build.getNumber()) + "/report");
+    	File destXltReport = new File(build.getRootDir(), "report");
     	
-    	FileUtils.copyDirectory(srcXltReport, destXltReport, true);
-    	
+    	FileUtils.copyDirectory(srcXltReport, destXltReport, true);    	
     	
     	postTestExecution(build, listener);    	
-
     	    	
     	return true;
     }
