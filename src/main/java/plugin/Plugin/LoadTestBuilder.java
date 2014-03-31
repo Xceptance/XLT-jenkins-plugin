@@ -357,11 +357,14 @@ public class LoadTestBuilder extends Builder {
     	
     	//TODO print error-console in jenkins
     	
-    	
-    	// waiting until XLT is finished
-    	process.waitFor();
-    	
     	//TODO if not null Failed
+    	// waiting until XLT is finished and set FAILED in case of unexpected termination
+    	if(process.waitFor()!=0)
+    	{
+    		build.setResult(Result.FAILURE);
+    	}
+    	
+    	
     	
     	listener.getLogger().println("XLT_FINISHED");
     	
