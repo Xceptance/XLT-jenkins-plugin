@@ -1,30 +1,17 @@
 package plugin.Plugin;
 
-import hudson.Launcher;
 import hudson.Extension;
-import hudson.model.AbstractBuild;
+import hudson.Launcher;
 import hudson.model.Action;
 import hudson.model.BuildListener;
-
 import hudson.model.Result;
-
+import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.plugins.plot.Plot;
 import hudson.plugins.plot.Series;
 import hudson.plugins.plot.XMLSeries;
-import hudson.tasks.Builder;
 import hudson.tasks.BuildStepDescriptor;
-
-import org.apache.commons.io.FileUtils;
-import org.json.JSONException;
-import org.json.JSONObject;
-import org.kohsuke.stapler.DataBoundConstructor;
-import org.w3c.dom.Document;
-
-import org.xml.sax.SAXException;
-
-import org.w3c.dom.Element;
-
+import hudson.tasks.Builder;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -40,16 +27,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 
-
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.xpath.XPath;
-import javax.xml.xpath.XPathExpression;
-import javax.xml.xpath.XPathExpressionException;
-import javax.xml.xpath.XPathFactory;
-
-
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.Source;
@@ -63,6 +40,15 @@ import javax.xml.transform.stream.StreamResult;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
+
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang.SystemUtils;
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.kohsuke.stapler.DataBoundConstructor;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.xml.sax.SAXException;
 
 
 
@@ -340,8 +326,29 @@ public class LoadTestBuilder extends Builder {
     	FileUtils.copyDirectory(srcDir, destDir, true);
     	
  
-    	// perform XLT      	    	
-    	ProcessBuilder builder = new ProcessBuilder("./mastercontroller.sh", "-auto", "-embedded", "-report", "-testPropertiesFile", testConfiguration, "-Dcom.xceptance.xlt.mastercontroller.testSuitePath=" + build.getModuleRoot().toString(), "-Dcom.xceptance.xlt.mastercontroller.agentcontrollers.ac1.url=" + machineHost);
+        // perform XLT              
+        List<String> commandLine = new ArrayList<String>();
+
+        if (SystemUtils.IS_OS_WINDOWS)
+        {
+            commandLine.add("cmd.exe");
+            commandLine.add("/c");
+            commandLine.add("mastercontroller.cmd");
+        }
+        else
+        {
+            commandLine.add("./mastercontroller.sh");
+        }
+        
+        commandLine.add("-auto");
+        commandLine.add("-embedded");
+        commandLine.add("-report");
+        commandLine.add("-testPropertiesFile");
+        commandLine.add(testConfiguration);
+        commandLine.add("-Dcom.xceptance.xlt.mastercontroller.testSuitePath=" + build.getModuleRoot().toString());
+        commandLine.add("-Dcom.xceptance.xlt.mastercontroller.agentcontrollers.ac1.url=" + machineHost);
+
+        ProcessBuilder builder = new ProcessBuilder(commandLine);
     	
     	File path = new File(targetDirectory + "/bin");
     	
