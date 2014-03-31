@@ -207,7 +207,7 @@ public class LoadTestBuilder extends Builder {
     			failedAlerts.add("No test data found at: "+testReportFileXml.getAbsolutePath());
     		}else{
     			//FileUtils.copyFile(testReportFileXml, dataFile);
-	    		if(!testReportFileXml.exists()){
+	    		if(!dataFile.exists()){
 	    			failedAlerts.add("Expected copy of test data at: "+dataFile.getAbsolutePath());
 	    		}else{		        	
 					Document dataXml =DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(dataFile);
