@@ -303,9 +303,7 @@ public class LoadTestBuilder extends Builder {
     	
     	FileUtils.copyDirectory(srcDir, destDir, true);
     	
-
     	// perform XLT      	    	
-
     	ProcessBuilder builder;
     	
     	// check if machineHost is localhost
@@ -327,7 +325,11 @@ public class LoadTestBuilder extends Builder {
 			child.setExecutable(true);
 		}
     	
-    	builder.directory(path);    	
+    	builder.directory(path);
+    	
+    	// print error-console in jenkins
+    	builder.redirectErrorStream(true);
+    	
     	Process process = builder.start();
     	
     	// print XLT console output in Jenkins   	
@@ -355,17 +357,14 @@ public class LoadTestBuilder extends Builder {
     		break;
     	}
     	
-    	//TODO print error-console in jenkins
     	
-    	//TODO if not null Failed
     	// waiting until XLT is finished and set FAILED in case of unexpected termination
     	if(process.waitFor()!=0)
     	{
     		build.setResult(Result.FAILURE);
     	}
     	
-    	
-    	
+    	    	
     	listener.getLogger().println("XLT_FINISHED");
     	
     	
