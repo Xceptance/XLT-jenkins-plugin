@@ -296,7 +296,7 @@ public class LoadTestBuilder extends Builder {
     	if (!failedAlerts.isEmpty())
     	{
     		listener.getLogger().println("set failes by alerts");
-    		build.setResult(Result.FAILURE);
+    		build.setResult(Result.UNSTABLE);
     		for (String eachAlert : failedAlerts) {
     			listener.getLogger().println(eachAlert);
     			System.out.println(eachAlert);
@@ -314,8 +314,8 @@ public class LoadTestBuilder extends Builder {
     public boolean perform(AbstractBuild<?,?> build, Launcher launcher, BuildListener listener) throws IOException, InterruptedException {
     	System.out.println("LoadTestBuilder.perform");
     	
-    	// generate certain directory
-    	File destDir = new File(build.getProject().getRootDir(),"xlt-iteration-number/"+ Integer.toString(build.getNumber()));
+    	// generate temporary directory for local xlt
+    	File destDir = new File(build.getProject().getRootDir(), Integer.toString(build.getNumber()));
        	listener.getLogger().println(destDir.getAbsolutePath());
     	destDir.mkdirs();    	    	
     	
@@ -339,10 +339,14 @@ public class LoadTestBuilder extends Builder {
             commandLine.add("./mastercontroller.sh");
         }
      
-        // check if machineHost is localhost
-        if(machineHost.contains("localhost"))
+        // if no specific machineHost set -embedded
+        if(machineHost.isEmpty())
         {
         	commandLine.add("-embedded");
+        }
+        else
+        {
+        	commandLine.add("-Dcom.xceptance.xlt.mastercontroller.agentcontrollers.ac1.url=" + machineHost);
         }
         
         commandLine.add("-auto");
@@ -350,7 +354,7 @@ public class LoadTestBuilder extends Builder {
         commandLine.add("-testPropertiesFile");
         commandLine.add(testProperties);
         commandLine.add("-Dcom.xceptance.xlt.mastercontroller.testSuitePath=" + build.getModuleRoot().toString());
-        commandLine.add("-Dcom.xceptance.xlt.mastercontroller.agentcontrollers.ac1.url=" + machineHost);
+        
 
         ProcessBuilder builder = new ProcessBuilder(commandLine);
     	
@@ -417,7 +421,10 @@ public class LoadTestBuilder extends Builder {
     	
     	FileUtils.copyDirectory(srcXltReport, destXltReport, true);    	
     	
-    	postTestExecution(build, listener);    	
+    	postTestExecution(build, listener);
+    	    	
+    	// delete temporary directory with local xlt
+    	FileUtils.deleteDirectory(destDir);
     	    	
     	return true;
     }
