@@ -9,30 +9,33 @@
 	xmlns:local="local">
     
     <tr>
-    	<td>
-    	
-    	</td>
-		<td>
-        	<div>
-        		<a href="xltResult/report/index.html">XLT Report</a>
-			</div>
-        </td>
+	    <td>
+	    	<img src="${resURL}/plugin/Plugin/logo.png" width="48"/>
+	    </td>
+	    <td>
+	    	<table>
+				<tr>
+					<td>
+			        	<div>
+			        		<a href="xltResult/report/index.html">XLT Report</a>
+						</div>
+			        </td>
+			    </tr>
+			    <tr>
+					<td>
+						<j:if test="${it.getFailedAlerts().isEmpty() == false}">
+							<div>
+				        		<h3>Failed conditions</h3>
+				        		<ul>
+				        			<j:forEach var="eachAlert" items="${it.getFailedAlerts()}">
+				        				<li>${eachAlert}</li>
+				        			</j:forEach> 
+				        		</ul>
+							</div>
+						</j:if>
+			    	</td>
+			    </tr>
+	    	</table>
+	    </td>
     </tr>
-    <j:if test="${it.getFailedAlerts().isEmpty() == false}">
-	    <tr>
-	    	<td>
-	    	
-	    	</td>
-			<td>
-				<div>
-	        		<h3>Failed conditions</h3>
-	        		<ul>
-	        			<j:forEach var="eachAlert" items="${it.getFailedAlerts()}">
-	        				<li>${eachAlert}</li>
-	        			</j:forEach> 
-	        		</ul>
-				</div>
-	    	</td>
-	    </tr>
-    </j:if>    
 </j:jelly>
