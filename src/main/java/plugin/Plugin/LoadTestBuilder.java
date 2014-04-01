@@ -439,8 +439,7 @@ public class LoadTestBuilder extends Builder {
     	File[] filesReport = srcXltReport.listFiles();
     	File lastFileReport = filesReport[filesReport.length-1];
     	srcXltReport = lastFileReport;
-    	File destXltReport = new File(build.getRootDir(), "report");
-    	
+    	File destXltReport = new File(build.getRootDir(), "report");    	
     	FileUtils.copyDirectory(srcXltReport, destXltReport, true); 
     	
     	// copy xlt-result to build directory
@@ -449,8 +448,12 @@ public class LoadTestBuilder extends Builder {
     	File lastFileResult = filesResult[filesResult.length-1];
     	srcXltReport = lastFileResult;
     	File destXltResult = new File(build.getArtifactsDir(), "result");
-    	
     	FileUtils.copyDirectory(srcXltResult, destXltResult, true);
+
+    	// copy xlt-logs to build directory
+    	File srcXltLog = new File(destDir, "log");
+    	File destXltLog = new File(build.getArtifactsDir(), "log");    	
+    	FileUtils.copyDirectory(srcXltLog, destXltLog, true);
     	
     	postTestExecution(build, listener);
     	    	
