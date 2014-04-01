@@ -39,19 +39,16 @@
 	"plots":{
 		"summary":{
 			"title":"Requests",
-			"enabled":"yes",
 			"buildCount":"10"
 		},
 		
 		"requestErrors":{
 			"title":"Request Errors",
-			"enabled":"yes",
 			"buildCount":"10"
 		},
 		
 		"homepage":{
 			"title":"Homepage",
-			"enabled":"yes",
 			"buildCount":"10"		
 		}	
 	}	

@@ -19,6 +19,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -69,25 +70,25 @@ public class LoadTestBuilder extends Builder {
     
     private final String machineHost;
     
+    private String xltConfig;    
     
     private JSONObject config = new JSONObject();
 
     private final Map<String,Plot> plots = new Hashtable<String, Plot>();
     
     public enum CONFIG_CRITERIA_PARAMETER { xPath, plotID, condition, name};
-    public enum CONFIG_PLOT_PARAMETER { enabled, buildCount, title};    
+    public enum CONFIG_PLOT_PARAMETER { buildCount, title};    
     public enum CONFIG_SECTIONS_PARAMETER { criterias, plots};
     
     private XLTChartAction chartAction;
    
     @DataBoundConstructor
-    public LoadTestBuilder(List <String> qualitiesToPush, String testProperties, String machineHost) 
-    {
-            	
+    public LoadTestBuilder(List <String> qualitiesToPush, String testProperties, String machineHost, String xltConfig) 
+    {      	
     	this.qualityList = qualitiesToPush;
         this.testProperties = testProperties;
         this.machineHost = machineHost;
-    	    
+        this.xltConfig = xltConfig;
     }
 
     public List<String> getQualityList() {
@@ -100,16 +101,28 @@ public class LoadTestBuilder extends Builder {
     
     public String getMachineHost() {
         return machineHost;
-    }
+    }    
     
-    
-    
+    public String getXltConfig(){
+    	return xltConfig;
+    }        
     
     public List<Plot> getPlots(){
     	return new ArrayList<Plot>(plots.values());
     }
     
     private Plot getPlot(String configName){
+		try {
+			String plotID = getCriteriaConfigValue(configName, CONFIG_CRITERIA_PARAMETER.plotID);
+			return plots.get(plotID);
+		} catch (JSONException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}    	
+		return null;
+    }
+    
+    private Plot createPlot(String configName){
 		try {
 			String plotID = getCriteriaConfigValue(configName, CONFIG_CRITERIA_PARAMETER.plotID);
 			if(!plots.containsKey(plotID)){
@@ -120,18 +133,12 @@ public class LoadTestBuilder extends Builder {
 				plot.series = new ArrayList<Series>();
 				plots.put(plotID, plot);
 			}
-			if("yes".equals(getPlotConfigValue(configName, CONFIG_PLOT_PARAMETER.enabled))){
-				return plots.get(plotID);
-			}
+			return plots.get(plotID);
 		} catch (JSONException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}    	
 		return null;
-    }
-    
-    private void createPlot(String configName){
-    	getPlot(configName);
     }
     
     @Override
@@ -140,42 +147,29 @@ public class LoadTestBuilder extends Builder {
     	
     	ArrayList<Action> actions = new ArrayList<Action>();
     	
-    	updateConfig(project);
+    	updateConfig();
+    	plots.clear();
     	List<String> names = getConfigNames();
     	for (String name : names) {
     		createPlot(name);
     	}
-    	chartAction = new XLTChartAction(project, getPlots());
+    	if(!names.isEmpty()){
+    		chartAction = new XLTChartAction(project, getPlots());
+    		actions.add(chartAction);
+    	}
     	
-    	actions.add(chartAction);
     	return actions;
     }
     
-    private void updateConfig(AbstractProject<?, ?> project){
+    private void updateConfig(){
     	System.out.println("LoadTestBuilder.updateConfig");
     	
-		 File configFile = new File(project.getRootDir(),"xltConfig.json");
-		 if(configFile.exists() && configFile.isFile()){
-			 try {
-				 String content = "";
-				 Scanner scanner = new Scanner(configFile);
-				 scanner.useDelimiter("\\Z");
-				 while(scanner.hasNext()){
-					 content += scanner.next();
-				 }
-				 scanner.close();
-				 config = new JSONObject(content);
-			} catch (FileNotFoundException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (JSONException e) { 
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		 }else{
-			 //TODO
-			 System.out.println("no config file found at: "+configFile.getAbsolutePath());
-		 }
+		 try {
+			config = new JSONObject(xltConfig);
+		} catch (JSONException e) {
+			//TODO 
+			e.printStackTrace();
+		}
     }
     
     public String getCriteriaConfigValue(String configName, CONFIG_CRITERIA_PARAMETER parameter) throws JSONException{
@@ -185,17 +179,20 @@ public class LoadTestBuilder extends Builder {
     public String getPlotConfigValue(String configName, CONFIG_PLOT_PARAMETER parameter) throws JSONException{
     	String plotConfigName = getCriteriaConfigValue(configName, CONFIG_CRITERIA_PARAMETER.plotID);
     	return config.getJSONObject(CONFIG_SECTIONS_PARAMETER.plots.name()).getJSONObject(plotConfigName).getString(parameter.name());
-    }
-    
+    }    
     
     public List<String> getConfigNames(){
+    	if(config == null){
+    		return new ArrayList<String>();
+    	}
+    	
     	JSONObject criteriaSection = config.optJSONObject(CONFIG_SECTIONS_PARAMETER.criterias.name());
     	String[] names = null;
     	if(criteriaSection != null){
     		names = JSONObject.getNames(criteriaSection);
     	}
     	if(names == null || names.length == 0)
-    		return new ArrayList<String>();
+    		return new ArrayList<String>();    	
     	return Arrays.asList(names);
     }
 
@@ -206,7 +203,6 @@ public class LoadTestBuilder extends Builder {
     	XltRecorderAction printReportAction = new XltRecorderAction(build);
     	build.getActions().add(printReportAction);
 
-    	updateConfig(build.getProject());
     	File dataFile = null;
     	try{
 			// copy testreport.xml to workspace
@@ -444,6 +440,25 @@ public class LoadTestBuilder extends Builder {
         public DescriptorImpl() {
             load();
         }
+        
+        public File getXltConfigFile() throws URISyntaxException{
+				return new File(new File(Jenkins.getInstance().getPlugin("Plugin").getWrapper().baseResourceURL.toURI()), "xltConfig.json");				
+        }
+        
+        public String getDefaultXltConfig(){
+        	try {
+				return new String(Files.readAllBytes(getXltConfigFile().toPath()));
+			} catch (URISyntaxException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}        	
+        	return "No default config file found.";
+        }
+        
+        
 
 //        /**
 //         * Performs on-the-fly validation of the form field 'name'.
