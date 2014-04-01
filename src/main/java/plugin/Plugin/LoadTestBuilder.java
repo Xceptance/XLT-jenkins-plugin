@@ -300,7 +300,7 @@ public class LoadTestBuilder extends Builder {
     	if (!failedAlerts.isEmpty())
     	{
     		listener.getLogger().println("set failes by alerts");
-    		build.setResult(Result.FAILURE);
+    		build.setResult(Result.UNSTABLE);
     		for (String eachAlert : failedAlerts) {
     			listener.getLogger().println(eachAlert);
     			System.out.println(eachAlert);
