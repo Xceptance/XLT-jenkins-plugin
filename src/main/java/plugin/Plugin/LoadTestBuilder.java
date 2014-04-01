@@ -343,10 +343,14 @@ public class LoadTestBuilder extends Builder {
             commandLine.add("./mastercontroller.sh");
         }
      
-        // check if machineHost is localhost
-        if(machineHost.contains("localhost"))
+        // if no specific machineHost set -embedded
+        if(machineHost.isEmpty())
         {
         	commandLine.add("-embedded");
+        }
+        else
+        {
+        	commandLine.add("-Dcom.xceptance.xlt.mastercontroller.agentcontrollers.ac1.url=" + machineHost);
         }
         
         commandLine.add("-auto");
@@ -354,7 +358,7 @@ public class LoadTestBuilder extends Builder {
         commandLine.add("-testPropertiesFile");
         commandLine.add(testProperties);
         commandLine.add("-Dcom.xceptance.xlt.mastercontroller.testSuitePath=" + build.getModuleRoot().toString());
-        commandLine.add("-Dcom.xceptance.xlt.mastercontroller.agentcontrollers.ac1.url=" + machineHost);
+        
 
         ProcessBuilder builder = new ProcessBuilder(commandLine);
     	
