@@ -219,10 +219,7 @@ public class LoadTestBuilder extends Builder {
 
     
     private void postTestExecution(AbstractBuild<?,?> build, BuildListener listener){
-    	List<String> failedAlerts = new ArrayList<String>();
-    	
-    	XltRecorderAction printReportAction = new XltRecorderAction(build);
-    	build.getActions().add(printReportAction);
+    	List<String> failedAlerts = new ArrayList<String>();    	
 
     	File dataFile = null;
     	try{
@@ -246,11 +243,12 @@ public class LoadTestBuilder extends Builder {
 							
 							System.out.println(name+" : "+conditionPath+" : "+xPath);					
 
-							String value =  XPathFactory.newInstance().newXPath().evaluate(conditionPath, dataXml);
+							String result =  XPathFactory.newInstance().newXPath().evaluate(conditionPath, dataXml);
 							// validate value and collect failed validations then set the build state
-							if (value != null && value.isEmpty())
+							if (result != null && result.isEmpty())
 							{
-								failedAlerts.add("Condition failed: "+name + " : " + xPath);
+								String value = XPathFactory.newInstance().newXPath().evaluate(xPath, dataXml);;
+								failedAlerts.add("Condition \""+name+"\" failed. \n\t Value: \""+value+"\" Condition: \""+condition + "\" Path: \"" + xPath);
 							}
 							
 							Element node = (Element)XPathFactory.newInstance().newXPath().evaluate(xPath, dataXml, XPathConstants.NODE);
@@ -322,7 +320,10 @@ public class LoadTestBuilder extends Builder {
     			listener.getLogger().println(eachAlert);
     			System.out.println(eachAlert);
     		}
-    	}    	
+    	}
+    	
+    	XltRecorderAction printReportAction = new XltRecorderAction(build, failedAlerts);
+    	build.getActions().add(printReportAction);
     }
     
     @Override

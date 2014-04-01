@@ -9,11 +9,29 @@
 	xmlns:local="local">
     
     <tr>
-        <td>
+    	<td>
+    	
+    	</td>
+		<td>
         	<div>
         		<a href="xltResult/report/index.html">XLT Report</a>
-        	</div>
+			</div>
         </td>
+    </tr>
+    <tr>
+    	<td>
+    	
+    	</td>
+		<td>
+			<div>
+        		<h3>Failed conditions</h3>
+        		<ul>
+        			<j:forEach var="eachAlert" items="${it.getFailedAlerts()}">
+        				<li>${eachAlert}</li>
+        			</j:forEach> 
+        		</ul>
+			</div>
+    	</td>
     </tr>
     
 </j:jelly>
