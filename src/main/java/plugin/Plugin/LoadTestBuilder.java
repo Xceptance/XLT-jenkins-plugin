@@ -414,12 +414,21 @@ public class LoadTestBuilder extends Builder {
     	
     	// copy xlt-report to build directory
     	File srcXltReport = new File(destDir, "reports");
-    	File[] files = srcXltReport.listFiles();
-    	File lastFile = files[files.length-1];
-    	srcXltReport = lastFile;
+    	File[] filesReport = srcXltReport.listFiles();
+    	File lastFileReport = filesReport[filesReport.length-1];
+    	srcXltReport = lastFileReport;
     	File destXltReport = new File(build.getRootDir(), "report");
     	
-    	FileUtils.copyDirectory(srcXltReport, destXltReport, true);    	
+    	FileUtils.copyDirectory(srcXltReport, destXltReport, true); 
+    	
+    	// copy xlt-result to build directory
+    	File srcXltResult = new File(destDir, "results");
+    	File[] filesResult = srcXltResult.listFiles();
+    	File lastFileResult = filesResult[filesResult.length-1];
+    	srcXltReport = lastFileResult;
+    	File destXltResult = new File(build.getArtifactsDir(), "result");
+    	
+    	FileUtils.copyDirectory(srcXltResult, destXltResult, true);
     	
     	postTestExecution(build, listener);
     	    	
