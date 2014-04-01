@@ -63,11 +63,12 @@ import org.xml.sax.SAXException;
  */
 public class LoadTestBuilder extends Builder {
 
-    private final String testConfiguration;
+    private final String testProperties;
        
     private List<String> qualityList;
     
     private final String machineHost;
+    
     
     private JSONObject config = new JSONObject();
 
@@ -80,14 +81,29 @@ public class LoadTestBuilder extends Builder {
     private XLTChartAction chartAction;
    
     @DataBoundConstructor
-    public LoadTestBuilder(List <String> qualitiesToPush, String testConfiguration, String machineHost) 
+    public LoadTestBuilder(List <String> qualitiesToPush, String testProperties, String machineHost) 
     {
-            	System.out.println("new LoadTestBuilder");
+            	
     	this.qualityList = qualitiesToPush;
-        this.testConfiguration = testConfiguration;
+        this.testProperties = testProperties;
         this.machineHost = machineHost;
     	    
     }
+
+    public List<String> getQualityList() {
+        return qualityList;
+    }
+
+    public String getTestProperties() {
+        return testProperties;
+    }
+    
+    public String getMachineHost() {
+        return machineHost;
+    }
+    
+    
+    
     
     public List<Plot> getPlots(){
     	return new ArrayList<Plot>(plots.values());
@@ -183,17 +199,6 @@ public class LoadTestBuilder extends Builder {
     	return Arrays.asList(names);
     }
 
-    public List<String> getQualityList() {
-        return qualityList;
-    }
-
-    public String getTestprofileSelected() {
-        return testConfiguration;
-    }
-    
-    public String getMachineHost() {
-        return machineHost;
-    }
     
     private void postTestExecution(AbstractBuild<?,?> build, BuildListener listener){
     	List<String> failedAlerts = new ArrayList<String>();
@@ -347,7 +352,7 @@ public class LoadTestBuilder extends Builder {
         commandLine.add("-auto");
         commandLine.add("-report");
         commandLine.add("-testPropertiesFile");
-        commandLine.add(testConfiguration);
+        commandLine.add(testProperties);
         commandLine.add("-Dcom.xceptance.xlt.mastercontroller.testSuitePath=" + build.getModuleRoot().toString());
         commandLine.add("-Dcom.xceptance.xlt.mastercontroller.agentcontrollers.ac1.url=" + machineHost);
 
