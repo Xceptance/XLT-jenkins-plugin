@@ -3,6 +3,7 @@ package plugin.Plugin;
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.util.List;
 
 import javax.servlet.ServletException;
 
@@ -16,9 +17,11 @@ public class XltRecorderAction implements Action {
 
 	public String reportPath;
 	public AbstractBuild<?, ?> build;
+	private List<String> failedAlerts;
 	
-	public XltRecorderAction(AbstractBuild<?, ?> build) {
+	public XltRecorderAction(AbstractBuild<?, ?> build, List<String> failedAlerts) {
 		this.build = build;
+		this.failedAlerts = failedAlerts;
 	}
 
 	public String getIconFileName() {
@@ -32,6 +35,10 @@ public class XltRecorderAction implements Action {
 	public String getUrlName() {
 		// TODO Auto-generated method stub
 		return "xltResult";
+	}
+	
+	public List<String> getFailedAlerts(){
+		return failedAlerts;
 	}
 	
 	public void doReport(StaplerRequest request, StaplerResponse response) throws MalformedURLException, ServletException, IOException{
