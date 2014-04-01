@@ -6,92 +6,26 @@
 	xmlns:t="/lib/hudson" 
 	xmlns:f="/lib/form">
 	
-<<<<<<< HEAD
+
 	<f:section title="Load Test Configuration"> 
+	  	
 	  	<f:entry title="Test Configuration" field="testProperties">
 	    	<f:textbox />
 	  	</f:entry>
 	  	
 	  	<f:entry title="Test quality" field="parsers">
 			<f:textarea field="xltConfig" default="${descriptor.getDefaultXltConfig()}"/>
-	
-<!--	
-=======
-
-
-  <f:section title="Load Test Configuration"> 
-  
-  
-  
-  <f:entry title="Test Configuration" field="testProperties">
-    	<f:textbox />
-  
-  </f:entry>
-  
-  
-<!--     
-  <f:entry title="Test quality" field="parsers">
-  
->>>>>>> branch 'master' of ssh://git@gitlab.xceptance.de:3772/m.aleithe/xlt-jenkins-plugin.git
-	<f:repeatable field="qualitiesToPush"
-                    add="Add"> 
-        <table width="100%">
-          <br/>
-          <f:entry field="name"
-                   title="Name">
-            <f:textbox />
-          </f:entry>
-          <f:entry field="xpath"
-                   title="XPATH">
-            <f:textbox />
-          </f:entry>         
-          <f:entry field="thresholdSuccess"
-                   title="threshold SUCCESS">
-            <f:textbox />
-          </f:entry>
-          <f:entry field="thresholdFailed"
-                   title="threshold FAILED">
-            <f:textbox />
-          </f:entry>
-        </table>
-        <div align="right">
-          <input type="button" value="Delete" class="repeatable-delete" style="margin-left: 1em;" />
-        </div>
-      </f:repeatable>
--->     
 		</f:entry>
-	</f:section> 
+	
+	</f:section> 	
 
-<<<<<<< HEAD
+
+
 	<f:section title="Hardware Configuration">
     	<f:entry title="host-url" field="machineHost">
     		<f:textbox />  
   		</f:entry>
   	</f:section>
-  	
-=======
-
-  </f:entry>
--->
-
-  
-  
-  </f:section>
- 
   
 
-
-  <f:section title="Hardware Configuration"> 
-  
-    <f:entry title="host-url" field="machineHost">
-    	<f:textbox />
-  
-  </f:entry>
-  
-  </f:section>
-    
-
-
-
->>>>>>> branch 'master' of ssh://git@gitlab.xceptance.de:3772/m.aleithe/xlt-jenkins-plugin.git
 </j:jelly>
