@@ -28,11 +28,17 @@
   	
   	
   	<f:section title="Alert Configuration"> 
+		<f:entry title="Plot Width">
+    		<f:textbox field="plotWidth" default="${descriptor.getDefaultPlotWidth()}"/>
+  		</f:entry>  	
+  		
+  		<f:entry title="Plot Height">
+			<f:textbox field="plotHeight" default="${descriptor.getDefaultPlotHeight()}"/>  
+  		</f:entry>
 	  	
 	  	<f:entry title="Test quality" field="parsers">
 			<f:textarea field="xltConfig" default="${descriptor.getDefaultXltConfig()}"/>
 		</f:entry>
-	
 	</f:section> 
   
 

@@ -77,6 +77,10 @@ public class LoadTestBuilder extends Builder {
 
     private final Map<String,Plot> plots = new Hashtable<String, Plot>();
     
+	private int plotWidth;
+	
+	private int plotHeight ;
+    
     public enum CONFIG_CRITERIA_PARAMETER { xPath, plotID, condition, name};
     public enum CONFIG_PLOT_PARAMETER { buildCount, title, enabled};    
     public enum CONFIG_SECTIONS_PARAMETER { criterias, plots};
@@ -84,12 +88,14 @@ public class LoadTestBuilder extends Builder {
     private XLTChartAction chartAction;
    
     @DataBoundConstructor
-    public LoadTestBuilder(List <String> qualitiesToPush, String testProperties, String machineHost, String xltConfig) 
+    public LoadTestBuilder(List <String> qualitiesToPush, String testProperties, String machineHost, String xltConfig, int plotWidth, int plotHeight) 
     {      	
     	this.qualityList = qualitiesToPush;
         this.testProperties = testProperties;
         this.machineHost = machineHost;
-        this.xltConfig = xltConfig;
+        this.xltConfig = xltConfig;        
+        this.plotWidth = plotWidth;
+        this.plotHeight = plotHeight;
     }
 
     public List<String> getQualityList() {
@@ -107,6 +113,14 @@ public class LoadTestBuilder extends Builder {
     public String getXltConfig(){
     	return xltConfig;
     }        
+    
+    public int getPlotWidth() {
+		return plotWidth;
+	}
+    
+    public int getPlotHeight() {
+		return plotHeight;
+	}
     
     public List<Plot> getEnabledPlots(){
     	ArrayList<Plot> enabledPlots = new ArrayList<Plot>();
@@ -175,7 +189,7 @@ public class LoadTestBuilder extends Builder {
     		createPlot(name);
     	}
     	if(!names.isEmpty()){
-    		chartAction = new XLTChartAction(project, getEnabledPlots());
+    		chartAction = new XLTChartAction(project, getEnabledPlots(), plotWidth, plotHeight);
     		actions.add(chartAction);
     	}
     	
@@ -499,7 +513,13 @@ public class LoadTestBuilder extends Builder {
         	return "No default config file found.";
         }
         
+        public int getDefaultPlotWidth(){
+        	return 400;
+        }
         
+        public int getDefaultPlotHeight(){
+        	return 250;
+        }
 
 //        /**
 //         * Performs on-the-fly validation of the form field 'name'.
