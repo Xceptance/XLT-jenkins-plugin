@@ -18,20 +18,21 @@
 			</div>
         </td>
     </tr>
-    <tr>
-    	<td>
-    	
-    	</td>
-		<td>
-			<div>
-        		<h3>Failed conditions</h3>
-        		<ul>
-        			<j:forEach var="eachAlert" items="${it.getFailedAlerts()}">
-        				<li>${eachAlert}</li>
-        			</j:forEach> 
-        		</ul>
-			</div>
-    	</td>
-    </tr>
-    
+    <j:if test="${it.getFailedAlerts().isEmpty() == false}">
+	    <tr>
+	    	<td>
+	    	
+	    	</td>
+			<td>
+				<div>
+	        		<h3>Failed conditions</h3>
+	        		<ul>
+	        			<j:forEach var="eachAlert" items="${it.getFailedAlerts()}">
+	        				<li>${eachAlert}</li>
+	        			</j:forEach> 
+	        		</ul>
+				</div>
+	    	</td>
+	    </tr>
+    </j:if>    
 </j:jelly>
