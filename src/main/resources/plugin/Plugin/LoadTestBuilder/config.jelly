@@ -12,20 +12,28 @@
 	  	<f:entry title="Test Configuration" field="testProperties">
 	    	<f:textbox />
 	  	</f:entry>
-	  	
-	  	<f:entry title="Test quality" field="parsers">
-			<f:textarea field="xltConfig" default="${descriptor.getDefaultXltConfig()}"/>
-		</f:entry>
 	
 	</f:section> 	
 
 
 
 	<f:section title="Hardware Configuration">
+    	
     	<f:entry title="host-url" field="machineHost">
     		<f:textbox />  
   		</f:entry>
+  	
   	</f:section>
+  	
+  	
+  	
+  	<f:section title="Alert Configuration"> 
+	  	
+	  	<f:entry title="Test quality" field="parsers">
+			<f:textarea field="xltConfig" default="${descriptor.getDefaultXltConfig()}"/>
+		</f:entry>
+	
+	</f:section> 
   
 
 </j:jelly>
