@@ -1,65 +1,7 @@
 <html>
 	<body>
-		<p>Create a file with the name <b>xltConfig.json</b> at the project location. Edit the file and then save the project.
-		<pre>
-		{	
-			"criterias":{
-				"requestsMax":{
-					"xPath":"/testreport/summary/requests/max",
-					"condition":"[number() < 10000]",
-					"plotID":"summary",
-					"name":"max < 10s"	
-				},	
-						
-				"requestsMean":{
-					"xPath":"/testreport/summary/requests/mean",
-					"condition":"",
-					"plotID":"summary",
-					"name":"mean"	
-				},	
-				
-				"requestErrors":{
-					"xPath":"/testreport/summary/requests/errors",
-					"condition":"[number() = 0]",
-					"plotID":"requestErrors",
-					"name":"count"	
-				},
-				
-				"homepageMax":{
-					"xPath":"/testreport/actions/action[./name[text() = 'Homepage']]/max",
-					"condition":"[number() < 5000]",
-					"plotID":"homepage",
-					"name":"max < 1s"	
-				},
-				
-				"homepageMean":{
-					"xPath":"/testreport/actions/action[./name[text() = 'Homepage']]/mean",
-					"condition":"",
-					"plotID":"homepage",
-					"name":"mean"						
-				}
-			},
-			
-			"plots":{
-				"summary":{
-					"title":"Requests",
-					"enabled":"yes",
-					"buildCount":"10"
-				},
-				
-				"requestErrors":{
-					"title":"Request Errors",
-					"enabled":"yes",
-					"buildCount":"10"
-				},
-				
-				"homepage":{
-					"title":"Homepage",
-					"enabled":"yes",
-					"buildCount":"10"		
-				}	
-			}	
-		}
-		</pre>
+		<p>
+			Some help here...
+		</p>
 	</body>
 </html>

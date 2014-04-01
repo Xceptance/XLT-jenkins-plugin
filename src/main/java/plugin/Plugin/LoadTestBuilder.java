@@ -27,6 +27,7 @@ import java.util.Collection;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Scanner;
 
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -77,7 +78,7 @@ public class LoadTestBuilder extends Builder {
     private final Map<String,Plot> plots = new Hashtable<String, Plot>();
     
     public enum CONFIG_CRITERIA_PARAMETER { xPath, plotID, condition, name};
-    public enum CONFIG_PLOT_PARAMETER { buildCount, title};    
+    public enum CONFIG_PLOT_PARAMETER { buildCount, title, enabled};    
     public enum CONFIG_SECTIONS_PARAMETER { criterias, plots};
     
     private XLTChartAction chartAction;
@@ -107,9 +108,29 @@ public class LoadTestBuilder extends Builder {
     	return xltConfig;
     }        
     
-    public List<Plot> getPlots(){
+    public List<Plot> getEnabledPlots(){
+    	ArrayList<Plot> enabledPlots = new ArrayList<Plot>();
+    	for (Entry<String, Plot> eachEntry : plots.entrySet()) {
+			String plotID = eachEntry.getKey();
+			String enabled = null;
+			try {
+				enabled = config.getJSONObject(CONFIG_SECTIONS_PARAMETER.plots.name()).getJSONObject(plotID).getString(CONFIG_PLOT_PARAMETER.enabled.name());
+			} catch (JSONException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
+			if("yes".equals(enabled)){
+				enabledPlots.add(eachEntry.getValue());
+			}
+		}
+    	return enabledPlots;
+    }
+    
+    private List<Plot> getPlots(){
     	return new ArrayList<Plot>(plots.values());
     }
+ 
     
     private Plot getPlot(String configName){
 		try {
@@ -154,7 +175,7 @@ public class LoadTestBuilder extends Builder {
     		createPlot(name);
     	}
     	if(!names.isEmpty()){
-    		chartAction = new XLTChartAction(project, getPlots());
+    		chartAction = new XLTChartAction(project, getEnabledPlots());
     		actions.add(chartAction);
     	}
     	
