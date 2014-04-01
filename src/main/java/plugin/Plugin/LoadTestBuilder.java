@@ -318,8 +318,8 @@ public class LoadTestBuilder extends Builder {
     public boolean perform(AbstractBuild<?,?> build, Launcher launcher, BuildListener listener) throws IOException, InterruptedException {
     	System.out.println("LoadTestBuilder.perform");
     	
-    	// generate certain directory
-    	File destDir = new File(build.getProject().getRootDir(),"xlt-iteration-number/"+ Integer.toString(build.getNumber()));
+    	// generate temporary directory for local xlt
+    	File destDir = new File(build.getProject().getRootDir(), Integer.toString(build.getNumber()));
        	listener.getLogger().println(destDir.getAbsolutePath());
     	destDir.mkdirs();    	    	
     	
@@ -425,7 +425,10 @@ public class LoadTestBuilder extends Builder {
     	
     	FileUtils.copyDirectory(srcXltReport, destXltReport, true);    	
     	
-    	postTestExecution(build, listener);    	
+    	postTestExecution(build, listener);
+    	    	
+    	// delete temporary directory with local xlt
+    	FileUtils.deleteDirectory(destDir);
     	    	
     	return true;
     }

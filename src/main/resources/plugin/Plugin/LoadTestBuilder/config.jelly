@@ -18,7 +18,7 @@
   </f:entry>
   
   
-     
+<!--     
   <f:entry title="Test quality" field="parsers">
   
 	<f:repeatable field="qualitiesToPush"
@@ -27,22 +27,18 @@
           <br/>
           <f:entry field="name"
                    title="Name">
-              <!--  <f:textbox checkUrl="'descriptorByName/GitPublisher/checkTagName?value='+escape(this.value)" />  -->
             <f:textbox />
           </f:entry>
           <f:entry field="xpath"
                    title="XPATH">
-              <!--  <f:textbox checkUrl="'descriptorByName/GitPublisher/checkTagName?value='+escape(this.value)" />  -->
             <f:textbox />
           </f:entry>         
           <f:entry field="thresholdSuccess"
                    title="threshold SUCCESS">
-              <!--  <f:textbox checkUrl="'descriptorByName/GitPublisher/checkTagName?value='+escape(this.value)" />  -->
             <f:textbox />
           </f:entry>
           <f:entry field="thresholdFailed"
                    title="threshold FAILED">
-              <!--  <f:textbox checkUrl="'descriptorByName/GitPublisher/checkTagName?value='+escape(this.value)" />  -->
             <f:textbox />
           </f:entry>
         </table>
@@ -53,6 +49,8 @@
 
 
   </f:entry>
+-->
+
   
   
   </f:section>
