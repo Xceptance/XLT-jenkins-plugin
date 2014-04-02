@@ -27,7 +27,15 @@
   	
   	
   	
-  	<f:section title="Alert Configuration"> 
+  	<f:section title="Alert Configuration">
+		<f:invisibleEntry >
+			<f:textbox field="builderID" value="${it.getBuilderID()}"/>
+		</f:invisibleEntry>
+    			
+		<f:entry title="Plot Title">
+    		<f:textbox field="plotTitle" default="${descriptor.getDefaultPlotTitle()}"/>
+  		</f:entry>  	
+  	 
 		<f:entry title="Plot Width">
     		<f:textbox field="plotWidth" default="${descriptor.getDefaultPlotWidth()}"/>
   		</f:entry>  	

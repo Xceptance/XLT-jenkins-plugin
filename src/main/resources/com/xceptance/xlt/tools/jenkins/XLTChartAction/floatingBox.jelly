@@ -2,13 +2,13 @@
 	<j:if test="${from.getPlots().isEmpty() == false}">
 		<div align="right">
 			<center>
-				<h2>${%XLT Summary}</h2>
+				<h2>${from.getTitle()}</h2>
 				<j:set var="width" value="${from.getPlotWidth()}"/>
 				<j:set var="height" value="${from.getPlotHeight()}"/>
 				
 				<j:forEach var="plot" items="${from.getPlots()}" varStatus="loopStat">
 					<p>
-						<img src="xltChart/getPlot?index=${loopStat.index}&amp;width=${width}&amp;height=${height}" lazymap="xltChart/getPlotMap?index=${loopStat.index}&amp;width=${width}&amp;height=${height}"/>
+						<img src="${from.getUrlName()}/getPlot?index=${loopStat.index}&amp;width=${width}&amp;height=${height}" lazymap="${from.getUrlName()}/getPlotMap?index=${loopStat.index}&amp;width=${width}&amp;height=${height}"/>
 					</p>
 				</j:forEach>
 			</center>

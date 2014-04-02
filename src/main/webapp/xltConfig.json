@@ -1,5 +1,5 @@
 {	
-	"criterias":{
+	"criteria":{
 		"requestsMax":{
 			"xPath":"/testreport/summary/requests/max",
 			"condition":"[number() < 10000]",

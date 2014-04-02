@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Scanner;
+import java.util.UUID;
 
 import javax.imageio.IIOException;
 import javax.servlet.ServletException;
@@ -84,15 +85,17 @@ public class LoadTestBuilder extends Builder {
 	private int plotWidth;
 	
 	private int plotHeight ;
+	
+	private String plotTitle;
+	
+	private String builderID;
     
     public enum CONFIG_CRITERIA_PARAMETER { xPath, plotID, condition, name};
     public enum CONFIG_PLOT_PARAMETER { buildCount, title, enabled};    
-    public enum CONFIG_SECTIONS_PARAMETER { criterias, plots};
-    
-    private XLTChartAction chartAction;
-   
+    public enum CONFIG_SECTIONS_PARAMETER { criteria, plots};
+       
     @DataBoundConstructor
-    public LoadTestBuilder(List <String> qualitiesToPush, String testProperties, String machineHost, String xltConfig, int plotWidth, int plotHeight) 
+    public LoadTestBuilder(List <String> qualitiesToPush, String testProperties, String machineHost, String xltConfig, int plotWidth, int plotHeight, String plotTitle, String builderID) 
     {      	
     	this.qualityList = qualitiesToPush;
         this.testProperties = testProperties;
@@ -100,6 +103,14 @@ public class LoadTestBuilder extends Builder {
         this.xltConfig = xltConfig;        
         this.plotWidth = plotWidth;
         this.plotHeight = plotHeight;
+        if(plotTitle == null){
+        	plotTitle = getDescriptor().getDefaultPlotTitle(); 
+        }
+        this.plotTitle = plotTitle;
+        if(builderID == null){
+        	builderID = UUID.randomUUID().toString();
+        }   
+        this.builderID = builderID;
     }
 
     public List<String> getQualityList() {
@@ -124,6 +135,14 @@ public class LoadTestBuilder extends Builder {
     
     public int getPlotHeight() {
 		return plotHeight;
+	}
+    
+    public String getPlotTitle() {
+		return plotTitle;
+	}
+    
+    public String getBuilderID() {
+		return builderID;
 	}
     
     public List<Plot> getEnabledPlots(){
@@ -168,7 +187,7 @@ public class LoadTestBuilder extends Builder {
 				String plotCount = getPlotConfigValue(configName, CONFIG_PLOT_PARAMETER.buildCount);
 				String title = getPlotConfigValue(configName, CONFIG_PLOT_PARAMETER.title);
 				
-				Plot plot = new Plot(title,"","XLT",plotCount,"xltPlot"+plotID,"line",false);		
+				Plot plot = new Plot(title,"","XLT",plotCount,"xltPlot"+plotID+builderID,"line",false);		
 				plot.series = new ArrayList<Series>();
 				plots.put(plotID, plot);
 			}
@@ -183,7 +202,6 @@ public class LoadTestBuilder extends Builder {
     @Override
     public Collection<? extends Action> getProjectActions(AbstractProject<?, ?> project) {
     	System.out.println("LoadTestBuilder.getProjectActions");
-    	
     	ArrayList<Action> actions = new ArrayList<Action>();
     	
     	updateConfig();
@@ -193,8 +211,7 @@ public class LoadTestBuilder extends Builder {
     		createPlot(name);
     	}
     	if(!names.isEmpty()){
-    		chartAction = new XLTChartAction(project, getEnabledPlots(), plotWidth, plotHeight);
-    		actions.add(chartAction);
+    		actions.add(new XLTChartAction(project, getEnabledPlots(), plotWidth, plotHeight, plotTitle, builderID));
     	}
     	
     	return actions;
@@ -212,7 +229,7 @@ public class LoadTestBuilder extends Builder {
     }
     
     public String getCriteriaConfigValue(String configName, CONFIG_CRITERIA_PARAMETER parameter) throws JSONException{
-    	return config.getJSONObject(CONFIG_SECTIONS_PARAMETER.criterias.name()).getJSONObject(configName).getString(parameter.name());
+    	return config.getJSONObject(CONFIG_SECTIONS_PARAMETER.criteria.name()).getJSONObject(configName).getString(parameter.name());
     }
     
     public String getPlotConfigValue(String configName, CONFIG_PLOT_PARAMETER parameter) throws JSONException{
@@ -225,7 +242,7 @@ public class LoadTestBuilder extends Builder {
     		return new ArrayList<String>();
     	}
     	
-    	JSONObject criteriaSection = config.optJSONObject(CONFIG_SECTIONS_PARAMETER.criterias.name());
+    	JSONObject criteriaSection = config.optJSONObject(CONFIG_SECTIONS_PARAMETER.criteria.name());
     	String[] names = null;
     	if(criteriaSection != null){
     		names = JSONObject.getNames(criteriaSection);
@@ -524,6 +541,11 @@ public class LoadTestBuilder extends Builder {
         public int getDefaultPlotHeight(){
         	return 250;
         }
+        
+        public String getDefaultPlotTitle(){
+        	return "";
+        }
+
 
 //        /**
 //         * Performs on-the-fly validation of the form field 'name'.
