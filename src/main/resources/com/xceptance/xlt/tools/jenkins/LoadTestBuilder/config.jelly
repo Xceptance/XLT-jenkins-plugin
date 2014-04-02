@@ -10,7 +10,7 @@
 	<f:section title="Load Test Configuration"> 
 	  	
 	  	<f:entry title="Test Configuration" field="testProperties">
-	    	<f:textbox />
+	    	<f:textbox default="test.properties" />
 	  	</f:entry>
 	
 	</f:section> 	
