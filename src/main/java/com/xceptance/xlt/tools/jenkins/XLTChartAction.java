@@ -16,16 +16,20 @@ public class XLTChartAction implements Action{
 	private final PlotReport report;
 	private int plotWidth;
 	private int plotHeight;
+	private String title;
+	private String builderID;
 		
-	public XLTChartAction(AbstractProject<?, ?> project, List<Plot> plots, int plotWidth, int plotHeight) {		
+	public XLTChartAction(AbstractProject<?, ?> project, List<Plot> plots, int plotWidth, int plotHeight, String title, String builderID) {		
 		report = new PlotReport(project, "XLT", new ArrayList<Plot>());
 		report.getPlots().addAll(plots);
 		this.plotWidth = plotWidth;
 		this.plotHeight = plotHeight;
+		this.title = title;
+		this.builderID = builderID;
 	}
 
 	public String getDisplayName() {
-		return null; //no link to action page
+		return "Chart Action "+title; //no link to action page
 	}	
 	
 	public String getIconFileName() {
@@ -33,7 +37,11 @@ public class XLTChartAction implements Action{
 	}
 	
 	public String getUrlName() {	
-		return "xltChart";
+		return "xltChart"+builderID;
+	}
+	
+	public String getTitle() {
+		return title;
 	}
 	
 	// called from jelly files
@@ -47,7 +55,7 @@ public class XLTChartAction implements Action{
 	
 	public int getPlotHeight(){
 		return plotHeight;
-	}
+	}	
 		
 	// called from jelly files
 	public void doGetPlot(StaplerRequest req, StaplerResponse rsp) {		
