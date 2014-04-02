@@ -1,4 +1,4 @@
-package plugin.Plugin;
+package com.xceptance.xlt.tools.jenkins;
 
 import hudson.Extension;
 import hudson.Launcher;
@@ -497,7 +497,7 @@ public class LoadTestBuilder extends Builder {
         }
         
         public File getXltConfigFile() throws URISyntaxException{
-				return new File(new File(Jenkins.getInstance().getPlugin("Plugin").getWrapper().baseResourceURL.toURI()), "xltConfig.json");				
+				return new File(new File(Jenkins.getInstance().getPlugin("xlt-jenkins").getWrapper().baseResourceURL.toURI()), "xltConfig.json");				
         }
         
         public String getDefaultXltConfig(){

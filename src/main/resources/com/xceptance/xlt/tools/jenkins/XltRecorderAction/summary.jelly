@@ -10,7 +10,7 @@
     
     <tr>
 	    <td>
-	    	<img src="${resURL}/plugin/Plugin/logo.png" width="48"/>
+	    	<img src="${resURL}/plugin/xlt-jenkins/logo.png" width="48"/>
 	    </td>
 	    <td>
 	    	<table>

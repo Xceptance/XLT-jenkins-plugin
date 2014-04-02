@@ -1,4 +1,4 @@
-package plugin.Plugin;
+package com.xceptance.xlt.tools.jenkins;
 
 import java.util.ArrayList;
 import java.util.List;

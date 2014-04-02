@@ -1,4 +1,4 @@
-package plugin.Plugin;
+package com.xceptance.xlt.tools.jenkins;
 
 import java.io.File;
 import java.io.IOException;
