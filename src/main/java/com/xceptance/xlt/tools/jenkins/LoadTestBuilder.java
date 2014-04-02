@@ -12,6 +12,7 @@ import hudson.plugins.plot.Series;
 import hudson.plugins.plot.XMLSeries;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
+import hudson.util.FormValidation;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -30,6 +31,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Scanner;
 
+import javax.imageio.IIOException;
+import javax.servlet.ServletException;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.Source;
@@ -51,6 +54,7 @@ import org.apache.commons.lang.SystemUtils;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.QueryParameter;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.xml.sax.SAXException;
