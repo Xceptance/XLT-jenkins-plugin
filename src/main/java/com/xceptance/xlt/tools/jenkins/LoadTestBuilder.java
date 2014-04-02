@@ -83,7 +83,7 @@ public class LoadTestBuilder extends Builder {
     
     public enum CONFIG_CRITERIA_PARAMETER { xPath, plotID, condition, name};
     public enum CONFIG_PLOT_PARAMETER { buildCount, title, enabled};    
-    public enum CONFIG_SECTIONS_PARAMETER { criterias, plots};
+    public enum CONFIG_SECTIONS_PARAMETER { criteria, plots};
     
     private XLTChartAction chartAction;
    
@@ -208,7 +208,7 @@ public class LoadTestBuilder extends Builder {
     }
     
     public String getCriteriaConfigValue(String configName, CONFIG_CRITERIA_PARAMETER parameter) throws JSONException{
-    	return config.getJSONObject(CONFIG_SECTIONS_PARAMETER.criterias.name()).getJSONObject(configName).getString(parameter.name());
+    	return config.getJSONObject(CONFIG_SECTIONS_PARAMETER.criteria.name()).getJSONObject(configName).getString(parameter.name());
     }
     
     public String getPlotConfigValue(String configName, CONFIG_PLOT_PARAMETER parameter) throws JSONException{
@@ -221,7 +221,7 @@ public class LoadTestBuilder extends Builder {
     		return new ArrayList<String>();
     	}
     	
-    	JSONObject criteriaSection = config.optJSONObject(CONFIG_SECTIONS_PARAMETER.criterias.name());
+    	JSONObject criteriaSection = config.optJSONObject(CONFIG_SECTIONS_PARAMETER.criteria.name());
     	String[] names = null;
     	if(criteriaSection != null){
     		names = JSONObject.getNames(criteriaSection);
