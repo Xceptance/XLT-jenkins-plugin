@@ -98,6 +98,8 @@ public class LoadTestBuilder extends Builder {
 	private String plotTitle;
 	
 	private String builderID;
+
+	private boolean isPlotVertical;
     
     public enum CONFIG_CRITERIA_PARAMETER { id, xPath, condition, plotID , name };
     public enum CONFIG_PLOT_PARAMETER { id, title, buildCount, enabled };    
@@ -106,7 +108,7 @@ public class LoadTestBuilder extends Builder {
     @DataBoundConstructor
     public LoadTestBuilder(String testProperties, String machineHost, String xltConfig, int plotWidth, int plotHeight, String plotTitle, String builderID) 
     {      	
-    	if (testProperties==null){
+    	if (testProperties==null || testProperties.isEmpty()){
     		testPropertiesFileAvailable = false;
     	}
         this.testProperties = testProperties;
@@ -121,7 +123,8 @@ public class LoadTestBuilder extends Builder {
         if(builderID == null){
         	builderID = UUID.randomUUID().toString();
         }   
-        this.builderID = builderID;
+        this.builderID = builderID;        
+        this.isPlotVertical = isPlotVertical;
     }
 
 
@@ -151,6 +154,10 @@ public class LoadTestBuilder extends Builder {
     
     public String getBuilderID() {
 		return builderID;
+	}
+    
+    public boolean getIsPlotVertical() {
+		return isPlotVertical;
 	}
     
     public List<Plot> sortPlots(Map<String,Plot> unsortedPlots){
@@ -233,7 +240,7 @@ public class LoadTestBuilder extends Builder {
 	    		createPlot(name);
 	    	}
 	    	if(!ids.isEmpty()){
-	    		actions.add(new XLTChartAction(project, sortPlots(getEnabledPlots()), plotWidth, plotHeight, plotTitle, builderID));
+	    		actions.add(new XLTChartAction(project, sortPlots(getEnabledPlots()), plotWidth, plotHeight, plotTitle, builderID, isPlotVertical));
 	    	}
 		} catch (JSONException e) {
 			// TODO Auto-generated catch block
@@ -611,6 +618,10 @@ public class LoadTestBuilder extends Builder {
         
         public String getDefaultPlotTitle(){
         	return "";
+        }
+        
+        public boolean getDefaultIsPlotVertical(){
+        	return false;
         }
 
         
