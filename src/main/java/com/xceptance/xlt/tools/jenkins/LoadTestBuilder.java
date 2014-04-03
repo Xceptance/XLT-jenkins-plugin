@@ -552,6 +552,17 @@ public class LoadTestBuilder extends Builder {
 
         
         /**
+         * Performs on-the-fly validation of the form field 'testProperties'.
+         */
+        public FormValidation doCheckTestProperties(@QueryParameter String value)
+        		throws IOException, ServletException{
+        	//TODO warning if empty that test.properties is used
+        	//TODO validate syntax if <file>.properties        	
+        	
+        	return FormValidation.ok();
+        } 
+        
+        /**
          * Performs on-the-fly validation of the form field 'machineHost'.
          */
         public FormValidation doCheckMachineHost(@QueryParameter String value)
