@@ -348,6 +348,8 @@ public class LoadTestBuilder extends Builder {
 								{
 									String value = XPathFactory.newInstance().newXPath().evaluate(xPath, dataXml);;
 									failedAlerts.add("Condition \""+eachID+"\" failed. \n\t Value: \""+value+"\" Condition: \""+condition + "\" Path: \"" + xPath);
+								
+									listener.getLogger().println("Condition \""+eachID+"\" failed. \n\t Value: \""+value+"\" Condition: \""+condition + "\" Path: \"" + xPath);
 								}
 								
 								Element node = (Element)XPathFactory.newInstance().newXPath().evaluate(xPath, dataXml, XPathConstants.NODE);
