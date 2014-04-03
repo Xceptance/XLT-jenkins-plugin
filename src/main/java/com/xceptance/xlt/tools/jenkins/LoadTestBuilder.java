@@ -32,6 +32,7 @@ import java.util.Map.Entry;
 import java.util.Scanner;
 import java.util.UUID;
 
+import javax.annotation.RegEx;
 import javax.imageio.IIOException;
 import javax.servlet.ServletException;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -50,8 +51,11 @@ import javax.xml.xpath.XPathFactory;
 
 import jenkins.model.Jenkins;
 
+import org.apache.commons.digester.RegexMatcher;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.filefilter.RegexFileFilter;
 import org.apache.commons.lang.SystemUtils;
+import org.apache.tools.ant.util.regexp.RegexpUtil;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -66,7 +70,7 @@ import org.xml.sax.SAXException;
  * Readout the configuration of XLT in Jenkins, perform load testing and plot build results on project page.
  *
  * 
- * @author Michael Aleithe
+ * @author Michael Aleithe, Randolph Straub
  */
 public class LoadTestBuilder extends Builder {
 
@@ -546,23 +550,20 @@ public class LoadTestBuilder extends Builder {
         	return "";
         }
 
-
-//        /**
-//         * Performs on-the-fly validation of the form field 'name'.
-//         *
-//         * @param value
-//         *      This parameter receives the value that the user has typed.
-//         * @return
-//         *      Indicates the outcome of the validation. This is sent to the browser.
-//         */
-//        public FormValidation doCheckName(@QueryParameter String value)
-//                throws IOException, ServletException {
-//            if (value.length() == 0)
-//                return FormValidation.error("Please set a name");
-//            if (value.length() < 4)
-//                return FormValidation.warning("Isn't the name too short?");
-//            return FormValidation.ok();
-//        }
+        
+        /**
+         * Performs on-the-fly validation of the form field 'machineHost'.
+         */
+        public FormValidation doCheckMachineHost(@QueryParameter String value)
+        		throws IOException, ServletException{
+        	if (value.isEmpty())
+        		return FormValidation.ok("-embedded is enabled");
+        	//TODO validate if there is the right syntax. <protocol>://<hostname>:<port>        	
+        	//TODO validate port number
+        	//TODO validate protocol
+        	
+        	return FormValidation.ok();
+        }
 
         public boolean isApplicable(Class<? extends AbstractProject> aClass) {
             // Indicates that this builder can be used with all kinds of project types 
