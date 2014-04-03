@@ -537,7 +537,7 @@ public class LoadTestBuilder extends Builder {
     	{
     		build.setResult(Result.FAILURE);
     	}
-    	listener.getLogger().println(process.waitFor());
+    	listener.getLogger().println("mastercontroller return code: " + process.waitFor());
     	
     	    	
     	listener.getLogger().println("XLT_FINISHED");
