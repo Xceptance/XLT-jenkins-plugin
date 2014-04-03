@@ -1,58 +1,59 @@
-{	
-	"criteria":{
-		"requestsMax":{
-			"xPath":"/testreport/summary/requests/max",
-			"condition":"[number() < 10000]",
-			"plotID":"summary",
-			"name":"max < 10s"	
-		},	
-				
-		"requestsMean":{
-			"xPath":"/testreport/summary/requests/mean",
-			"condition":"",
-			"plotID":"summary",
-			"name":"mean"	
-		},	
-		
-		"requestErrors":{
-			"xPath":"/testreport/summary/requests/errors",
-			"condition":"[number() = 0]",
-			"plotID":"requestErrors",
-			"name":"count"	
-		},
-		
-		"homepageMax":{
-			"xPath":"/testreport/actions/action[./name[text() = 'Homepage']]/max",
-			"condition":"[number() < 1000]",
-			"plotID":"homepage",
-			"name":"max < 1s"	
-		},
-		
-		"homepageMean":{
-			"xPath":"/testreport/actions/action[./name[text() = 'Homepage']]/mean",
-			"condition":"",
-			"plotID":"homepage",
-			"name":"mean"						
-		}
-	},
-	
-	"plots":{
-		"summary":{
-			"title":"Requests",
-			"buildCount":"10",
-			"enabled":"yes"
-		},
-		
-		"requestErrors":{
-			"title":"Request Errors",
-			"buildCount":"10",
-			"enabled":"yes"
-		},
-		
-		"homepage":{
-			"title":"Homepage",
-			"buildCount":"10",
-			"enabled":"yes"		
-		}	
-	}	
+{
+    "criteria": [
+        {
+            "id": "requestsMax",
+            "xPath": "/testreport/summary/requests/max",
+            "condition": "[number() < 10000]",
+            "plotID": "summary",
+            "name": "max < 10s"
+        },
+        {
+            "id": "requestsMean",
+            "xPath": "/testreport/summary/requests/mean",
+            "condition": "",
+            "plotID": "summary",
+            "name": "mean"
+        },
+        {
+            "id": "requestErrors",
+            "xPath": "/testreport/summary/requests/errors",
+            "condition": "[number() = 0]",
+            "plotID": "requestErrors",
+            "name": "count"
+        },
+        {
+            "id": "homepageMax",
+            "xPath": "/testreport/actions/action[./name[text() = 'Homepage']]/max",
+            "condition": "[number() < 1000]",
+            "plotID": "homepage",
+            "name": "max < 1s"
+        },
+        {
+            "id": "homepageMean",
+            "xPath": "/testreport/actions/action[./name[text() = 'Homepage']]/mean",
+            "condition": "",
+            "plotID": "homepage",
+            "name": "mean"
+        }
+    ],
+    "plots": [
+		{
+            "id": "summary",
+            "title": "Requests",
+            "buildCount": "10",
+            "enabled": "yes"
+        },    
+        {
+            "id": "requestErrors",
+            "title": "Request Errors",
+            "buildCount": "10",
+            "enabled": "yes"
+        },
+        {
+            "id": "homepage",
+            "title": "Homepage",
+            "buildCount": "10",
+            "enabled": "yes"
+        }
+    ]
 }
