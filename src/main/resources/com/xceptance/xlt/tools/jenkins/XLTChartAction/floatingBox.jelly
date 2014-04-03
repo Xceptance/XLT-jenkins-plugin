@@ -12,8 +12,10 @@
 		<div align="right">					
 			<br/>
 			<div align="right">
-				<img src="${resURL}/plugin/xlt-jenkins/logo.png" height="16"/>
-				<b><a href="${from.getUrlName()}">${from.getTitle()}</a></b>
+				<a href="${from.getUrlName()}">
+					<img src="${resURL}/plugin/xlt-jenkins/logo.png" height="16"/>
+					<b>${from.getTitle()}</b>
+				</a>
 			</div>			
 			<div>
 				<j:forEach var="plot" items="${from.getPlots()}" varStatus="loopStat">
