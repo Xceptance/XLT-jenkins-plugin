@@ -104,9 +104,8 @@ public class LoadTestBuilder extends Builder {
     public enum CONFIG_SECTIONS_PARAMETER { criteria, plots };
        
     @DataBoundConstructor
-    public LoadTestBuilder(List <String> qualitiesToPush, String testProperties, String machineHost, String xltConfig, int plotWidth, int plotHeight, String plotTitle, String builderID) 
+    public LoadTestBuilder(String testProperties, String machineHost, String xltConfig, int plotWidth, int plotHeight, String plotTitle, String builderID) 
     {      	
-    	this.qualityList = qualitiesToPush;
         this.testProperties = testProperties;
         this.machineHost = machineHost;
         this.xltConfig = xltConfig;        
@@ -122,9 +121,6 @@ public class LoadTestBuilder extends Builder {
         this.builderID = builderID;
     }
 
-    public List<String> getQualityList() {
-        return qualityList;
-    }
 
     public String getTestProperties() {
         return testProperties;
