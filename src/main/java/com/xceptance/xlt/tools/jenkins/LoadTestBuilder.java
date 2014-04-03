@@ -556,8 +556,7 @@ public class LoadTestBuilder extends Builder {
          */
         public FormValidation doCheckTestProperties(@QueryParameter String value)
         		throws IOException, ServletException{
-        	//TODO warning if empty that test.properties is used
-        	//TODO validate syntax if <file>.properties        	
+        	//TODO warning if empty that test.properties is used        	
         	
         	return FormValidation.ok();
         } 
@@ -575,6 +574,18 @@ public class LoadTestBuilder extends Builder {
         	
         	return FormValidation.ok();
         }
+        
+        /**
+         * Performs on-the-fly validation of the form field 'parsers'.
+         */
+        public FormValidation doCheckParsers(@QueryParameter String value)
+        		throws IOException, ServletException{
+        	//TODO check if valid JSON-objects
+        	//TODO if empty use default values, that plugin not abort        	
+        	
+        	return FormValidation.ok();
+        } 
+    
 
         public boolean isApplicable(Class<? extends AbstractProject> aClass) {
             // Indicates that this builder can be used with all kinds of project types 
