@@ -80,8 +80,8 @@ import org.xml.sax.SAXException;
 public class LoadTestBuilder extends Builder {
 
     private final String testProperties;
-       
-    private List<String> qualityList;
+    
+    private boolean testPropertiesFileAvailable = true;
     
     private final String machineHost;
     
@@ -106,6 +106,9 @@ public class LoadTestBuilder extends Builder {
     @DataBoundConstructor
     public LoadTestBuilder(String testProperties, String machineHost, String xltConfig, int plotWidth, int plotHeight, String plotTitle, String builderID) 
     {      	
+    	if (testProperties==null){
+    		testPropertiesFileAvailable = false;
+    	}
         this.testProperties = testProperties;
         this.machineHost = machineHost;
         this.xltConfig = xltConfig;        
@@ -466,8 +469,14 @@ public class LoadTestBuilder extends Builder {
         
         commandLine.add("-auto");
         commandLine.add("-report");
-        commandLine.add("-testPropertiesFile");
-        commandLine.add(testProperties);
+        
+        if (testPropertiesFileAvailable==true)
+        {
+        	commandLine.add("-testPropertiesFile");
+            commandLine.add(testProperties);
+            	
+        }
+        
         commandLine.add("-Dcom.xceptance.xlt.mastercontroller.testSuitePath=" + build.getModuleRoot().toString());
         
 
