@@ -25,7 +25,9 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Hashtable;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -51,15 +53,18 @@ import javax.xml.xpath.XPathFactory;
 
 import jenkins.model.Jenkins;
 
+import org.apache.commons.collections.map.HashedMap;
 import org.apache.commons.digester.RegexMatcher;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.RegexFileFilter;
 import org.apache.commons.lang.SystemUtils;
 import org.apache.tools.ant.util.regexp.RegexpUtil;
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
+import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.xml.sax.SAXException;
@@ -94,9 +99,9 @@ public class LoadTestBuilder extends Builder {
 	
 	private String builderID;
     
-    public enum CONFIG_CRITERIA_PARAMETER { xPath, plotID, condition, name};
-    public enum CONFIG_PLOT_PARAMETER { buildCount, title, enabled};    
-    public enum CONFIG_SECTIONS_PARAMETER { criteria, plots};
+    public enum CONFIG_CRITERIA_PARAMETER { id, xPath, condition, plotID , name };
+    public enum CONFIG_PLOT_PARAMETER { id, title, buildCount, enabled };    
+    public enum CONFIG_SECTIONS_PARAMETER { criteria, plots };
        
     @DataBoundConstructor
     public LoadTestBuilder(List <String> qualitiesToPush, String testProperties, String machineHost, String xltConfig, int plotWidth, int plotHeight, String plotTitle, String builderID) 
@@ -149,29 +154,41 @@ public class LoadTestBuilder extends Builder {
 		return builderID;
 	}
     
-    public List<Plot> getEnabledPlots(){
-    	ArrayList<Plot> enabledPlots = new ArrayList<Plot>();
+    public List<Plot> sortPlots(Map<String,Plot> unsortedPlots){
+    	List<Plot> sortedPlots = new ArrayList<Plot>();
+		try {
+			for (String eachID :  getPlotConfigIDs()) {
+				sortedPlots.add(unsortedPlots.get(eachID));
+			}			
+		} catch (JSONException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+    	return sortedPlots;
+    }
+    
+    public Map<String,Plot> getEnabledPlots(){
+    	Map<String,Plot> enabledPlots = new HashMap<String,Plot>();
     	for (Entry<String, Plot> eachEntry : plots.entrySet()) {
 			String plotID = eachEntry.getKey();
 			String enabled = null;
 			try {
-				enabled = config.getJSONObject(CONFIG_SECTIONS_PARAMETER.plots.name()).getJSONObject(plotID).getString(CONFIG_PLOT_PARAMETER.enabled.name());
+				enabled = getPlotConfigValue(plotID, CONFIG_PLOT_PARAMETER.enabled) ;
 			} catch (JSONException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 			
 			if("yes".equals(enabled)){
-				enabledPlots.add(eachEntry.getValue());
+				enabledPlots.put(plotID,eachEntry.getValue());
 			}
 		}
     	return enabledPlots;
     }
     
-    private List<Plot> getPlots(){
-    	return new ArrayList<Plot>(plots.values());
-    }
- 
+    private Map<String,Plot> getPlots(){
+    	return plots;
+    }    
     
     private Plot getPlot(String configName){
 		try {
@@ -188,8 +205,8 @@ public class LoadTestBuilder extends Builder {
 		try {
 			String plotID = getCriteriaConfigValue(configName, CONFIG_CRITERIA_PARAMETER.plotID);
 			if(!plots.containsKey(plotID)){
-				String plotCount = getPlotConfigValue(configName, CONFIG_PLOT_PARAMETER.buildCount);
-				String title = getPlotConfigValue(configName, CONFIG_PLOT_PARAMETER.title);
+				String plotCount = getPlotConfigValue(plotID, CONFIG_PLOT_PARAMETER.buildCount);
+				String title = getPlotConfigValue(plotID, CONFIG_PLOT_PARAMETER.title);
 				
 				Plot plot = new Plot(title,"","XLT",plotCount,"xltPlot"+plotID+builderID,"line",false);		
 				plot.series = new ArrayList<Series>();
@@ -208,15 +225,21 @@ public class LoadTestBuilder extends Builder {
     	System.out.println("LoadTestBuilder.getProjectActions");
     	ArrayList<Action> actions = new ArrayList<Action>();
     	
-    	updateConfig();
-    	plots.clear();
-    	List<String> names = getConfigNames();
-    	for (String name : names) {
-    		createPlot(name);
-    	}
-    	if(!names.isEmpty()){
-    		actions.add(new XLTChartAction(project, getEnabledPlots(), plotWidth, plotHeight, plotTitle, builderID));
-    	}
+		try {
+			updateConfig();
+	    	plots.clear();
+			
+			List<String> ids = getCriteriaConfigIDs();
+	    	for (String name : ids) {
+	    		createPlot(name);
+	    	}
+	    	if(!ids.isEmpty()){
+	    		actions.add(new XLTChartAction(project, sortPlots(getEnabledPlots()), plotWidth, plotHeight, plotTitle, builderID));
+	    	}
+		} catch (JSONException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
     	
     	return actions;
     }
@@ -233,27 +256,56 @@ public class LoadTestBuilder extends Builder {
     }
     
     public String getCriteriaConfigValue(String configName, CONFIG_CRITERIA_PARAMETER parameter) throws JSONException{
-    	return config.getJSONObject(CONFIG_SECTIONS_PARAMETER.criteria.name()).getJSONObject(configName).getString(parameter.name());
+    	JSONArray criteriaArray = config.getJSONArray(CONFIG_SECTIONS_PARAMETER.criteria.name());
+    	for (int i = 0; i < criteriaArray.length(); i++) {
+    		JSONObject each = criteriaArray.getJSONObject(i);
+    		if(configName.equals(each.getString(CONFIG_CRITERIA_PARAMETER.id.name()))){
+    			return each.getString(parameter.name());
+    		}
+		}
+    	return null;
     }
     
-    public String getPlotConfigValue(String configName, CONFIG_PLOT_PARAMETER parameter) throws JSONException{
-    	String plotConfigName = getCriteriaConfigValue(configName, CONFIG_CRITERIA_PARAMETER.plotID);
-    	return config.getJSONObject(CONFIG_SECTIONS_PARAMETER.plots.name()).getJSONObject(plotConfigName).getString(parameter.name());
+    public String getCriteriaPlotConfigValue(String configName, CONFIG_PLOT_PARAMETER parameter) throws JSONException{
+    	String plotID = getCriteriaConfigValue(configName, CONFIG_CRITERIA_PARAMETER.plotID);
+    	return getPlotConfigValue(plotID, parameter);
     }    
     
-    public List<String> getConfigNames(){
-    	if(config == null){
-    		return new ArrayList<String>();
-    	}
+    public String getPlotConfigValue(String plotID, CONFIG_PLOT_PARAMETER parameter) throws JSONException{
+    	JSONArray plotsArray = config.getJSONArray(CONFIG_SECTIONS_PARAMETER.plots.name());
+    	for (int i = 0; i < plotsArray.length(); i++) {
+			JSONObject each = plotsArray.getJSONObject(i);
+			if(plotID.equals(each.getString(CONFIG_PLOT_PARAMETER.id.name()))){
+				return each.getString(parameter.name());
+			}
+		}
+    	return null;
+    }
+    
+    public ArrayList<String> getCriteriaConfigIDs() throws JSONException{    	
+    	ArrayList<String> criteriaList = new ArrayList<String>();
     	
-    	JSONObject criteriaSection = config.optJSONObject(CONFIG_SECTIONS_PARAMETER.criteria.name());
-    	String[] names = null;
-    	if(criteriaSection != null){
-    		names = JSONObject.getNames(criteriaSection);
+    	if(config != null){
+	    	JSONArray criteriaSection = config.getJSONArray(CONFIG_SECTIONS_PARAMETER.criteria.name());
+	    	for (int i = 0; i < criteriaSection.length(); i++) {
+	    		JSONObject each = criteriaSection.getJSONObject(i);
+	    		criteriaList.add(each.getString(CONFIG_CRITERIA_PARAMETER.id.name()));
+			}
     	}
-    	if(names == null || names.length == 0)
-    		return new ArrayList<String>();    	
-    	return Arrays.asList(names);
+    	return criteriaList;
+    }
+    
+    public ArrayList<String> getPlotConfigIDs() throws JSONException{
+    	ArrayList<String> plotIDs = new ArrayList<String>();
+    	
+    	if(config != null){
+	    	JSONArray plotSection = config.getJSONArray(CONFIG_SECTIONS_PARAMETER.plots.name());
+	    	for (int i = 0; i < plotSection.length(); i++) {
+	    		JSONObject each = plotSection.getJSONObject(i);
+	    		plotIDs.add(each.getString(CONFIG_PLOT_PARAMETER.id.name()));
+			}
+    	}
+    	return plotIDs;
     }
 
     
@@ -273,39 +325,45 @@ public class LoadTestBuilder extends Builder {
 	    			failedAlerts.add("Expected copy of test data at: "+dataFile.getAbsolutePath());
 	    		}else{		        	
 					Document dataXml =DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(dataFile);
-			    	List<String> names = getConfigNames();
-			    	for (String name : names) {
-						try {
-							String xPath = getCriteriaConfigValue(name, CONFIG_CRITERIA_PARAMETER.xPath);
-							String condition = getCriteriaConfigValue(name, CONFIG_CRITERIA_PARAMETER.condition);							
-							String conditionPath = xPath+condition;
-							
-							System.out.println(name+" : "+conditionPath+" : "+xPath);					
+					
+			    	try {
+						List<String> criteriaIDs = getCriteriaConfigIDs();
+						for (String eachID : criteriaIDs) {
+							try {
+								String xPath = getCriteriaConfigValue(eachID, CONFIG_CRITERIA_PARAMETER.xPath);
+								String condition = getCriteriaConfigValue(eachID, CONFIG_CRITERIA_PARAMETER.condition);							
+								String conditionPath = xPath+condition;
+								
+								System.out.println(eachID+" : "+conditionPath+" : "+xPath);					
 
-							String result =  XPathFactory.newInstance().newXPath().evaluate(conditionPath, dataXml);
-							// validate value and collect failed validations then set the build state
-							if (result != null && result.isEmpty())
-							{
-								String value = XPathFactory.newInstance().newXPath().evaluate(xPath, dataXml);;
-								failedAlerts.add("Condition \""+name+"\" failed. \n\t Value: \""+value+"\" Condition: \""+condition + "\" Path: \"" + xPath);
+								String result =  XPathFactory.newInstance().newXPath().evaluate(conditionPath, dataXml);
+								// validate value and collect failed validations then set the build state
+								if (result != null && result.isEmpty())
+								{
+									String value = XPathFactory.newInstance().newXPath().evaluate(xPath, dataXml);;
+									failedAlerts.add("Condition \""+eachID+"\" failed. \n\t Value: \""+value+"\" Condition: \""+condition + "\" Path: \"" + xPath);
+								}
+								
+								Element node = (Element)XPathFactory.newInstance().newXPath().evaluate(xPath, dataXml, XPathConstants.NODE);
+								String label = getCriteriaConfigValue(eachID, CONFIG_CRITERIA_PARAMETER.name);
+								node.setAttribute("name", label);							
+								
+								Plot plot = getPlot(eachID);
+								if(plot != null){
+									plot.series.add(new XMLSeries("testreport.xml", xPath, "NODE", ""));
+								}
+							} catch (JSONException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							} catch (XPathExpressionException e) {
+								e.printStackTrace();
+								String message = eachID + " xPath evaluation failed \n" +e.getMessage();					
+								failedAlerts.add(message);
 							}
-							
-							Element node = (Element)XPathFactory.newInstance().newXPath().evaluate(xPath, dataXml, XPathConstants.NODE);
-							String label = getCriteriaConfigValue(name, CONFIG_CRITERIA_PARAMETER.name);
-							node.setAttribute("name", label);							
-							
-							Plot plot = getPlot(name);
-							if(plot != null){
-								plot.series.add(new XMLSeries("testreport.xml", xPath, "NODE", ""));
-							}
-						} catch (JSONException e) {
-							// TODO Auto-generated catch block
-							e.printStackTrace();
-						} catch (XPathExpressionException e) {
-							e.printStackTrace();
-							String message = name + " xPath evaluation failed \n" +e.getMessage();					
-							failedAlerts.add(message);
 						}
+					}catch (JSONException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
 					}
 			    	
 					Transformer transformer = TransformerFactory.newInstance().newTransformer();
@@ -315,7 +373,7 @@ public class LoadTestBuilder extends Builder {
 					transformer.transform(input, output);
 					
 			    	//must happen after everything is in place... this will start the data collection for the plot
-			    	for (Plot eachPlot : getPlots()) {
+			    	for (Plot eachPlot : plots.values()) {
 				        eachPlot.addBuild(build, System.out);
 					}
 	    		}
