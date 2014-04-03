@@ -1,17 +1,20 @@
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
 	<j:if test="${from.getPlots().isEmpty() == false}">
-		<div align="right">
-			<center>
-				<h2>${from.getTitle()}</h2>
-				<j:set var="width" value="${from.getPlotWidth()}"/>
-				<j:set var="height" value="${from.getPlotHeight()}"/>
-				
-				<j:forEach var="plot" items="${from.getPlots()}" varStatus="loopStat">
-					<p>
-						<img src="${from.getUrlName()}/getPlot?index=${loopStat.index}&amp;width=${width}&amp;height=${height}" lazymap="${from.getUrlName()}/getPlotMap?index=${loopStat.index}&amp;width=${width}&amp;height=${height}"/>
-					</p>
-				</j:forEach>
-			</center>
+	
+		<j:set var="width" value="${from.getPlotWidth()}"/>
+		<j:set var="height" value="${from.getPlotHeight()}"/>
+			
+		<div align="right">					
+			<br/>
+			<div align="right">
+				<img src="${resURL}/plugin/xlt-jenkins/logo.png" height="16"/>
+				<b><a href="${from.getUrlName()}">${from.getTitle()}</a></b>
+			</div>			
+			<br/>
+			
+			<j:forEach var="plot" items="${from.getPlots()}" varStatus="loopStat">
+				<img  src="${from.getUrlName()}/getPlot?index=${loopStat.index}&amp;width=${width}&amp;height=${height}" lazymap="${from.getUrlName()}/getPlotMap?index=${loopStat.index}&amp;width=${width}&amp;height=${height}"/>
+			</j:forEach>
 		</div>
 	</j:if>	
 </j:jelly>
