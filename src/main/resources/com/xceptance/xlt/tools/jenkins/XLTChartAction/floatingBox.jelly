@@ -3,6 +3,11 @@
 	
 		<j:set var="width" value="${from.getPlotWidth()}"/>
 		<j:set var="height" value="${from.getPlotHeight()}"/>
+		
+		<j:set var="imgDivStyle" value="display:inline;"/>
+		<j:if test="${from.isPlotVertical()}">
+			<j:set var="imgDivStyle" value=""/>
+		</j:if>		
 			
 		<div align="right">					
 			<br/>
@@ -10,11 +15,13 @@
 				<img src="${resURL}/plugin/xlt-jenkins/logo.png" height="16"/>
 				<b><a href="${from.getUrlName()}">${from.getTitle()}</a></b>
 			</div>			
-			<br/>
-			
-			<j:forEach var="plot" items="${from.getPlots()}" varStatus="loopStat">
-				<img  src="${from.getUrlName()}/getPlot?index=${loopStat.index}&amp;width=${width}&amp;height=${height}" lazymap="${from.getUrlName()}/getPlotMap?index=${loopStat.index}&amp;width=${width}&amp;height=${height}"/>
-			</j:forEach>
+			<div>
+				<j:forEach var="plot" items="${from.getPlots()}" varStatus="loopStat">
+					<div style="${imgDivStyle}">
+						<img style="margin:0px 0px 5px 0px;border-top-style:solid;border-top-width:1px;border-top-color:grey" src="${from.getUrlName()}/getPlot?index=${loopStat.index}&amp;width=${width}&amp;height=${height}" lazymap="${from.getUrlName()}/getPlotMap?index=${loopStat.index}&amp;width=${width}&amp;height=${height}"/>
+					</div>
+				</j:forEach>
+			</div>
 		</div>
 	</j:if>	
 </j:jelly>

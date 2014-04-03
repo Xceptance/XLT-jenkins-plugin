@@ -18,14 +18,16 @@ public class XLTChartAction implements Action{
 	private int plotHeight;
 	private String title;
 	private String builderID;
+	private boolean isPlotVertical;
 		
-	public XLTChartAction(AbstractProject<?, ?> project, List<Plot> plots, int plotWidth, int plotHeight, String title, String builderID) {		
+	public XLTChartAction(AbstractProject<?, ?> project, List<Plot> plots, int plotWidth, int plotHeight, String title, String builderID, boolean isPlotVertical) {		
 		report = new PlotReport(project, "XLT", new ArrayList<Plot>());
 		report.getPlots().addAll(plots);
 		this.plotWidth = plotWidth;
 		this.plotHeight = plotHeight;
 		this.title = title;
 		this.builderID = builderID;
+		this.isPlotVertical = isPlotVertical;
 	}
 
 	public String getDisplayName() {
@@ -56,6 +58,10 @@ public class XLTChartAction implements Action{
 	public int getPlotHeight(){
 		return plotHeight;
 	}	
+	
+	public boolean isPlotVertical(){
+		return isPlotVertical;
+	}
 		
 	// called from jelly files
 	public void doGetPlot(StaplerRequest req, StaplerResponse rsp) {		
