@@ -19,8 +19,10 @@ public class XLTChartAction implements Action{
 	private String title;
 	private String builderID;
 	private boolean isPlotVertical;
+	private AbstractProject<?, ?> project;
 		
-	public XLTChartAction(AbstractProject<?, ?> project, List<Plot> plots, int plotWidth, int plotHeight, String title, String builderID, boolean isPlotVertical) {		
+	public XLTChartAction(AbstractProject<?, ?> project, List<Plot> plots, int plotWidth, int plotHeight, String title, String builderID, boolean isPlotVertical) {
+		this.project = project;
 		report = new PlotReport(project, "XLT", new ArrayList<Plot>());
 		report.getPlots().addAll(plots);
 		this.plotWidth = plotWidth;
@@ -40,6 +42,10 @@ public class XLTChartAction implements Action{
 	
 	public String getUrlName() {	
 		return "xltChart"+builderID;
+	}
+	
+	public AbstractProject<?, ?> getProject() {
+		return project;
 	}
 	
 	public String getTitle() {

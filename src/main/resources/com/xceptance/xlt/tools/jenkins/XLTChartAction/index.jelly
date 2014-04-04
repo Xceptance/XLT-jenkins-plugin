@@ -1,15 +1,22 @@
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
 
-<j:set var="width" value="750"/>
-<j:set var="height" value="500"/>
-
-<div align="center">
-	<h1>${it.getTitle()}</h1>
-
-	<j:forEach var="plot" items="${it.plots}" varStatus="loopStat">
-		<div>
-			<img src="getPlot?index=${loopStat.index}&amp;width=${width}&amp;height=${height}" lazymap="getPlotMap?index=${loopStat.index}&amp;width=${width}&amp;height=${height}"/>
-		</div>
-	</j:forEach>
-</div>
+	<l:layout>
+		<st:include page="sidepanel.jelly" it="${it.getProject()}"/>
+		
+		
+		<j:set var="width" value="750"/>
+		<j:set var="height" value="500"/>
+		
+		<l:main-panel>
+			<div align="center">
+				<h1>${it.getTitle()}</h1>
+			
+				<j:forEach var="plot" items="${it.plots}" varStatus="loopStat">
+					<div>
+						<img src="getPlot?index=${loopStat.index}&amp;width=${width}&amp;height=${height}" lazymap="getPlotMap?index=${loopStat.index}&amp;width=${width}&amp;height=${height}"/>
+					</div>
+				</j:forEach>
+			</div>
+		</l:main-panel>
+	</l:layout>
 </j:jelly>
