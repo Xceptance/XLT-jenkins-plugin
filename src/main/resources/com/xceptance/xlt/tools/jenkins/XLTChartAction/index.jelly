@@ -2,21 +2,26 @@
 
 	<l:layout>
 		<st:include page="sidepanel.jelly" it="${it.getProject()}"/>
-		
-		
+				
 		<j:set var="width" value="750"/>
 		<j:set var="height" value="500"/>
 		
 		<l:main-panel>
-			<div align="center">
+			<center>
 				<h1>${it.getTitle()}</h1>
-			
-				<j:forEach var="plot" items="${it.plots}" varStatus="loopStat">
-					<div>
-						<img src="getPlot?index=${loopStat.index}&amp;width=${width}&amp;height=${height}" lazymap="getPlotMap?index=${loopStat.index}&amp;width=${width}&amp;height=${height}"/>
-					</div>
-				</j:forEach>
-			</div>
+				<!--
+				Width:<f:textbox style="width:100px" field="plotWidth" default="${it.getDefaultWidth()}"/>
+				Height:<f:textbox style="width:100px" field="plotHeight" default="${it.getDefaultHeight()}"/>
+				-->
+				<hr/>			
+				<div>
+					<j:forEach var="plot" items="${it.plots}" varStatus="loopStat">
+						<div>
+							<img src="getPlot?index=${loopStat.index}&amp;width=${width}&amp;height=${height}" lazymap="getPlotMap?index=${loopStat.index}&amp;width=${width}&amp;height=${height}"/>
+						</div>
+					</j:forEach>
+				</div>
+			</center>
 		</l:main-panel>
 	</l:layout>
 </j:jelly>
