@@ -360,6 +360,8 @@ public class LoadTestBuilder extends Builder {
 										listener.getLogger().println("Add plot value. Criteria \""+eachID+"\"\t Value: \""+number+ "\"\t Path: \"" + xPath);
 										plot.series.add(new XMLSeries("testreport.xml", xPath, "NODE", ""));
 									}	
+								}else{
+									listener.getLogger().println("Plot value is not a number. Criteria \""+eachID+"\"\t Value: \""+number+ "\"\t Path: \"" + xPath);
 								}
 
 								if(!condition.isEmpty()){
