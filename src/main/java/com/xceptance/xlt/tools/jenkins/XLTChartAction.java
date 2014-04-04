@@ -33,7 +33,7 @@ public class XLTChartAction implements Action{
 	}
 
 	public String getDisplayName() {
-		return "Chart Action "+title; //no link to action page
+		return "XLT Chart - "+title; //no link to action page
 	}	
 	
 	public String getIconFileName() {
