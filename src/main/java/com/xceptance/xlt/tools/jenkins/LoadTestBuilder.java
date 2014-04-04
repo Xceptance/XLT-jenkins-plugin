@@ -96,7 +96,7 @@ public class LoadTestBuilder extends Builder {
     public enum CONFIG_SECTIONS_PARAMETER { criteria, plots };
        
     @DataBoundConstructor
-    public LoadTestBuilder(String testProperties, String machineHost, String xltConfig, int plotWidth, int plotHeight, String plotTitle, String builderID) 
+    public LoadTestBuilder(String testProperties, String machineHost, String xltConfig, int plotWidth, int plotHeight, String plotTitle, String builderID, boolean isPlotVertical) 
     {      	
     	if (testProperties==null || testProperties.isEmpty()){
     		testPropertiesFileAvailable = false;
