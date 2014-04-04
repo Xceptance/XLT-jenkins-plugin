@@ -20,7 +20,7 @@
 	<f:section title="Hardware Configuration">
     	
     	<f:entry title="host-url" field="machineHost">
-    		<f:textbox />  
+    		<f:textbox  />  
   		</f:entry>
   	
   	</f:section>
@@ -31,24 +31,24 @@
 		<f:invisibleEntry >
 			<f:textbox field="builderID" value="${it.getBuilderID()}"/>
 		</f:invisibleEntry>
-    			
-		<f:advanced>    			
-			<f:entry title="Plot Title">
-	    		<f:textbox field="plotTitle" default="${descriptor.getDefaultPlotTitle()}"/>
-	  		</f:entry>  
-	  	 
-			<f:entry title="Plot Width">
-	    		<f:textbox field="plotWidth" default="${descriptor.getDefaultPlotWidth()}"/>
-	  		</f:entry>  	
-	  		
-	  		<f:entry title="Plot Height">
-				<f:textbox field="plotHeight" default="${descriptor.getDefaultPlotHeight()}"/>  
-	  		</f:entry>
-	  		
-			<f:entry title="Stay Vertical">			
-	    		<f:checkbox field="isPlotVertical" default="${descriptor.getDefaultIsPlotVertical()}"/>
-	  		</f:entry>
-		</f:advanced>	
+    	
+    	<f:advanced>		
+		<f:entry title="Plot Title">
+    		<f:textbox field="plotTitle" default="${descriptor.getDefaultPlotTitle()}"/>
+  		</f:entry>  	
+  	 
+		<f:entry title="Plot Width">
+    		<f:textbox field="plotWidth" default="${descriptor.getDefaultPlotWidth()}"/>
+  		</f:entry>  	
+  		
+  		<f:entry title="Plot Height">
+			<f:textbox field="plotHeight" default="${descriptor.getDefaultPlotHeight()}"/>  
+  		</f:entry>
+  		
+  		<f:entry title="Stay Vertical">   
+       		<f:checkbox field="isPlotVertical" default="${descriptor.getDefaultIsPlotVertical()}"/>
+     	</f:entry>
+  		</f:advanced>
 	  	
 	  	<f:entry title="Test quality" field="parsers">
 			<f:textarea field="xltConfig" default="${descriptor.getDefaultXltConfig()}"/>

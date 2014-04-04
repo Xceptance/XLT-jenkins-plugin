@@ -70,8 +70,8 @@ import org.xml.sax.SAXException;
 public class LoadTestBuilder extends Builder {
 
     private final String testProperties;
-       
-    private List<String> qualityList;
+    
+    private boolean testPropertiesFileAvailable = true;
     
     private final String machineHost;
     
@@ -96,9 +96,11 @@ public class LoadTestBuilder extends Builder {
     public enum CONFIG_SECTIONS_PARAMETER { criteria, plots };
        
     @DataBoundConstructor
-    public LoadTestBuilder(List <String> qualitiesToPush, String testProperties, String machineHost, String xltConfig, int plotWidth, int plotHeight, String plotTitle, String builderID, boolean isPlotVertical) 
+    public LoadTestBuilder(String testProperties, String machineHost, String xltConfig, int plotWidth, int plotHeight, String plotTitle, String builderID) 
     {      	
-    	this.qualityList = qualitiesToPush;
+    	if (testProperties==null || testProperties.isEmpty()){
+    		testPropertiesFileAvailable = false;
+    	}
         this.testProperties = testProperties;
         this.machineHost = machineHost;
         this.xltConfig = xltConfig;        
@@ -115,9 +117,6 @@ public class LoadTestBuilder extends Builder {
         this.isPlotVertical = isPlotVertical;
     }
 
-    public List<String> getQualityList() {
-        return qualityList;
-    }
 
     public String getTestProperties() {
         return testProperties;
@@ -510,8 +509,14 @@ public class LoadTestBuilder extends Builder {
         
         commandLine.add("-auto");
         commandLine.add("-report");
-        commandLine.add("-testPropertiesFile");
-        commandLine.add(testProperties);
+        
+        if (testPropertiesFileAvailable==true)
+        {
+        	commandLine.add("-testPropertiesFile");
+            commandLine.add(testProperties);
+            	
+        }
+        
         commandLine.add("-Dcom.xceptance.xlt.mastercontroller.testSuitePath=" + build.getModuleRoot().toString());
         
 
@@ -565,7 +570,7 @@ public class LoadTestBuilder extends Builder {
     	{
     		build.setResult(Result.FAILURE);
     	}
-    	listener.getLogger().println(process.waitFor());
+    	listener.getLogger().println("mastercontroller return code: " + process.waitFor());
     	
     	    	
     	listener.getLogger().println("XLT_FINISHED");
