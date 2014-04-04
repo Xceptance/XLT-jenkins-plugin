@@ -103,26 +103,32 @@ public class LoadTestBuilder extends Builder {
     	}
         this.testProperties = testProperties;
         this.machineHost = machineHost;
-        this.xltConfig = xltConfig;    
+        
+        if(xltConfig == null || xltConfig.trim().replace(" ", "").isEmpty()){
+        	xltConfig = getDescriptor().getDefaultXltConfig();
+        }
+        this.xltConfig = xltConfig;   
+        
         if(plotWidth == 0){
         	plotWidth = getDescriptor().getDefaultPlotWidth();
         }
         this.plotWidth = plotWidth;
+        
         if(plotHeight == 0){
         	plotHeight = getDescriptor().getDefaultPlotHeight();
         }
         this.plotHeight = plotHeight;
+        
         if(plotTitle == null){
         	plotTitle = getDescriptor().getDefaultPlotTitle(); 
         }
-        if(plotTitle == null){
-        	plotTitle = getDescriptor().getDefaultPlotTitle();
-        }
         this.plotTitle = plotTitle;
+        
         if(builderID == null){
         	builderID = UUID.randomUUID().toString();
         }   
-        this.builderID = builderID;        
+        this.builderID = builderID;
+        
         this.isPlotVertical = isPlotVertical;
     }
 
@@ -698,11 +704,39 @@ public class LoadTestBuilder extends Builder {
         /**
          * Performs on-the-fly validation of the form field 'parsers'.
          */
-        public FormValidation doCheckParsers(@QueryParameter String value)
-        		throws IOException, ServletException{
-        	//TODO check if valid JSON-objects
-        	//TODO if empty use default values, that plugin not abort        	
+        public FormValidation doCheckXltConfig(@QueryParameter String value){
+        	if(value == null || value.trim().replace(" ", "").isEmpty())
+        		return FormValidation.ok("The default config will be used for empty field.");
+
+        	JSONObject validConfig;
+        	try {
+				validConfig = new JSONObject(value);
+			} catch (JSONException e) {
+				return FormValidation.error(e, "Invalid JSON");
+			}        	
         	
+        	try{
+	        	JSONArray validCriterias = validConfig.getJSONArray(CONFIG_SECTIONS_PARAMETER.criteria.name());
+				for (int i = 0; i < validCriterias.length(); i++) {
+					JSONObject eachCriteria = validCriterias.optJSONObject(i);
+					eachCriteria.getString(CONFIG_CRITERIA_PARAMETER.id.name());
+					eachCriteria.getString(CONFIG_CRITERIA_PARAMETER.xPath.name());
+					eachCriteria.getString(CONFIG_CRITERIA_PARAMETER.condition.name());
+					eachCriteria.getString(CONFIG_CRITERIA_PARAMETER.plotID.name());
+					eachCriteria.getString(CONFIG_CRITERIA_PARAMETER.name.name());
+				}        	
+			
+				JSONArray validPlots = validConfig.getJSONArray(CONFIG_SECTIONS_PARAMETER.plots.name());
+				for (int i = 0; i < validPlots.length(); i++) {
+					JSONObject eachPlot = validPlots.getJSONObject(i);
+					eachPlot.getString(CONFIG_PLOT_PARAMETER.id.name());
+					eachPlot.getString(CONFIG_PLOT_PARAMETER.title.name());
+					eachPlot.getString(CONFIG_PLOT_PARAMETER.buildCount.name());
+					eachPlot.getString(CONFIG_PLOT_PARAMETER.enabled.name());
+				}
+        	}catch(JSONException e){
+        		return FormValidation.error(e, "Missing JSON part");
+        	}        	
         	return FormValidation.ok();
         } 
         
