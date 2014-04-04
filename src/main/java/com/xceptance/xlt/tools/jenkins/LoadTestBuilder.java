@@ -103,11 +103,20 @@ public class LoadTestBuilder extends Builder {
     	}
         this.testProperties = testProperties;
         this.machineHost = machineHost;
-        this.xltConfig = xltConfig;        
+        this.xltConfig = xltConfig;    
+        if(plotWidth == 0){
+        	plotWidth = getDescriptor().getDefaultPlotWidth();
+        }
         this.plotWidth = plotWidth;
+        if(plotHeight == 0){
+        	plotHeight = getDescriptor().getDefaultPlotHeight();
+        }
         this.plotHeight = plotHeight;
         if(plotTitle == null){
         	plotTitle = getDescriptor().getDefaultPlotTitle(); 
+        }
+        if(plotTitle == null){
+        	plotTitle = getDescriptor().getDefaultPlotTitle();
         }
         this.plotTitle = plotTitle;
         if(builderID == null){
@@ -214,7 +223,6 @@ public class LoadTestBuilder extends Builder {
     
     @Override
     public Collection<? extends Action> getProjectActions(AbstractProject<?, ?> project) {
-    	System.out.println("LoadTestBuilder.getProjectActions");
     	ArrayList<Action> actions = new ArrayList<Action>();
     	
 		try {
@@ -236,9 +244,7 @@ public class LoadTestBuilder extends Builder {
     	return actions;
     }
     
-    private void updateConfig(){
-    	System.out.println("LoadTestBuilder.updateConfig");
-    	
+    private void updateConfig(){    	
 		 try {
 			config = new JSONObject(xltConfig);
 		} catch (JSONException e) {
@@ -474,14 +480,11 @@ public class LoadTestBuilder extends Builder {
     
     @Override
     public boolean prebuild(AbstractBuild<?, ?> build, BuildListener listener) {
-    	System.out.println("LoadTestBuilder.prebuild");
     	return true;
     }    
     
     @Override
     public boolean perform(AbstractBuild<?,?> build, Launcher launcher, BuildListener listener) throws IOException, InterruptedException {
-    	System.out.println("LoadTestBuilder.perform");
-    	
     	// generate temporary directory for local xlt
     	File destDir = new File(build.getProject().getRootDir(), Integer.toString(build.getNumber()));
        	listener.getLogger().println(destDir.getAbsolutePath());
@@ -702,8 +705,45 @@ public class LoadTestBuilder extends Builder {
         	
         	return FormValidation.ok();
         } 
-    
-
+        
+        public FormValidation doCheckPlotWidth(@QueryParameter String value){
+        	if(value == null || value.trim().replace(" ", "").isEmpty())
+        		return FormValidation.ok("The default width will be used for empty field. ("+getDefaultPlotWidth()+")");
+        	   
+        	double number = -1;
+        	try {
+        		number = Double.valueOf(value);
+			} catch (NumberFormatException e) {
+				return FormValidation.error("Please enter a valid number for width.");
+			}
+        	if(number < 1){
+        		return FormValidation.error("Please enter a valid positive number for width.");
+        	}
+        	if(number != (int)number){
+        		return FormValidation.warning("Dezimal number for width. Width will be "+(int)number); 
+        	}
+        	return FormValidation.ok();
+        }    
+        
+        public FormValidation doCheckPlotHeight(@QueryParameter String value){
+        	if(value == null || value.trim().replace(" ", "").isEmpty())
+        		return FormValidation.ok("The default height will be used for empty field. ("+getDefaultPlotHeight()+")");
+        	   
+        	double number = -1;
+        	try {
+        		number = Double.valueOf(value);
+			} catch (NumberFormatException e) {
+				return FormValidation.error("Please enter a valid number for height.");
+			}
+        	if(number < 1){
+        		return FormValidation.error("Please enter a valid positive number for height.");
+        	}
+        	if(number != (int)number){
+        		return FormValidation.warning("Dezimal number for height. Height will be "+(int)number); 
+        	}
+        	return FormValidation.ok();
+        }    
+        
         public boolean isApplicable(Class<? extends AbstractProject> aClass) {
             // Indicates that this builder can be used with all kinds of project types 
             return true;
