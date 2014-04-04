@@ -376,6 +376,8 @@ public class LoadTestBuilder extends Builder {
 										listener.getLogger().println(message);
 										continue;
 									}							
+								}else{
+									listener.getLogger().println("No condition to test. Criteria: \""+eachID+"\"");
 								}
 							} catch (JSONException e) {
 								String errorMessage = "";
