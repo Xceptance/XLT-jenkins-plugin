@@ -16,26 +16,20 @@ import hudson.util.FormValidation;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Hashtable;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Scanner;
 import java.util.UUID;
 
-import javax.annotation.RegEx;
-import javax.imageio.IIOException;
 import javax.servlet.ServletException;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -53,20 +47,16 @@ import javax.xml.xpath.XPathFactory;
 
 import jenkins.model.Jenkins;
 
-import org.apache.commons.collections.map.HashedMap;
-import org.apache.commons.digester.RegexMatcher;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.filefilter.RegexFileFilter;
 import org.apache.commons.lang.SystemUtils;
-import org.apache.tools.ant.util.regexp.RegexpUtil;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
-import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 import org.xml.sax.SAXException;
 
 
@@ -191,11 +181,7 @@ public class LoadTestBuilder extends Builder {
 			}
 		}
     	return enabledPlots;
-    }
-    
-    private Map<String,Plot> getPlots(){
-    	return plots;
-    }    
+    }  
     
     private Plot getPlot(String configName){
 		try {
@@ -318,7 +304,8 @@ public class LoadTestBuilder extends Builder {
     
     private void postTestExecution(AbstractBuild<?,?> build, BuildListener listener){
     	List<String> failedAlerts = new ArrayList<String>();    	
-
+		listener.getLogger().println("");
+		
     	File dataFile = null;
     	try{
 			// copy testreport.xml to workspace
@@ -336,40 +323,85 @@ public class LoadTestBuilder extends Builder {
 			    	try {
 						List<String> criteriaIDs = getCriteriaConfigIDs();
 						for (String eachID : criteriaIDs) {
+							listener.getLogger().println("Start processiong. Criteria:\""+eachID+"\"");
+							String xPath = null;
+							String condition = null;
 							try {
-								String xPath = getCriteriaConfigValue(eachID, CONFIG_CRITERIA_PARAMETER.xPath);
-								String condition = getCriteriaConfigValue(eachID, CONFIG_CRITERIA_PARAMETER.condition);							
+								xPath = getCriteriaConfigValue(eachID, CONFIG_CRITERIA_PARAMETER.xPath);
+								condition = getCriteriaConfigValue(eachID, CONFIG_CRITERIA_PARAMETER.condition);	
+								if(xPath == null){
+									String message = "No xPath for Criteria: \""+eachID+"\"";
+									failedAlerts.add(message);
+									listener.getLogger().println(message);
+									continue;
+								}
+								if(condition == null){
+									condition = "";
+								}								
 								String conditionPath = xPath+condition;
 								
-								System.out.println(eachID+" : "+conditionPath+" : "+xPath);					
-
-								String result =  XPathFactory.newInstance().newXPath().evaluate(conditionPath, dataXml);
-								// validate value and collect failed validations then set the build state
-								if (result != null && result.isEmpty())
-								{
-									String value = XPathFactory.newInstance().newXPath().evaluate(xPath, dataXml);;
-									failedAlerts.add("Condition \""+eachID+"\" failed. \n\t Value: \""+value+"\" Condition: \""+condition + "\" Path: \"" + xPath);
-								}
-								
 								Element node = (Element)XPathFactory.newInstance().newXPath().evaluate(xPath, dataXml, XPathConstants.NODE);
+								if(node == null){
+									String message = "No result found for xPath. Criteria \""+eachID+ "\"\t Path: \"" + xPath;
+									failedAlerts.add(message);
+									listener.getLogger().println(message);
+									continue;
+								}
+
 								String label = getCriteriaConfigValue(eachID, CONFIG_CRITERIA_PARAMETER.name);
+								if(label == null){
+									label = eachID;
+								}
 								node.setAttribute("name", label);							
 								
-								Plot plot = getPlot(eachID);
-								if(plot != null){
-									plot.series.add(new XMLSeries("testreport.xml", xPath, "NODE", ""));
+								Double number = (Double)XPathFactory.newInstance().newXPath().evaluate(xPath, dataXml, XPathConstants.NUMBER);
+								if(!number.isNaN()){
+									Plot plot = getPlot(eachID);
+									if(plot != null){
+										listener.getLogger().println("Add plot value. Criteria \""+eachID+"\"\t Value: \""+number+ "\"\t Path: \"" + xPath);
+										plot.series.add(new XMLSeries("testreport.xml", xPath, "NODE", ""));
+									}	
+								}
+
+								if(!condition.isEmpty()){
+									//test the condition
+									listener.getLogger().println("Test condition. Criteria: \""+eachID+ "\"\t Path: \"" + xPath+"\t Condition: \""+condition + "\"");
+									Node result =  (Node)XPathFactory.newInstance().newXPath().evaluate(conditionPath, dataXml, XPathConstants.NODE);
+									if (result == null)
+									{
+										String value = XPathFactory.newInstance().newXPath().evaluate(xPath, dataXml);
+										String message = "Criteria \""+eachID+"\" failed. \n\t Value: \""+value+"\" Condition: \""+condition + "\" Path: \"" + xPath;
+										failedAlerts.add(message);
+										listener.getLogger().println(message);
+										continue;
+									}							
 								}
 							} catch (JSONException e) {
-								// TODO Auto-generated catch block
-								e.printStackTrace();
-							} catch (XPathExpressionException e) {
-								e.printStackTrace();
-								String message = eachID + " xPath evaluation failed \n" +e.getMessage();					
+								String errorMessage = "";
+								if(e.getMessage() != null)
+									errorMessage = " \n\t Error: "+e.getMessage();
+								String causeMessage = "";
+								if(e.getCause() != null && e.getCause().getMessage() != null)
+									causeMessage = " \n\t Cause: "+e.getCause().getMessage();
+								
+								String message = "Failed to get parameter from configuration.  Criteria \""+eachID+"\""+errorMessage+causeMessage;
 								failedAlerts.add(message);
-							}
+								listener.getLogger().println(message);
+							} catch (XPathExpressionException e) {								
+								String errorMessage = "";
+								if(e.getMessage() != null)
+									errorMessage = " \n\t Error: "+e.getMessage();
+								String causeMessage = "";
+								if(e.getCause() != null && e.getCause().getMessage() != null)
+									causeMessage = " \n\t Cause: "+e.getCause().getMessage();
+								
+								String message = "Incorrect xPath expression. Criteria \""+eachID+"\"\t Condition: \""+condition + "\"\t Path: \"" + xPath+" "+errorMessage+causeMessage;
+								failedAlerts.add(message);
+								listener.getLogger().println(message);
+							}							
 						}
 					}catch (JSONException e) {
-						// TODO Auto-generated catch block
+						//we have no citeria section or one criteria has no id defined...
 						e.printStackTrace();
 					}
 			    	
@@ -381,9 +413,9 @@ public class LoadTestBuilder extends Builder {
 					
 			    	//must happen after everything is in place... this will start the data collection for the plot
 			    	for (Plot eachPlot : plots.values()) {
-				        eachPlot.addBuild(build, System.out);
+				        eachPlot.addBuild(build, listener.getLogger());
 					}
-	    		}
+	    		}	    		
     		}
     	}catch(IOException e){
 			// TODO Auto-generated catch block
@@ -418,12 +450,13 @@ public class LoadTestBuilder extends Builder {
     	
     	if (!failedAlerts.isEmpty())
     	{
-    		listener.getLogger().println("set failes by alerts");
+    		listener.getLogger().println("");
+    		listener.getLogger().println("Set state to UNSTABLE by alerts.");
     		build.setResult(Result.UNSTABLE);
     		for (String eachAlert : failedAlerts) {
     			listener.getLogger().println(eachAlert);
-    			System.out.println(eachAlert);
     		}
+    		listener.getLogger().println("");
     	}
     	
     	XltRecorderAction printReportAction = new XltRecorderAction(build, failedAlerts);
