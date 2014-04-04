@@ -3,6 +3,7 @@ package com.xceptance.xlt.tools.jenkins;
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.servlet.ServletException;
@@ -17,9 +18,9 @@ public class XltRecorderAction implements Action {
 
 	public String reportPath;
 	public AbstractBuild<?, ?> build;
-	private List<String> failedAlerts;
+	private List<CriteriaResult> failedAlerts;
 	
-	public XltRecorderAction(AbstractBuild<?, ?> build, List<String> failedAlerts) {
+	public XltRecorderAction(AbstractBuild<?, ?> build, List<CriteriaResult> failedAlerts) {
 		this.build = build;
 		this.failedAlerts = failedAlerts;
 	}
@@ -37,8 +38,24 @@ public class XltRecorderAction implements Action {
 		return "xltResult";
 	}
 	
-	public List<String> getFailedAlerts(){
-		return failedAlerts;
+	public List<CriteriaResult> getFailedAlerts(){
+		List<CriteriaResult> failed = new ArrayList<CriteriaResult>();
+		for (CriteriaResult eachAlert : failedAlerts) {
+			if(eachAlert.getType() == CriteriaResult.Type.FAILED){
+				failed.add(eachAlert);
+			}
+		}
+		return failed;
+	}
+	
+	public List<CriteriaResult> getErrorAlerts(){
+		List<CriteriaResult> errors = new ArrayList<CriteriaResult>();
+		for (CriteriaResult eachError : failedAlerts) {
+			if(eachError.getType() == CriteriaResult.Type.ERROR){
+				errors.add(eachError);
+			}
+		}
+		return errors;
 	}
 	
 	public void doReport(StaplerRequest request, StaplerResponse response) throws MalformedURLException, ServletException, IOException{

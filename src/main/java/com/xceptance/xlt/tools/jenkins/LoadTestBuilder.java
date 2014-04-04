@@ -302,8 +302,8 @@ public class LoadTestBuilder extends Builder {
 
     
     private void postTestExecution(AbstractBuild<?,?> build, BuildListener listener){
-    	List<String> failedAlerts = new ArrayList<String>();    	
-		listener.getLogger().println("");
+    	List<CriteriaResult> failedAlerts = new ArrayList<CriteriaResult>();    	
+		listener.getLogger().println();
 		
     	File dataFile = null;
     	try{
@@ -311,17 +311,22 @@ public class LoadTestBuilder extends Builder {
     		File testReportFileXml = new File(build.getRootDir(), "report/testreport.xml");
     		dataFile = new File(new File(build.getModuleRoot().toURI()),"testreport.xml");    		
     		if(!testReportFileXml.exists()){
-    			failedAlerts.add("No test data found at: "+testReportFileXml.getAbsolutePath());
+    			CriteriaResult criteriaResult = CriteriaResult.error("No test data found at: "+testReportFileXml.getAbsolutePath());    			
+				failedAlerts.add(criteriaResult);
+				listener.getLogger().println(criteriaResult.getLogMessage());
     		}else{
     			FileUtils.copyFile(testReportFileXml, dataFile);
 	    		if(!dataFile.exists()){
-	    			failedAlerts.add("Expected copy of test data at: "+dataFile.getAbsolutePath());
+	    			CriteriaResult criteriaResult = CriteriaResult.error("Expected copy of test data at: "+dataFile.getAbsolutePath());
+					failedAlerts.add(criteriaResult);
+					listener.getLogger().println(criteriaResult.getLogMessage());
 	    		}else{		        	
 					Document dataXml =DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(dataFile);
 					
 			    	try {
 						List<String> criteriaIDs = getCriteriaConfigIDs();
 						for (String eachID : criteriaIDs) {
+							listener.getLogger().println();
 							listener.getLogger().println("Start processiong. Criteria:\""+eachID+"\"");
 							String xPath = null;
 							String condition = null;
@@ -329,9 +334,10 @@ public class LoadTestBuilder extends Builder {
 								xPath = getCriteriaConfigValue(eachID, CONFIG_CRITERIA_PARAMETER.xPath);
 								condition = getCriteriaConfigValue(eachID, CONFIG_CRITERIA_PARAMETER.condition);	
 								if(xPath == null){
-									String message = "No xPath for Criteria: \""+eachID+"\"";
-									failedAlerts.add(message);
-									listener.getLogger().println(message);
+					    			CriteriaResult criteriaResult = CriteriaResult.error("No xPath for Criteria");
+					    			criteriaResult.setCriteriaID(eachID);
+									failedAlerts.add(criteriaResult);
+									listener.getLogger().println(criteriaResult.getLogMessage());
 									continue;
 								}
 								if(condition == null){
@@ -341,9 +347,11 @@ public class LoadTestBuilder extends Builder {
 								
 								Element node = (Element)XPathFactory.newInstance().newXPath().evaluate(xPath, dataXml, XPathConstants.NODE);
 								if(node == null){
-									String message = "No result found for xPath. Criteria \""+eachID+ "\"\t Path: \"" + xPath;
-									failedAlerts.add(message);
-									listener.getLogger().println(message);
+					    			CriteriaResult criteriaResult = CriteriaResult.error("No result found for xPath");
+					    			criteriaResult.setCriteriaID(eachID);
+					    			criteriaResult.setXPath(xPath);
+									failedAlerts.add(criteriaResult);
+									listener.getLogger().println(criteriaResult.getLogMessage());
 									continue;
 								}
 
@@ -371,36 +379,34 @@ public class LoadTestBuilder extends Builder {
 									if (result == null)
 									{
 										String value = XPathFactory.newInstance().newXPath().evaluate(xPath, dataXml);
-										String message = "Criteria \""+eachID+"\" failed. \n\t Value: \""+value+"\" Condition: \""+condition + "\" Path: \"" + xPath;
-										failedAlerts.add(message);
-										listener.getLogger().println(message);
+						    			CriteriaResult criteriaResult = CriteriaResult.failed("Condition failed");
+						    			criteriaResult.setCriteriaID(eachID);
+						    			criteriaResult.setValue(value);
+						    			criteriaResult.setCondition(condition);
+						    			criteriaResult.setXPath(xPath);
+										failedAlerts.add(criteriaResult);
+										listener.getLogger().println(criteriaResult.getLogMessage());
 										continue;
 									}							
 								}else{
 									listener.getLogger().println("No condition to test. Criteria: \""+eachID+"\"");
 								}
 							} catch (JSONException e) {
-								String errorMessage = "";
-								if(e.getMessage() != null)
-									errorMessage = " \n\t Error: "+e.getMessage();
-								String causeMessage = "";
-								if(e.getCause() != null && e.getCause().getMessage() != null)
-									causeMessage = " \n\t Cause: "+e.getCause().getMessage();
-								
-								String message = "Failed to get parameter from configuration.  Criteria \""+eachID+"\""+errorMessage+causeMessage;
-								failedAlerts.add(message);
-								listener.getLogger().println(message);
-							} catch (XPathExpressionException e) {								
-								String errorMessage = "";
-								if(e.getMessage() != null)
-									errorMessage = " \n\t Error: "+e.getMessage();
-								String causeMessage = "";
-								if(e.getCause() != null && e.getCause().getMessage() != null)
-									causeMessage = " \n\t Cause: "+e.getCause().getMessage();
-								
-								String message = "Incorrect xPath expression. Criteria \""+eachID+"\"\t Condition: \""+condition + "\"\t Path: \"" + xPath+" "+errorMessage+causeMessage;
-								failedAlerts.add(message);
-								listener.getLogger().println(message);
+				    			CriteriaResult criteriaResult = CriteriaResult.error("Failed to get parameter from configuration");
+				    			criteriaResult.setCriteriaID(eachID);
+				    			criteriaResult.setExceptionMessage(e.getMessage());
+				    			criteriaResult.setCauseMessage(e.getCause() != null ? e.getCause().getMessage() : null);
+								failedAlerts.add(criteriaResult);
+								listener.getLogger().println(criteriaResult.getLogMessage());
+							} catch (XPathExpressionException e) {
+				    			CriteriaResult criteriaResult = CriteriaResult.error("Incorrect xPath expression");
+				    			criteriaResult.setCriteriaID(eachID);
+				    			criteriaResult.setCondition(condition);
+				    			criteriaResult.setXPath(xPath);
+				    			criteriaResult.setExceptionMessage(e.getMessage());
+				    			criteriaResult.setCauseMessage(e.getCause() != null ? e.getCause().getMessage() : null);
+								failedAlerts.add(criteriaResult);
+								listener.getLogger().println(criteriaResult.getLogMessage());
 							}							
 						}
 					}catch (JSONException e) {
@@ -453,13 +459,13 @@ public class LoadTestBuilder extends Builder {
     	
     	if (!failedAlerts.isEmpty())
     	{
-    		listener.getLogger().println("");
+    		listener.getLogger().println();
     		listener.getLogger().println("Set state to UNSTABLE by alerts.");
     		build.setResult(Result.UNSTABLE);
-    		for (String eachAlert : failedAlerts) {
-    			listener.getLogger().println(eachAlert);
+    		for (CriteriaResult eachAlert : failedAlerts) {
+    			listener.getLogger().println(eachAlert.getLogMessage());
     		}
-    		listener.getLogger().println("");
+    		listener.getLogger().println();
     	}
     	
     	XltRecorderAction printReportAction = new XltRecorderAction(build, failedAlerts);
