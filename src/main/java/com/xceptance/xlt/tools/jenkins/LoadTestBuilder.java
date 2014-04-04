@@ -368,7 +368,7 @@ public class LoadTestBuilder extends Builder {
 								}
 
 								String label = getCriteriaConfigValue(eachID, CONFIG_CRITERIA_PARAMETER.name);
-								if(label == null){
+								if(label == null || label.trim().replace(" ", "").isEmpty()){
 									label = eachID;
 								}
 								node.setAttribute("name", label);							
@@ -719,23 +719,55 @@ public class LoadTestBuilder extends Builder {
 	        	JSONArray validCriterias = validConfig.getJSONArray(CONFIG_SECTIONS_PARAMETER.criteria.name());
 				for (int i = 0; i < validCriterias.length(); i++) {
 					JSONObject eachCriteria = validCriterias.optJSONObject(i);
-					eachCriteria.getString(CONFIG_CRITERIA_PARAMETER.id.name());
-					eachCriteria.getString(CONFIG_CRITERIA_PARAMETER.xPath.name());
-					eachCriteria.getString(CONFIG_CRITERIA_PARAMETER.condition.name());
-					eachCriteria.getString(CONFIG_CRITERIA_PARAMETER.plotID.name());
-					eachCriteria.getString(CONFIG_CRITERIA_PARAMETER.name.name());
+					try{
+						String id = eachCriteria.getString(CONFIG_CRITERIA_PARAMETER.id.name());
+						if(id == null || id.trim().replace(" ", "").isEmpty())
+							return FormValidation.error("Criteria id is empty. (criteria index: "+i+")");
+						
+						String path = eachCriteria.getString(CONFIG_CRITERIA_PARAMETER.xPath.name());
+						if(path == null || path.trim().replace(" ", "").isEmpty())
+							return FormValidation.error("Criteria xPath is empty. (criteria id: "+id+")");
+						
+						try {
+							XPathFactory.newInstance().newXPath().compile(path);
+						} catch (XPathExpressionException e) {
+							return FormValidation.error(e, "Invalid xPath. (criteria id:"+id+")");
+						}
+						
+						String condition = eachCriteria.getString(CONFIG_CRITERIA_PARAMETER.condition.name());
+						if(condition != null && !condition.trim().replace(" ", "").isEmpty()){
+							try {
+								XPathFactory.newInstance().newXPath().compile(path+condition);
+							} catch (XPathExpressionException e) {
+								return FormValidation.error(e, "Condition does not form a valid xPath. (criteria id:"+id+")");
+							}
+						}							
+						
+						eachCriteria.getString(CONFIG_CRITERIA_PARAMETER.plotID.name());
+						eachCriteria.getString(CONFIG_CRITERIA_PARAMETER.name.name());
+					}catch(JSONException e){
+						return FormValidation.error(e, "Missing criteria JSON section. ("+i+")");
+					}
 				}        	
 			
 				JSONArray validPlots = validConfig.getJSONArray(CONFIG_SECTIONS_PARAMETER.plots.name());
 				for (int i = 0; i < validPlots.length(); i++) {
 					JSONObject eachPlot = validPlots.getJSONObject(i);
-					eachPlot.getString(CONFIG_PLOT_PARAMETER.id.name());
-					eachPlot.getString(CONFIG_PLOT_PARAMETER.title.name());
-					eachPlot.getString(CONFIG_PLOT_PARAMETER.buildCount.name());
-					eachPlot.getString(CONFIG_PLOT_PARAMETER.enabled.name());
+					try{
+						eachPlot.getString(CONFIG_PLOT_PARAMETER.id.name());
+						String id = eachPlot.getString(CONFIG_PLOT_PARAMETER.id.name());
+						if(id == null || id.trim().replace(" ", "").isEmpty())
+							return FormValidation.error("Plot id is empty. (plot index: "+i+")");
+	
+						eachPlot.getString(CONFIG_PLOT_PARAMETER.title.name());
+						eachPlot.getString(CONFIG_PLOT_PARAMETER.buildCount.name());
+						eachPlot.getString(CONFIG_PLOT_PARAMETER.enabled.name());
+					}catch(JSONException e){
+						return FormValidation.error(e, "Missing plot JSON section. ("+i+")");
+					}
 				}
         	}catch(JSONException e){
-        		return FormValidation.error(e, "Missing JSON part");
+        		return FormValidation.error(e, "Missing JSON section");
         	}        	
         	return FormValidation.ok();
         } 
