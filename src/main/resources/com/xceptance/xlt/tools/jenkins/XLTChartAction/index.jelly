@@ -7,21 +7,23 @@
 		<j:set var="height" value="500"/>
 		
 		<l:main-panel>
-			<center>
-				<h1>${it.getTitle()}</h1>
-				<!--
-				Width:<f:textbox style="width:100px" field="plotWidth" default="${it.getDefaultWidth()}"/>
-				Height:<f:textbox style="width:100px" field="plotHeight" default="${it.getDefaultHeight()}"/>
-				-->
-				<hr/>			
-				<div>
-					<j:forEach var="plot" items="${it.plots}" varStatus="loopStat">
-						<div>
-							<img src="getPlot?index=${loopStat.index}&amp;width=${width}&amp;height=${height}" lazymap="getPlotMap?index=${loopStat.index}&amp;width=${width}&amp;height=${height}"/>
-						</div>
-					</j:forEach>
-				</div>
-			</center>
+			<j:if test="${it.getPlots().isEmpty() == false}">
+				<center>
+					<h1>${it.getTitle()}</h1>
+					<!--
+					Width:<f:textbox style="width:100px" field="plotWidth" default="${it.getDefaultWidth()}"/>
+					Height:<f:textbox style="width:100px" field="plotHeight" default="${it.getDefaultHeight()}"/>
+					-->
+					<hr/>			
+					<div>
+						<j:forEach var="plot" items="${it.plots}" varStatus="loopStat">
+							<div>
+								<img src="getPlot?index=${loopStat.index}&amp;width=${width}&amp;height=${height}" lazymap="getPlotMap?index=${loopStat.index}&amp;width=${width}&amp;height=${height}"/>
+							</div>
+						</j:forEach>
+					</div>
+				</center>
+			</j:if>
 		</l:main-panel>
 	</l:layout>
 </j:jelly>
