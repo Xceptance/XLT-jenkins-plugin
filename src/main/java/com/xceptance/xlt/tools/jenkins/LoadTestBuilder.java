@@ -30,6 +30,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.servlet.ServletException;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -721,8 +723,9 @@ public class LoadTestBuilder extends Builder {
          */
         public FormValidation doCheckTestProperties(@QueryParameter String value)
         		throws IOException, ServletException{
-        	//TODO warning if empty that test.properties is used        	
-        	
+        	if (value.isEmpty()){
+        		return FormValidation.warning("Please specify test configuration!");
+        	}        	       	
         	return FormValidation.ok();
         } 
         
@@ -733,9 +736,13 @@ public class LoadTestBuilder extends Builder {
         		throws IOException, ServletException{
         	if (value.isEmpty())
         		return FormValidation.ok("-embedded is enabled");
-        	//TODO validate if there is the right syntax. <protocol>://<hostname>:<port>        	
-        	//TODO validate port number
-        	//TODO validate protocol
+        	
+        	String regex = "^https://.*";
+        	Pattern p = Pattern.compile(regex);
+        	Matcher matcher = p.matcher(value);
+        	if (!matcher.find()){
+        		return FormValidation.error("invalid host-url");
+        	} 
         	
         	return FormValidation.ok();
         }
