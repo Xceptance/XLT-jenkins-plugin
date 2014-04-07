@@ -19,6 +19,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.lang.Thread.UncaughtExceptionHandler;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.util.ArrayList;
@@ -50,6 +51,9 @@ import jenkins.model.Jenkins;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.SystemUtils;
+import org.apache.log4j.FileAppender;
+import org.apache.log4j.Logger;
+import org.apache.log4j.PatternLayout;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -91,14 +95,34 @@ public class LoadTestBuilder extends Builder {
 	private String builderID;
 
 	private boolean isPlotVertical;
+	
+	public static final Logger LOGGER = Logger.getLogger(LoadTestBuilder.class); 
     
     public enum CONFIG_CRITERIA_PARAMETER { id, xPath, condition, plotID , name };
     public enum CONFIG_PLOT_PARAMETER { id, title, buildCount, enabled };    
     public enum CONFIG_SECTIONS_PARAMETER { criteria, plots };
+    
+    static{
+    	try {
+    		File logFile = new File(new File(Jenkins.getInstance().getPlugin("xlt-jenkins").getWrapper().baseResourceURL.toURI()),"xltPlugin.log");
+			LOGGER.addAppender(new FileAppender(new PatternLayout("%d{yyyy-MMM-dd} : %d{HH:mm:ss,SSS} | [%t] %p %C.%M line:%L | %x - %m%n"), logFile.getAbsolutePath(), true));
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (URISyntaxException e) {
+			e.printStackTrace();
+		}
+    }
        
     @DataBoundConstructor
     public LoadTestBuilder(String testProperties, String machineHost, String xltConfig, int plotWidth, int plotHeight, String plotTitle, String builderID, boolean isPlotVertical) 
-    {      	
+    {  
+    	Thread.currentThread().setUncaughtExceptionHandler(new UncaughtExceptionHandler() {			
+			public void uncaughtException(Thread t, Throwable e) {
+				LOGGER.error("Uncaught exception", e);
+				e.printStackTrace();
+			}
+		});
+    	
     	if (testProperties==null || testProperties.isEmpty()){
     		testPropertiesFileAvailable = false;
     	}
@@ -175,7 +199,7 @@ public class LoadTestBuilder extends Builder {
 				}
 			}			
 		} catch (JSONException e) {
-			// TODO Auto-generated catch block
+			LOGGER.error("",e);
 			e.printStackTrace();
 		}
     	return sortedPlots;
@@ -199,7 +223,7 @@ public class LoadTestBuilder extends Builder {
 			String plotID = getCriteriaConfigValue(configName, CONFIG_CRITERIA_PARAMETER.plotID);
 			return plots.get(plotID);
 		} catch (JSONException e) {
-			// TODO Auto-generated catch block
+			LOGGER.error("",e);
 			e.printStackTrace();
 		}    	
 		return null;
@@ -223,7 +247,7 @@ public class LoadTestBuilder extends Builder {
 			}
 			return plots.get(plotID);
 		} catch (JSONException e) {
-			// TODO Auto-generated catch block
+			LOGGER.error("",e);
 			e.printStackTrace();
 		}    	
 		return null;
@@ -234,8 +258,8 @@ public class LoadTestBuilder extends Builder {
     	ArrayList<Action> actions = new ArrayList<Action>();
     	
 		try {
-			updateConfig();
 	    	plots.clear();
+			updateConfig();
 			
 			List<String> ids = getCriteriaConfigIDs();
 	    	for (String name : ids) {
@@ -245,7 +269,7 @@ public class LoadTestBuilder extends Builder {
 	    		actions.add(new XLTChartAction(project, sortPlots(getEnabledPlots()), plotWidth, plotHeight, plotTitle, builderID, isPlotVertical));
 	    	}
 		} catch (JSONException e) {
-			// TODO Auto-generated catch block
+			LOGGER.error("",e);
 			e.printStackTrace();
 		}
     	
@@ -256,7 +280,7 @@ public class LoadTestBuilder extends Builder {
 		 try {
 			config = new JSONObject(xltConfig);
 		} catch (JSONException e) {
-			//TODO 
+			LOGGER.error("",e);
 			e.printStackTrace();
 		}
     }
@@ -281,6 +305,7 @@ public class LoadTestBuilder extends Builder {
     	try {
 			return getPlotConfigValue(plotID, parameter);
 		} catch (JSONException e) {
+			LOGGER.error("",e);
 			return null;
 		}
     }
@@ -433,6 +458,7 @@ public class LoadTestBuilder extends Builder {
 						}
 					}catch (JSONException e) {
 						//we have no citeria section or one criteria has no id defined...
+						LOGGER.error("",e);
 						e.printStackTrace();
 					}
 			    	
@@ -449,31 +475,32 @@ public class LoadTestBuilder extends Builder {
 	    		}	    		
     		}
     	}catch(IOException e){
-			// TODO Auto-generated catch block
-    		e.printStackTrace();
-    	} catch (SAXException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		} catch (ParserConfigurationException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
+			LOGGER.error("",e);
+			e.printStackTrace();
+    	} catch (SAXException e) {
+			LOGGER.error("",e);
+			e.printStackTrace();
+		} catch (ParserConfigurationException e) {
+			LOGGER.error("",e);
+			e.printStackTrace();
 		} catch (TransformerConfigurationException e) {
-			// TODO Auto-generated catch block
+			LOGGER.error("",e);
 			e.printStackTrace();
 		} catch (TransformerFactoryConfigurationError e) {
-			// TODO Auto-generated catch block
+			LOGGER.error("",e);
 			e.printStackTrace();
 		} catch (TransformerException e) {
-			// TODO Auto-generated catch block
+			LOGGER.error("",e);
 			e.printStackTrace();
-		} catch (InterruptedException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
+		} catch (InterruptedException e) {
+			LOGGER.error("",e);
+			e.printStackTrace();
 		}finally{
 			if(dataFile != null){
 				try {
 					Files.deleteIfExists(dataFile.toPath());
 				} catch (IOException e) {
+					LOGGER.error("",e);
 					e.printStackTrace();
 				}
 			}
@@ -588,6 +615,8 @@ public class LoadTestBuilder extends Builder {
     		}
     		catch(Exception e)
     		{
+    			LOGGER.error("",e);
+    			e.printStackTrace();
     			continue;
     		}
     		break;
@@ -661,13 +690,13 @@ public class LoadTestBuilder extends Builder {
         	try {
 				return new String(Files.readAllBytes(getXltConfigFile().toPath()));
 			} catch (URISyntaxException e) {
-				// TODO Auto-generated catch block
+				LOGGER.error("",e);
 				e.printStackTrace();
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
+				LOGGER.error("",e);
 				e.printStackTrace();
 			}        	
-        	return "No default config file found.";
+        	return null;
         }
         
         public int getDefaultPlotWidth(){
