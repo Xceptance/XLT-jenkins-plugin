@@ -631,33 +631,35 @@ public class LoadTestBuilder extends Builder {
     		build.setResult(Result.FAILURE);
     	}
     	listener.getLogger().println("mastercontroller return code: " + process.waitFor());
-    	
-    	    	
+    	    	    	
     	listener.getLogger().println("XLT_FINISHED");
     	
+    	// perform only if XLT was successful
+    	if (!build.getResult().equals(Result.FAILURE))
+    	{   	
+    		// copy xlt-report to build directory
+    		File srcXltReport = new File(destDir, "reports");
+    		File[] filesReport = srcXltReport.listFiles();
+    		File lastFileReport = filesReport[filesReport.length-1];
+    		srcXltReport = lastFileReport;
+    		File destXltReport = new File(build.getRootDir(), "report");    	
+    		FileUtils.copyDirectory(srcXltReport, destXltReport, true); 
     	
-    	// copy xlt-report to build directory
-    	File srcXltReport = new File(destDir, "reports");
-    	File[] filesReport = srcXltReport.listFiles();
-    	File lastFileReport = filesReport[filesReport.length-1];
-    	srcXltReport = lastFileReport;
-    	File destXltReport = new File(build.getRootDir(), "report");    	
-    	FileUtils.copyDirectory(srcXltReport, destXltReport, true); 
-    	
-    	// copy xlt-result to build directory
-    	File srcXltResult = new File(destDir, "results");
-    	File[] filesResult = srcXltResult.listFiles();
-    	File lastFileResult = filesResult[filesResult.length-1];
-    	srcXltReport = lastFileResult;
-    	File destXltResult = new File(build.getArtifactsDir(), "result");
-    	FileUtils.copyDirectory(srcXltResult, destXltResult, true);
+    		// copy xlt-result to build directory
+    		File srcXltResult = new File(destDir, "results");
+    		File[] filesResult = srcXltResult.listFiles();
+    		File lastFileResult = filesResult[filesResult.length-1];
+    		srcXltReport = lastFileResult;
+    		File destXltResult = new File(build.getArtifactsDir(), "result");
+    		FileUtils.copyDirectory(srcXltResult, destXltResult, true);
 
-    	// copy xlt-logs to build directory
-    	File srcXltLog = new File(destDir, "log");
-    	File destXltLog = new File(build.getArtifactsDir(), "log");    	
-    	FileUtils.copyDirectory(srcXltLog, destXltLog, true);
+    		// copy xlt-logs to build directory
+    		File srcXltLog = new File(destDir, "log");
+    		File destXltLog = new File(build.getArtifactsDir(), "log");    	
+    		FileUtils.copyDirectory(srcXltLog, destXltLog, true);
     	
-    	postTestExecution(build, listener);
+    		postTestExecution(build, listener);
+    	}
     	    	
     	// delete temporary directory with local xlt
     	FileUtils.deleteDirectory(destDir);
