@@ -713,16 +713,22 @@ public class LoadTestBuilder extends Builder {
 				validConfig = new JSONObject(value);
 			} catch (JSONException e) {
 				return FormValidation.error(e, "Invalid JSON");
-			}        	
+			} 
         	
         	try{
+        		List<String> criteriaIDs = new ArrayList<String>();
+        		Map<String, String> criteriaPlotIDs = new HashMap<String, String>();
 	        	JSONArray validCriterias = validConfig.getJSONArray(CONFIG_SECTIONS_PARAMETER.criteria.name());
 				for (int i = 0; i < validCriterias.length(); i++) {
 					JSONObject eachCriteria = validCriterias.optJSONObject(i);
+					String id = null;
 					try{
-						String id = eachCriteria.getString(CONFIG_CRITERIA_PARAMETER.id.name());
+						id = eachCriteria.getString(CONFIG_CRITERIA_PARAMETER.id.name());
 						if(id == null || id.trim().replace(" ", "").isEmpty())
 							return FormValidation.error("Criteria id is empty. (criteria index: "+i+")");
+						if(criteriaIDs.contains(id))
+							return FormValidation.error("Criteria id already exists. (id: "+id+")");
+						criteriaIDs.add(id);
 						
 						String path = eachCriteria.getString(CONFIG_CRITERIA_PARAMETER.xPath.name());
 						if(path == null || path.trim().replace(" ", "").isEmpty())
@@ -743,32 +749,48 @@ public class LoadTestBuilder extends Builder {
 							}
 						}							
 						
-						eachCriteria.getString(CONFIG_CRITERIA_PARAMETER.plotID.name());
+						String criteriaPlotID = eachCriteria.getString(CONFIG_CRITERIA_PARAMETER.plotID.name());
+						if(criteriaPlotID != null && !criteriaPlotID.trim().replace(" ", "").isEmpty()){
+							criteriaPlotIDs.put(id,criteriaPlotID);
+						}
+						
 						eachCriteria.getString(CONFIG_CRITERIA_PARAMETER.name.name());
 					}catch(JSONException e){
-						return FormValidation.error(e, "Missing criteria JSON section. ("+i+")");
+						return FormValidation.error(e, "Missing criteria JSON section. (index: "+i+ " "+ (id != null ? (" id: "+ id) : "")+")");
 					}
 				}        	
 			
+        		List<String> plotIDs = new ArrayList<String>();
 				JSONArray validPlots = validConfig.getJSONArray(CONFIG_SECTIONS_PARAMETER.plots.name());
 				for (int i = 0; i < validPlots.length(); i++) {
 					JSONObject eachPlot = validPlots.getJSONObject(i);
+					String id = null;
 					try{
 						eachPlot.getString(CONFIG_PLOT_PARAMETER.id.name());
-						String id = eachPlot.getString(CONFIG_PLOT_PARAMETER.id.name());
+						id = eachPlot.getString(CONFIG_PLOT_PARAMETER.id.name());
 						if(id == null || id.trim().replace(" ", "").isEmpty())
 							return FormValidation.error("Plot id is empty. (plot index: "+i+")");
+						if(plotIDs.contains(id))
+							return FormValidation.error("Plot id already exists. (id: "+id+")");
+						plotIDs.add(id);
 	
 						eachPlot.getString(CONFIG_PLOT_PARAMETER.title.name());
 						eachPlot.getString(CONFIG_PLOT_PARAMETER.buildCount.name());
 						eachPlot.getString(CONFIG_PLOT_PARAMETER.enabled.name());
 					}catch(JSONException e){
-						return FormValidation.error(e, "Missing plot JSON section. ("+i+")");
+						return FormValidation.error(e, "Missing plot JSON section. (index: "+i+ " "+ (id != null ? (" id: "+ id) : "")+")");
+					}
+				}
+				
+				for (Entry<String, String> eachEntry : criteriaPlotIDs.entrySet()) {
+					if(!plotIDs.contains(eachEntry.getValue())){
+						return FormValidation.error("Missing plot config for plot id:"+eachEntry.getValue()+" at criteria id: "+eachEntry.getKey()+".");
 					}
 				}
         	}catch(JSONException e){
         		return FormValidation.error(e, "Missing JSON section");
         	}        	
+        	        	
         	return FormValidation.ok();
         } 
         
