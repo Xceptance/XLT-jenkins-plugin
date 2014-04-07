@@ -187,7 +187,7 @@ public class LoadTestBuilder extends Builder {
 			String plotID = eachEntry.getKey();
 			String enabled = optPlotConfigValue(plotID, CONFIG_PLOT_PARAMETER.enabled) ;
 			
-			if(enabled != null && !enabled.trim().replace(" ", "").isEmpty() && "yes".equals(enabled)){
+			if(StringUtils.isNotBlank(enabled) && "yes".equals(enabled)){
 				enabledPlots.put(plotID,eachEntry.getValue());
 			}
 		}
@@ -210,7 +210,7 @@ public class LoadTestBuilder extends Builder {
 			String plotID = getCriteriaConfigValue(configName, CONFIG_CRITERIA_PARAMETER.plotID);
 			if(!plots.containsKey(plotID)){
 				String plotCount = optPlotConfigValue(plotID, CONFIG_PLOT_PARAMETER.buildCount);			
-				if(plotCount == null || plotCount.trim().replace(" ", "").isEmpty())
+				if(StringUtils.isBlank(plotCount))
 					plotCount = String.valueOf(Integer.MAX_VALUE);
 				
 				String title = optPlotConfigValue(plotID, CONFIG_PLOT_PARAMETER.title);
@@ -378,7 +378,7 @@ public class LoadTestBuilder extends Builder {
 								}
 
 								String label = getCriteriaConfigValue(eachID, CONFIG_CRITERIA_PARAMETER.name);
-								if(label == null || label.trim().replace(" ", "").isEmpty()){
+								if(StringUtils.isBlank(label)){
 									label = eachID;
 								}
 								node.setAttribute("name", label);							
@@ -715,7 +715,7 @@ public class LoadTestBuilder extends Builder {
          * Performs on-the-fly validation of the form field 'parsers'.
          */
         public FormValidation doCheckXltConfig(@QueryParameter String value){
-        	if(value == null || value.trim().replace(" ", "").isEmpty())
+        	if(StringUtils.isBlank(value))
         		return FormValidation.ok("The default config will be used for empty field.");
 
         	JSONObject validConfig;
@@ -734,14 +734,14 @@ public class LoadTestBuilder extends Builder {
 					String id = null;
 					try{
 						id = eachCriteria.getString(CONFIG_CRITERIA_PARAMETER.id.name());
-						if(id == null || id.trim().replace(" ", "").isEmpty())
+						if(StringUtils.isBlank(id))
 							return FormValidation.error("Criteria id is empty. (criteria index: "+i+")");
 						if(criteriaIDs.contains(id))
 							return FormValidation.error("Criteria id already exists. (criteria id: "+id+")");
 						criteriaIDs.add(id);
 						
 						String path = eachCriteria.getString(CONFIG_CRITERIA_PARAMETER.xPath.name());
-						if(path == null || path.trim().replace(" ", "").isEmpty())
+						if(StringUtils.isBlank(path))
 							return FormValidation.error("Criteria xPath is empty. (criteria id: "+id+")");
 						
 						try {
@@ -751,7 +751,7 @@ public class LoadTestBuilder extends Builder {
 						}
 						
 						String condition = eachCriteria.getString(CONFIG_CRITERIA_PARAMETER.condition.name());
-						if(condition != null && !condition.trim().replace(" ", "").isEmpty()){
+						if(StringUtils.isNotBlank(condition)){
 							try {
 								XPathFactory.newInstance().newXPath().compile(path+condition);
 							} catch (XPathExpressionException e) {
@@ -760,7 +760,7 @@ public class LoadTestBuilder extends Builder {
 						}							
 						
 						String criteriaPlotID = eachCriteria.getString(CONFIG_CRITERIA_PARAMETER.plotID.name());
-						if(criteriaPlotID != null && !criteriaPlotID.trim().replace(" ", "").isEmpty()){
+						if(StringUtils.isNotBlank(criteriaPlotID)){
 							criteriaPlotIDs.put(id,criteriaPlotID);
 						}
 						
@@ -778,7 +778,7 @@ public class LoadTestBuilder extends Builder {
 					try{
 						eachPlot.getString(CONFIG_PLOT_PARAMETER.id.name());
 						id = eachPlot.getString(CONFIG_PLOT_PARAMETER.id.name());
-						if(id == null || id.trim().replace(" ", "").isEmpty())
+						if(StringUtils.isBlank(id))
 							return FormValidation.error("Plot id is empty. (plot index: "+i+")");
 						if(plotIDs.contains(id))
 							return FormValidation.error("Plot id already exists. (plot id: "+id+")");
@@ -786,7 +786,7 @@ public class LoadTestBuilder extends Builder {
 	
 						eachPlot.getString(CONFIG_PLOT_PARAMETER.title.name());
 						String buildCount = eachPlot.getString(CONFIG_PLOT_PARAMETER.buildCount.name());
-						if(buildCount != null && !buildCount.trim().replace(" ", "").isEmpty()){
+						if(StringUtils.isNotBlank(buildCount)){
 				        	double number = -1;
 				        	try {
 				        		number = Double.valueOf(buildCount);
@@ -801,7 +801,7 @@ public class LoadTestBuilder extends Builder {
 				        	}
 						}
 						String plotEnabled = eachPlot.getString(CONFIG_PLOT_PARAMETER.enabled.name());
-						if(plotEnabled != null && !plotEnabled.trim().replace(" ", "").isEmpty()){
+						if(StringUtils.isNotBlank(plotEnabled)){
 							if(!("yes".equals(plotEnabled) || "no".equals(plotEnabled))){
 								return FormValidation.error("Invalid value for plot enabled. Only yes or no is allowed. (plot id: "+id+")");
 							}
@@ -824,7 +824,7 @@ public class LoadTestBuilder extends Builder {
         } 
         
         public FormValidation doCheckPlotWidth(@QueryParameter String value){
-        	if(value == null || value.trim().replace(" ", "").isEmpty())
+        	if(StringUtils.isBlank(value))
         		return FormValidation.ok("The default width will be used for empty field. ("+getDefaultPlotWidth()+")");
         	   
         	double number = -1;
@@ -843,7 +843,7 @@ public class LoadTestBuilder extends Builder {
         }    
         
         public FormValidation doCheckPlotHeight(@QueryParameter String value){
-        	if(value == null || value.trim().replace(" ", "").isEmpty())
+        	if(StringUtils.isBlank(value))
         		return FormValidation.ok("The default height will be used for empty field. ("+getDefaultPlotHeight()+")");
         	   
         	double number = -1;
