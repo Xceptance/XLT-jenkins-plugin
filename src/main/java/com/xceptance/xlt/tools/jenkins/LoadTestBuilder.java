@@ -672,7 +672,7 @@ public class LoadTestBuilder extends Builder {
 
 
     @Extension 
-    public static final class DescriptorImpl extends BuildStepDescriptor<Builder> {
+    public static class DescriptorImpl extends BuildStepDescriptor<Builder> {
         /**
          * In order to load the persisted global configuration, you have to 
          * call load() in the constructor.
