@@ -34,7 +34,6 @@ public class XltRecorderAction implements Action {
 	}
 
 	public String getUrlName() {
-		// TODO Auto-generated method stub
 		return "xltResult";
 	}
 	
