@@ -169,7 +169,9 @@ public class LoadTestBuilder extends Builder {
     	List<Plot> sortedPlots = new ArrayList<Plot>();
 		try {
 			for (String eachID :  getPlotConfigIDs()) {
-				sortedPlots.add(unsortedPlots.get(eachID));
+				if(unsortedPlots.containsKey(eachID)){
+					sortedPlots.add(unsortedPlots.get(eachID));
+				}
 			}			
 		} catch (JSONException e) {
 			// TODO Auto-generated catch block
@@ -182,15 +184,9 @@ public class LoadTestBuilder extends Builder {
     	Map<String,Plot> enabledPlots = new HashMap<String,Plot>();
     	for (Entry<String, Plot> eachEntry : plots.entrySet()) {
 			String plotID = eachEntry.getKey();
-			String enabled = null;
-			try {
-				enabled = getPlotConfigValue(plotID, CONFIG_PLOT_PARAMETER.enabled) ;
-			} catch (JSONException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+			String enabled = optPlotConfigValue(plotID, CONFIG_PLOT_PARAMETER.enabled) ;
 			
-			if("yes".equals(enabled)){
+			if(enabled != null && !enabled.trim().replace(" ", "").isEmpty() && "yes".equals(enabled)){
 				enabledPlots.put(plotID,eachEntry.getValue());
 			}
 		}
@@ -212,8 +208,13 @@ public class LoadTestBuilder extends Builder {
 		try {
 			String plotID = getCriteriaConfigValue(configName, CONFIG_CRITERIA_PARAMETER.plotID);
 			if(!plots.containsKey(plotID)){
-				String plotCount = getPlotConfigValue(plotID, CONFIG_PLOT_PARAMETER.buildCount);
-				String title = getPlotConfigValue(plotID, CONFIG_PLOT_PARAMETER.title);
+				String plotCount = optPlotConfigValue(plotID, CONFIG_PLOT_PARAMETER.buildCount);			
+				if(plotCount == null || plotCount.trim().replace(" ", "").isEmpty())
+					plotCount = String.valueOf(Integer.MAX_VALUE);
+				
+				String title = optPlotConfigValue(plotID, CONFIG_PLOT_PARAMETER.title);
+				if(title == null)
+					title = "";
 				
 				Plot plot = new Plot(title,"","XLT",plotCount,"xltPlot"+plotID+builderID,"line",false);		
 				plot.series = new ArrayList<Series>();
@@ -274,6 +275,14 @@ public class LoadTestBuilder extends Builder {
     	String plotID = getCriteriaConfigValue(configName, CONFIG_CRITERIA_PARAMETER.plotID);
     	return getPlotConfigValue(plotID, parameter);
     }    
+    
+    public String optPlotConfigValue(String plotID, CONFIG_PLOT_PARAMETER parameter){
+    	try {
+			return getPlotConfigValue(plotID, parameter);
+		} catch (JSONException e) {
+			return null;
+		}
+    }
     
     public String getPlotConfigValue(String plotID, CONFIG_PLOT_PARAMETER parameter) throws JSONException{
     	JSONArray plotsArray = config.getJSONArray(CONFIG_SECTIONS_PARAMETER.plots.name());
