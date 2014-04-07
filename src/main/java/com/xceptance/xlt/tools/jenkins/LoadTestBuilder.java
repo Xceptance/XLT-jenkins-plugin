@@ -349,7 +349,7 @@ public class LoadTestBuilder extends Builder {
 						List<String> criteriaIDs = getCriteriaConfigIDs();
 						for (String eachID : criteriaIDs) {
 							listener.getLogger().println();
-							listener.getLogger().println("Start processiong. Criteria:\""+eachID+"\"");
+							listener.getLogger().println("Start processing. Criteria:\""+eachID+"\"");
 							String xPath = null;
 							String condition = null;
 							try {
