@@ -125,7 +125,7 @@ public class LoadTestBuilder extends Builder {
         }
         this.plotTitle = plotTitle;
         
-        if(builderID == null){
+        if(StringUtils.isBlank(builderID)){
         	builderID = UUID.randomUUID().toString();
         }   
         this.builderID = builderID;
