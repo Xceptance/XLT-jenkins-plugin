@@ -48,6 +48,7 @@ import javax.xml.xpath.XPathFactory;
 import jenkins.model.Jenkins;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.SystemUtils;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -104,7 +105,7 @@ public class LoadTestBuilder extends Builder {
         this.testProperties = testProperties;
         this.machineHost = machineHost;
         
-        if(xltConfig == null || xltConfig.trim().replace(" ", "").isEmpty()){
+        if(StringUtils.isBlank(xltConfig)){
         	xltConfig = getDescriptor().getDefaultXltConfig();
         }
         this.xltConfig = xltConfig;   
