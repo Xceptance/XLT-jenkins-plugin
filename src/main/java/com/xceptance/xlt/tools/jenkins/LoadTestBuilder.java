@@ -736,7 +736,7 @@ public class LoadTestBuilder extends Builder {
 						if(id == null || id.trim().replace(" ", "").isEmpty())
 							return FormValidation.error("Criteria id is empty. (criteria index: "+i+")");
 						if(criteriaIDs.contains(id))
-							return FormValidation.error("Criteria id already exists. (id: "+id+")");
+							return FormValidation.error("Criteria id already exists. (criteria id: "+id+")");
 						criteriaIDs.add(id);
 						
 						String path = eachCriteria.getString(CONFIG_CRITERIA_PARAMETER.xPath.name());
@@ -765,7 +765,7 @@ public class LoadTestBuilder extends Builder {
 						
 						eachCriteria.getString(CONFIG_CRITERIA_PARAMETER.name.name());
 					}catch(JSONException e){
-						return FormValidation.error(e, "Missing criteria JSON section. (index: "+i+ " "+ (id != null ? (" id: "+ id) : "")+")");
+						return FormValidation.error(e, "Missing criteria JSON section. (criteria index: "+i+ " "+ (id != null ? ("criteria id: "+ id) : "")+")");
 					}
 				}        	
 			
@@ -780,14 +780,33 @@ public class LoadTestBuilder extends Builder {
 						if(id == null || id.trim().replace(" ", "").isEmpty())
 							return FormValidation.error("Plot id is empty. (plot index: "+i+")");
 						if(plotIDs.contains(id))
-							return FormValidation.error("Plot id already exists. (id: "+id+")");
+							return FormValidation.error("Plot id already exists. (plot id: "+id+")");
 						plotIDs.add(id);
 	
 						eachPlot.getString(CONFIG_PLOT_PARAMETER.title.name());
-						eachPlot.getString(CONFIG_PLOT_PARAMETER.buildCount.name());
-						eachPlot.getString(CONFIG_PLOT_PARAMETER.enabled.name());
+						String buildCount = eachPlot.getString(CONFIG_PLOT_PARAMETER.buildCount.name());
+						if(buildCount != null && !buildCount.trim().replace(" ", "").isEmpty()){
+				        	double number = -1;
+				        	try {
+				        		number = Double.valueOf(buildCount);
+							} catch (NumberFormatException e) {
+								return FormValidation.error("Plot buildCount is not a number. (plot id: "+id+")");
+							}
+				        	if(number < 1){
+								return FormValidation.error("Plot buildCount must be positive. (plot id: "+id+")");
+				        	}
+				        	if(number != (int)number){
+								return FormValidation.error("Plot buildCount is a dezimal number. (plot id: "+id+")");
+				        	}
+						}
+						String plotEnabled = eachPlot.getString(CONFIG_PLOT_PARAMETER.enabled.name());
+						if(plotEnabled != null && !plotEnabled.trim().replace(" ", "").isEmpty()){
+							if(!("yes".equals(plotEnabled) || "no".equals(plotEnabled))){
+								return FormValidation.error("Invalid value for plot enabled. Only yes or no is allowed. (plot id: "+id+")");
+							}
+						}
 					}catch(JSONException e){
-						return FormValidation.error(e, "Missing plot JSON section. (index: "+i+ " "+ (id != null ? (" id: "+ id) : "")+")");
+						return FormValidation.error(e, "Missing plot JSON section. (plot index: "+i+ " "+ (id != null ? ("plot id: "+ id) : "")+")");
 					}
 				}
 				
