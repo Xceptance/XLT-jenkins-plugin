@@ -694,8 +694,9 @@ public class LoadTestBuilder extends Builder {
          */
         public FormValidation doCheckTestProperties(@QueryParameter String value)
         		throws IOException, ServletException{
-        	//TODO warning if empty that test.properties is used        	
-        	
+        	if (value.isEmpty()){
+        		return FormValidation.warning("Please specify test configuration!");
+        	}        	       	
         	return FormValidation.ok();
         } 
         
