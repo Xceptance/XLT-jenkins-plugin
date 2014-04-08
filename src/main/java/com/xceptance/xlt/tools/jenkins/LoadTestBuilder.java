@@ -635,7 +635,7 @@ public class LoadTestBuilder extends Builder {
     	listener.getLogger().println("XLT_FINISHED");
     	
     	// perform only if XLT was successful
-    	if (!build.getResult().equals(Result.FAILURE))
+    	if (build.getResult() == null || !build.getResult().equals(Result.FAILURE))
     	{   	
     		// copy xlt-report to build directory
     		File srcXltReport = new File(destDir, "reports");
