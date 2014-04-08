@@ -3,6 +3,7 @@ package com.xceptance.xlt.tools.jenkins;
 import hudson.Extension;
 import hudson.Launcher;
 import hudson.model.Action;
+import hudson.model.Build;
 import hudson.model.BuildListener;
 import hudson.model.Result;
 import hudson.model.AbstractBuild;
@@ -26,6 +27,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Hashtable;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -51,6 +53,7 @@ import javax.xml.xpath.XPathFactory;
 import jenkins.model.Jenkins;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.SystemUtils;
 import org.apache.log4j.FileAppender;
@@ -357,7 +360,7 @@ public class LoadTestBuilder extends Builder {
     	File dataFile = null;
     	try{
 			// copy testreport.xml to workspace
-    		File testReportFileXml = new File(build.getRootDir(), "report/testreport.xml");
+    		File testReportFileXml = new File(build.getRootDir(), "report-" + Integer.toString(build.getNumber()) + "/testreport.xml");
     		dataFile = new File(new File(build.getModuleRoot().toURI()),"testreport.xml");    		
     		if(!testReportFileXml.exists()){
     			CriteriaResult criteriaResult = CriteriaResult.error("No test data found at: "+testReportFileXml.getAbsolutePath());    			
@@ -642,7 +645,7 @@ public class LoadTestBuilder extends Builder {
     		File[] filesReport = srcXltReport.listFiles();
     		File lastFileReport = filesReport[filesReport.length-1];
     		srcXltReport = lastFileReport;
-    		File destXltReport = new File(build.getRootDir(), "report");    	
+    		File destXltReport = new File(build.getRootDir(), "report-" + Integer.toString(build.getNumber()));    	
     		FileUtils.copyDirectory(srcXltReport, destXltReport, true); 
     	
     		// copy xlt-result to build directory
@@ -659,6 +662,9 @@ public class LoadTestBuilder extends Builder {
     		FileUtils.copyDirectory(srcXltLog, destXltLog, true);
     	
     		postTestExecution(build, listener);
+    		
+    		// update trend-report
+    		createTrendReport(build, listener);
     	}
     	    	
     	// delete temporary directory with local xlt
@@ -667,7 +673,82 @@ public class LoadTestBuilder extends Builder {
     	return true;
     }
 
-    @Override
+    private void createTrendReport(AbstractBuild<?, ?> build,
+			BuildListener listener) throws IOException, InterruptedException {
+    	
+    	//TODO extend to windows support
+		
+    	List<String> trendReportProperties = new ArrayList<String>();
+    	trendReportProperties.add("./create_trend_report.sh");
+    	
+    	File trendReportDest = new File(build.getModuleRoot().toString() + "/trendreport");
+    	if (!trendReportDest.isDirectory()){
+    		trendReportDest.mkdirs();
+    	}
+    	trendReportProperties.add("-o");
+    	trendReportProperties.add(trendReportDest.toString());
+    	
+    	List<AbstractBuild<?,?>> trendReportPath = new ArrayList<AbstractBuild<?,?>>(build.getPreviousBuildsOverThreshold(build.getNumber(), Result.UNSTABLE));    	
+    	File reportDirectory;
+    	for ( AbstractBuild<?, ?> path : trendReportPath){
+    		reportDirectory = new File(path.getRootDir().getAbsolutePath() + "/report-" + Integer.toString(path.getNumber()));
+    		if (reportDirectory.isDirectory()){
+    			trendReportProperties.add(reportDirectory.toString());
+    		}
+    	}
+    	
+    	//TODO add report from current build also to testReportProperties
+    	
+        ProcessBuilder builder = new ProcessBuilder(trendReportProperties);
+    	File path = new File(build.getProject().getRootDir() + "/" + Integer.toString(build.getNumber()) + "/bin");
+    	builder.directory(path);
+    	
+    	// print error-stream in jenkins-console
+    	builder.redirectErrorStream(true);
+
+        // start trend-report-generator of XLT
+    	Process process = builder.start();
+    	
+    	// print XLT console output in Jenkins   	
+    	InputStream is = process.getInputStream();
+    	BufferedReader br = new BufferedReader(new InputStreamReader(is));
+    	String line;
+    	String lastline = null;
+    	
+    	while ((line = br.readLine()) != null)
+    	{
+    		if (line != null)
+    		{	
+    			lastline = line;    			
+    			listener.getLogger().println(lastline);	
+    		}
+    		
+    		try
+    		{
+    			process.exitValue();
+    		}
+    		catch(Exception e)
+    		{
+    			LOGGER.error("",e);
+    			e.printStackTrace();
+    			continue;
+    		}
+    		break;
+    	}
+    	
+    	// waiting until trend-report is created
+    	if(process.waitFor()!=0)
+    	{
+    		listener.getLogger().println("Abort creating trend-report!");
+    	}
+    	listener.getLogger().println("return code trend-report-generator: " + process.waitFor());
+    	
+    	//TODO make link to trend-report visible
+		
+	}
+
+
+	@Override
     public DescriptorImpl getDescriptor() {
         return (DescriptorImpl)super.getDescriptor();
     }
