@@ -27,7 +27,6 @@ public class XLTChartAction implements Action{
 	private String builderID;
 	private boolean isPlotVertical;
 	private AbstractProject<?, ?> project;
-	//public AbstractBuild<?, ?> build;
 		
 	public XLTChartAction(AbstractProject<?, ?> project, List<Plot> plots, int plotWidth, int plotHeight, String title, String builderID, boolean isPlotVertical) {
 		this.project = project;
