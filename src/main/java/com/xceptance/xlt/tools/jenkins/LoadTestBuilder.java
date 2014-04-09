@@ -8,6 +8,7 @@ import hudson.model.BuildListener;
 import hudson.model.Result;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
+import hudson.model.Project;
 import hudson.plugins.plot.Plot;
 import hudson.plugins.plot.Series;
 import hudson.plugins.plot.XMLSeries;
@@ -681,7 +682,7 @@ public class LoadTestBuilder extends Builder {
     	List<String> trendReportProperties = new ArrayList<String>();
     	trendReportProperties.add("./create_trend_report.sh");
     	
-    	File trendReportDest = new File(build.getModuleRoot().toString() + "/trendreport");
+    	File trendReportDest = new File(build.getProject().getRootDir() + "/trendreport");
     	if (!trendReportDest.isDirectory()){
     		trendReportDest.mkdirs();
     	}
