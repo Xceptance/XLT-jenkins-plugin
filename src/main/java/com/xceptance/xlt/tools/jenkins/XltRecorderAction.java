@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import javax.servlet.ServletException;
 
@@ -19,10 +20,12 @@ public class XltRecorderAction implements Action {
 	public String reportPath;
 	public AbstractBuild<?, ?> build;
 	private List<CriteriaResult> failedAlerts;
+	private String builderID;
 	
-	public XltRecorderAction(AbstractBuild<?, ?> build, List<CriteriaResult> failedAlerts) {
+	public XltRecorderAction(AbstractBuild<?, ?> build, List<CriteriaResult> failedAlerts, String builderID) {
 		this.build = build;
 		this.failedAlerts = failedAlerts;
+		this.builderID = builderID;
 	}
 
 	public String getIconFileName() {
@@ -35,6 +38,10 @@ public class XltRecorderAction implements Action {
 
 	public String getUrlName() {
 		return "xltResult";
+	}
+	
+	public String getBuilderID() {
+		return builderID;
 	}
 	
 	public List<CriteriaResult> getFailedAlerts(){
@@ -58,7 +65,7 @@ public class XltRecorderAction implements Action {
 	}
 	
 	public void doReport(StaplerRequest request, StaplerResponse response) throws MalformedURLException, ServletException, IOException{
-		response.serveFile(request, new File(new File(build.getRootDir(),"report-" + build.getNumber()), request.getRestOfPath()).toURI().toURL());
+		response.serveFile(request, new File(new File(build.getRootDir().getAbsolutePath() + "/report-" + Integer.toString(build.getNumber())), request.getRestOfPath()).toURI().toURL());
 	}	
 
 }

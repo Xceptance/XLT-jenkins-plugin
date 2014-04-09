@@ -361,7 +361,7 @@ public class LoadTestBuilder extends Builder {
     	File dataFile = null;
     	try{
 			// copy testreport.xml to workspace
-    		File testReportFileXml = new File(build.getRootDir(), "report-" + Integer.toString(build.getNumber()) + "/testreport.xml");
+    		File testReportFileXml = new File(build.getRootDir(), "report-" + Integer.toString(build.getNumber()) + "/"+ builderID + "/testreport.xml");
     		dataFile = new File(new File(build.getModuleRoot().toURI()),"testreport.xml");    		
     		if(!testReportFileXml.exists()){
     			CriteriaResult criteriaResult = CriteriaResult.error("No test data found at: "+testReportFileXml.getAbsolutePath());    			
@@ -523,7 +523,7 @@ public class LoadTestBuilder extends Builder {
     		listener.getLogger().println();
     	}
     	
-    	XltRecorderAction printReportAction = new XltRecorderAction(build, failedAlerts);
+    	XltRecorderAction printReportAction = new XltRecorderAction(build, failedAlerts, builderID);
     	build.getActions().add(printReportAction);
     }
     
@@ -646,7 +646,7 @@ public class LoadTestBuilder extends Builder {
     		File[] filesReport = srcXltReport.listFiles();
     		File lastFileReport = filesReport[filesReport.length-1];
     		srcXltReport = lastFileReport;
-    		File destXltReport = new File(build.getRootDir(), "report-" + Integer.toString(build.getNumber()));    	
+    		File destXltReport = new File(build.getRootDir(), "report-" + Integer.toString(build.getNumber()) + "/" + builderID);    	
     		FileUtils.copyDirectory(srcXltReport, destXltReport, true); 
     	
     		// copy xlt-result to build directory
@@ -654,12 +654,12 @@ public class LoadTestBuilder extends Builder {
     		File[] filesResult = srcXltResult.listFiles();
     		File lastFileResult = filesResult[filesResult.length-1];
     		srcXltReport = lastFileResult;
-    		File destXltResult = new File(build.getArtifactsDir(), "result");
+    		File destXltResult = new File(build.getArtifactsDir(), "result/" + builderID);
     		FileUtils.copyDirectory(srcXltResult, destXltResult, true);
 
     		// copy xlt-logs to build directory
     		File srcXltLog = new File(destDir, "log");
-    		File destXltLog = new File(build.getArtifactsDir(), "log");    	
+    		File destXltLog = new File(build.getArtifactsDir() + "/log", builderID);    	
     		FileUtils.copyDirectory(srcXltLog, destXltLog, true);
     	
     		postTestExecution(build, listener);
@@ -682,7 +682,7 @@ public class LoadTestBuilder extends Builder {
     	List<String> trendReportProperties = new ArrayList<String>();
     	trendReportProperties.add("./create_trend_report.sh");
     	
-    	File trendReportDest = new File(build.getProject().getRootDir() + "/trendreport");
+    	File trendReportDest = new File(build.getProject().getRootDir() + "/trendreport/" + builderID);
     	if (!trendReportDest.isDirectory()){
     		trendReportDest.mkdirs();
     	}

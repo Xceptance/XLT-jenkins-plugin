@@ -88,7 +88,7 @@ public class XLTChartAction implements Action{
 	
 	// called from jelly files
 	public void doTrendReport(StaplerRequest req, StaplerResponse rsp) throws MalformedURLException, ServletException, IOException{
-		rsp.serveFile(req, new File(new File(project.getRootDir(),"trendreport"), req.getRestOfPath()).toURI().toURL());
+		rsp.serveFile(req, new File(new File(project.getRootDir() + "/trendreport", builderID), req.getRestOfPath()).toURI().toURL());
 	}
 	
 }
