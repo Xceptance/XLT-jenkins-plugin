@@ -1,19 +1,14 @@
 package com.xceptance.xlt.tools.jenkins;
 
-import java.util.ArrayList;
 import java.util.List;
 
-import org.kohsuke.stapler.StaplerRequest;
-import org.kohsuke.stapler.StaplerResponse;
 
 import hudson.model.Action;
 import hudson.model.AbstractProject;
-import hudson.plugins.plot.Plot;
-import hudson.plugins.plot.PlotReport;
 
 public class XLTChartAction implements Action{
 	
-	private final PlotReport report;
+	private List<Chart<Integer, Double>> charts;
 	private int plotWidth;
 	private int plotHeight;
 	private String title;
@@ -21,10 +16,9 @@ public class XLTChartAction implements Action{
 	private boolean isPlotVertical;
 	private AbstractProject<?, ?> project;
 		
-	public XLTChartAction(AbstractProject<?, ?> project, List<Plot> plots, int plotWidth, int plotHeight, String title, String builderID, boolean isPlotVertical) {
+	public XLTChartAction(AbstractProject<?, ?> project, List<Chart<Integer, Double>> charts, int plotWidth, int plotHeight, String title, String builderID, boolean isPlotVertical) {
 		this.project = project;
-		report = new PlotReport(project, "XLT", new ArrayList<Plot>());
-		report.getPlots().addAll(plots);
+		this.charts = charts;
 		this.plotWidth = plotWidth;
 		this.plotHeight = plotHeight;
 		this.title = title;
@@ -53,8 +47,8 @@ public class XLTChartAction implements Action{
 	}
 	
 	// called from jelly files
-	public List<Plot> getPlots(){
-		return report.getPlots();
+	public List<Chart<Integer, Double>> getCharts(){
+		return charts;
 	}
 	
 	public int getPlotWidth(){
@@ -67,15 +61,5 @@ public class XLTChartAction implements Action{
 	
 	public boolean isPlotVertical(){
 		return isPlotVertical;
-	}
-		
-	// called from jelly files
-	public void doGetPlot(StaplerRequest req, StaplerResponse rsp) {		
-		report.doGetPlot(req, rsp);
-	}
-	
-	// called from jelly files
-	public void doGetPlotMap(StaplerRequest req, StaplerResponse rsp) {
-		report.doGetPlotMap(req, rsp);
 	}		
 }
