@@ -1,5 +1,5 @@
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
-	<j:if test="${from.getPlots().isEmpty() == false}">
+	<j:if test="${from.getCharts().isEmpty() == false}">
 	
 		<j:set var="width" value="${from.getPlotWidth()}"/>
 		<j:set var="height" value="${from.getPlotHeight()}"/>
@@ -21,10 +21,91 @@
 				</a>
 			</div>			
 			<div>
-				<j:forEach var="plot" items="${from.getPlots()}" varStatus="loopStat">
+				<!--<j:forEach var="plot" items="${from.getPlots()}" varStatus="loopStat">
 					<div style="${imgDivStyle}">
 						<img style="margin: 3px; border: 1px solid #BBBBBB; box-shadow: 1px 2px 6px -3px #555555;" src="${from.getUrlName()}/getPlot?index=${loopStat.index}&amp;width=${width}&amp;height=${height}" lazymap="${from.getUrlName()}/getPlotMap?index=${loopStat.index}&amp;width=${width}&amp;height=${height}"/>
 					</div>
+				</j:forEach>-->
+				
+				<script type="text/javascript" src="${resURL}/plugin/xlt-jenkins/flotr2.min.js"></script>
+				<j:forEach var="eachChart" items="${from.getCharts()}" varStatus="loopStat">
+					${eachChart.getChartID()}<br/>
+					<div id="plotContainer-${eachChart.getChartID()}" style="width:${width}px;height:${height}px"></div>
+				    <script type="text/javascript">
+					(function(){
+					
+						var data = eval('${eachChart.getDataString()}'); 				    	
+				        var container = document.getElementById('plotContainer-${eachChart.getChartID()}');
+				        var config = { 
+				        	title:'${eachChart.getTitle()}',
+				        	yaxis:{ 
+				        		min:null,
+				        		max:null,
+								tickDecimals:0,								
+							},
+							xaxis:{
+								min:null,
+								max:null,
+								tickDecimals:0,
+								tickFormatter:function(o){ return "Build "+o},
+								labelsAngle: 90,
+								noTicks:4,
+								minorTickFreq:2,
+							},
+							selection: {
+								show:true,				
+				    			scroll: true,			
+					            mode: 'xy',
+					            fps: 25
+					        },			
+					        lines:{
+					        	show:true
+					        },
+					        points:{
+					        	show:true
+					        },
+					        grid:{
+					        	verticalLines: false,
+					        },
+					        mouse:{
+					        	track:true,
+					        	position:'n',
+					        	relative:true,
+					        	margin:5,
+					        	trackFormatter:function(o){ return o.y}
+					        }	        
+						};
+				        var graph;
+				        
+						function drawGraph(options){
+							var newConfig = Flotr.merge(options, Flotr.clone(config));
+							return Flotr.draw(container, data, newConfig);
+						}
+						
+						graph = drawGraph(config);
+						
+						// Hook into the 'flotr:select' event.
+					    Flotr.EventAdapter.observe(container, 'flotr:select', function(area) {
+						
+					        // Draw graph with new area
+					        graph = drawGraph({
+					            xaxis: {
+					                min: area.x1,
+					                max: area.x2
+					            },
+					            yaxis: {
+					                min: area.y1,
+					                max: area.y2
+					            }
+					        });
+					    });
+					
+					    // When graph is clicked, draw the graph with default area.
+					    Flotr.EventAdapter.observe(container, 'flotr:click', function() {
+					        drawGraph(config);
+					    });
+					})();    
+					</script>
 				</j:forEach>
 			</div>
 		</div>

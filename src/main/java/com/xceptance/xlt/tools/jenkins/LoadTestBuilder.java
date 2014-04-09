@@ -3,18 +3,18 @@ package com.xceptance.xlt.tools.jenkins;
 import hudson.Extension;
 import hudson.Launcher;
 import hudson.model.Action;
-import hudson.model.Build;
 import hudson.model.BuildListener;
 import hudson.model.Result;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
+
 import hudson.model.Project;
-import hudson.plugins.plot.Plot;
-import hudson.plugins.plot.Series;
-import hudson.plugins.plot.XMLSeries;
+
+
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
 import hudson.util.FormValidation;
+import hudson.util.RunList;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -27,8 +27,6 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.Hashtable;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -39,14 +37,7 @@ import java.util.regex.Pattern;
 import javax.servlet.ServletException;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.transform.Source;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerConfigurationException;
-import javax.xml.transform.TransformerException;
-import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.TransformerFactoryConfigurationError;
-import javax.xml.transform.dom.DOMSource;
-import javax.xml.transform.stream.StreamResult;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
@@ -54,7 +45,6 @@ import javax.xml.xpath.XPathFactory;
 import jenkins.model.Jenkins;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.SystemUtils;
 import org.apache.log4j.FileAppender;
@@ -69,6 +59,9 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.xml.sax.SAXException;
+
+import com.xceptance.xlt.tools.jenkins.Chart.ChartLine;
+import com.xceptance.xlt.tools.jenkins.Chart.ChartLineValue;
 
 
 
@@ -88,9 +81,7 @@ public class LoadTestBuilder extends Builder {
     
     private String xltConfig;    
     
-    private JSONObject config = new JSONObject();
-
-    private final Map<String,Plot> plots = new Hashtable<String, Plot>();
+    transient private JSONObject config = new JSONObject();
     
 	private int plotWidth;
 	
@@ -102,7 +93,13 @@ public class LoadTestBuilder extends Builder {
 
 	private boolean isPlotVertical;
 	
-	public static final Logger LOGGER = Logger.getLogger(LoadTestBuilder.class); 
+	transient public static final Logger LOGGER = Logger.getLogger(LoadTestBuilder.class); 
+	
+	transient private List<Chart<Integer, Double>> charts = new ArrayList<Chart<Integer,Double>>();
+	
+	transient private boolean isSave = false;
+	
+	transient private XLTChartAction chartAction;
     
     public enum CONFIG_CRITERIA_PARAMETER { id, xPath, condition, plotID , name };
     public enum CONFIG_PLOT_PARAMETER { id, title, buildCount, enabled };    
@@ -122,6 +119,7 @@ public class LoadTestBuilder extends Builder {
     @DataBoundConstructor
     public LoadTestBuilder(String testProperties, String machineHost, String xltConfig, int plotWidth, int plotHeight, String plotTitle, String builderID, boolean isPlotVertical) 
     {  
+    	isSave = true;
     	Thread.currentThread().setUncaughtExceptionHandler(new UncaughtExceptionHandler() {			
 			public void uncaughtException(Thread t, Throwable e) {
 				LOGGER.error("Uncaught exception", e);
@@ -195,95 +193,96 @@ public class LoadTestBuilder extends Builder {
     public boolean getIsPlotVertical() {
 		return isPlotVertical;
 	}
-    
-    public List<Plot> sortPlots(Map<String,Plot> unsortedPlots){
-    	List<Plot> sortedPlots = new ArrayList<Plot>();
-		try {
-			for (String eachID :  getPlotConfigIDs()) {
-				if(unsortedPlots.containsKey(eachID)){
-					sortedPlots.add(unsortedPlots.get(eachID));
-				}
-			}			
-		} catch (JSONException e) {
-			LOGGER.error("",e);
-			e.printStackTrace();
+        
+    private Chart<Integer, Double> getChart(String plotID){    	
+    	for (Chart<Integer, Double> eachChart : charts) {
+			if(eachChart.getChartID().equals(plotID)){
+				return eachChart;
+			}
 		}
-    	return sortedPlots;
+    	return null;
     }
     
-    public Map<String,Plot> getEnabledPlots(){
-    	Map<String,Plot> enabledPlots = new HashMap<String,Plot>();
-    	for (Entry<String, Plot> eachEntry : plots.entrySet()) {
-			String plotID = eachEntry.getKey();
-			String enabled = optPlotConfigValue(plotID, CONFIG_PLOT_PARAMETER.enabled) ;
+    public List<Chart<Integer,Double>> getEnabledCharts(){
+    	List<Chart<Integer,Double>> enabledCharts = new ArrayList<Chart<Integer,Double>>();
+    	for (Chart<Integer, Double> eachChart : charts) {
+			String enabled = optPlotConfigValue(eachChart.getChartID(), CONFIG_PLOT_PARAMETER.enabled) ;
 			
 			if(StringUtils.isNotBlank(enabled) && "yes".equals(enabled)){
-				enabledPlots.put(plotID,eachEntry.getValue());
+				enabledCharts.add(eachChart);
 			}
 		}
-    	return enabledPlots;
-    }  
-    
-    private Plot getPlot(String configName){
-		try {
-			String plotID = getCriteriaConfigValue(configName, CONFIG_CRITERIA_PARAMETER.plotID);
-			return plots.get(plotID);
-		} catch (JSONException e) {
-			LOGGER.error("",e);
-			e.printStackTrace();
-		}    	
-		return null;
+    	return enabledCharts;
     }
-    
-    private Plot createPlot(String configName){
-		try {
-			String plotID = getCriteriaConfigValue(configName, CONFIG_CRITERIA_PARAMETER.plotID);
-			if(!plots.containsKey(plotID)){
-				String plotCount = optPlotConfigValue(plotID, CONFIG_PLOT_PARAMETER.buildCount);			
-				if(StringUtils.isBlank(plotCount))
-					plotCount = String.valueOf(Integer.MAX_VALUE);
+        
+    private void loadCharts(AbstractProject<? extends AbstractProject<?, ?>, ? extends AbstractBuild<?, ?>> project){    	
+    	try{
+        	RunList<? extends AbstractBuild<?, ?>> allBuilds = project.getBuilds(); 
+        	List<Chart<Integer, Double>> loadedCharts = new ArrayList<Chart<Integer, Double>>();
+        	
+			for(String eachPlotID : getPlotConfigIDs()){
+				String chartTitle = optPlotConfigValue(eachPlotID, CONFIG_PLOT_PARAMETER.title);
+				if(chartTitle == null){
+					chartTitle = "";
+				}
 				
-				String title = optPlotConfigValue(plotID, CONFIG_PLOT_PARAMETER.title);
-				if(title == null)
-					title = "";
+				Chart<Integer, Double> chart = new Chart<Integer, Double>(eachPlotID, chartTitle);
+				loadedCharts.add(chart);
 				
-				Plot plot = new Plot(title,"","XLT",plotCount,"xltPlot"+plotID+builderID,"line",false);		
-				plot.series = new ArrayList<Series>();
-				plots.put(plotID, plot);
+				int buildCount = Integer.parseInt(getPlotConfigValue(eachPlotID, CONFIG_PLOT_PARAMETER.buildCount));
+				List<? extends AbstractBuild<?, ?>> builds = allBuilds.subList(0, buildCount);
+
+				for (int i = builds.size()-1; i > -1; i-- ) {
+					AbstractBuild<?, ?> eachBuild = builds.get(i);
+					
+					File testDataFile = getTestReportDataFile(eachBuild);										
+					if(testDataFile.exists()){
+						Document dataXml =DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(testDataFile);
+						
+						for (String eachCriteriaID : getCriteriaConfigIDs(eachPlotID)) {
+							ChartLine<Integer, Double> line = chart.getLine(eachCriteriaID);
+							if(line == null){
+									line = new ChartLine<Integer, Double>(eachCriteriaID);
+									chart.getLines().add(line);
+							}
+							
+							String xPath = getCriteriaConfigValue(eachCriteriaID, CONFIG_CRITERIA_PARAMETER.xPath);							
+							Double number = (Double)XPathFactory.newInstance().newXPath().evaluate(xPath, dataXml, XPathConstants.NUMBER);
+							if(number.isNaN())
+								throw new NumberFormatException("Value is not a number. (criteria id: \""+eachCriteriaID+"\" XPath: \""+xPath+"\"");
+							else{
+								line.getValues().add(new ChartLineValue<Integer, Double>(eachBuild.number, number.doubleValue()));
+							}
+						}						
+					}
+				}
 			}
-			return plots.get(plotID);
-		} catch (JSONException e) {
-			LOGGER.error("",e);
-			e.printStackTrace();
-		}    	
-		return null;
+			charts = loadedCharts;
+    	}catch(Exception e){
+    		LOGGER.error("Failed to load charts from history.", e);
+    		e.printStackTrace();
+    	}    	
     }
     
     @Override
-    public Collection<? extends Action> getProjectActions(AbstractProject<?, ?> project) {
+    public Collection<? extends Action> getProjectActions(AbstractProject<? , ?> project) {
     	ArrayList<Action> actions = new ArrayList<Action>();
-    	
-		try {
-	    	plots.clear();
-			updateConfig();
-			
-			List<String> ids = getCriteriaConfigIDs();
-	    	for (String name : ids) {
-	    		createPlot(name);
-	    	}
-	    	if(!ids.isEmpty()){
-	    		actions.add(new XLTChartAction(project, sortPlots(getEnabledPlots()), plotWidth, plotHeight, plotTitle, builderID, isPlotVertical));
-	    	}
-		} catch (JSONException e) {
-			LOGGER.error("",e);
-			e.printStackTrace();
-		}
+    	if(isSave || chartAction == null){
+    		isSave = false;
+    		
+    		charts = new ArrayList<Chart<Integer,Double>>(); 
+			updateConfig();			
+			loadCharts(project);
+
+			chartAction = new XLTChartAction(project, getEnabledCharts(), plotWidth, plotHeight, plotTitle, builderID, isPlotVertical);
+    	}
+    	actions.add(chartAction);  
     	
     	return actions;
     }
     
     private void updateConfig(){    	
-		 try {
+		 try {			 
 			config = new JSONObject(xltConfig);
 		} catch (JSONException e) {
 			LOGGER.error("",e);
@@ -301,6 +300,17 @@ public class LoadTestBuilder extends Builder {
 		}
     	return null;
     }
+    
+    public String optCriteriaConfigValue(String configName, CONFIG_CRITERIA_PARAMETER parameter){
+    	try {
+			return getCriteriaConfigValue(configName, parameter);
+		} catch (JSONException e) {
+			LOGGER.error("",e);
+			e.printStackTrace();
+		}
+    	return null;
+    }
+
     
     public String getCriteriaPlotConfigValue(String configName, CONFIG_PLOT_PARAMETER parameter) throws JSONException{
     	String plotID = getCriteriaConfigValue(configName, CONFIG_CRITERIA_PARAMETER.plotID);
@@ -340,6 +350,19 @@ public class LoadTestBuilder extends Builder {
     	return criteriaList;
     }
     
+    public ArrayList<String> getCriteriaConfigIDs(String plotID) throws JSONException{    	
+    	ArrayList<String> criteriaList = new ArrayList<String>();
+
+    	JSONArray criteriaSection = config.getJSONArray(CONFIG_SECTIONS_PARAMETER.criteria.name());
+    	for (int i = 0; i < criteriaSection.length(); i++) {
+    		JSONObject each = criteriaSection.getJSONObject(i);
+    		if(plotID.equals(each.getString(CONFIG_CRITERIA_PARAMETER.plotID.name()))){
+	    		criteriaList.add(each.getString(CONFIG_CRITERIA_PARAMETER.id.name()));
+    		}
+		}
+    	return criteriaList;
+    }
+    
     public ArrayList<String> getPlotConfigIDs() throws JSONException{
     	ArrayList<String> plotIDs = new ArrayList<String>();
     	
@@ -353,6 +376,9 @@ public class LoadTestBuilder extends Builder {
     	return plotIDs;
     }
 
+    public File getTestReportDataFile(AbstractBuild<?,?> build){
+    	return  new File(build.getRootDir(), "report-" + Integer.toString(build.getNumber()) + "/" + builderID + "/testreport.xml");
+    }
     
     private void postTestExecution(AbstractBuild<?,?> build, BuildListener listener){
     	List<CriteriaResult> failedAlerts = new ArrayList<CriteriaResult>();    	
@@ -361,7 +387,8 @@ public class LoadTestBuilder extends Builder {
     	File dataFile = null;
     	try{
 			// copy testreport.xml to workspace
-    		File testReportFileXml = new File(build.getRootDir(), "report-" + Integer.toString(build.getNumber()) + "/"+ builderID + "/testreport.xml");
+    		File testReportFileXml = getTestReportDataFile(build);
+
     		dataFile = new File(new File(build.getModuleRoot().toURI()),"testreport.xml");    		
     		if(!testReportFileXml.exists()){
     			CriteriaResult criteriaResult = CriteriaResult.error("No test data found at: "+testReportFileXml.getAbsolutePath());    			
@@ -416,10 +443,13 @@ public class LoadTestBuilder extends Builder {
 								
 								Double number = (Double)XPathFactory.newInstance().newXPath().evaluate(xPath, dataXml, XPathConstants.NUMBER);
 								if(!number.isNaN()){
-									Plot plot = getPlot(eachID);
-									if(plot != null){
+									String plotID = optCriteriaConfigValue(eachID, CONFIG_CRITERIA_PARAMETER.plotID);									 
+									Chart<Integer, Double> chart = getChart(plotID);
+									if(chart != null){
 										listener.getLogger().println("Add plot value. Criteria \""+eachID+"\"\t Value: \""+number+ "\"\t Path: \"" + xPath);
-										plot.series.add(new XMLSeries("testreport.xml", xPath, "NODE", ""));
+										
+										ChartLine<Integer, Double> line = chart.getLine(eachID);	
+										line.getValues().add(new ChartLineValue<Integer, Double>(build.number, number));										
 									}	
 								}else{
 									listener.getLogger().println("Plot value is not a number. Criteria \""+eachID+"\"\t Value: \""+number+ "\"\t Path: \"" + xPath);
@@ -466,18 +496,7 @@ public class LoadTestBuilder extends Builder {
 						//we have no citeria section or one criteria has no id defined...
 						LOGGER.error("",e);
 						e.printStackTrace();
-					}
-			    	
-					Transformer transformer = TransformerFactory.newInstance().newTransformer();
-					javax.xml.transform.Result output = new StreamResult(dataFile);
-					Source input = new DOMSource(dataXml);
-			
-					transformer.transform(input, output);
-					
-			    	//must happen after everything is in place... this will start the data collection for the plot
-			    	for (Plot eachPlot : plots.values()) {
-				        eachPlot.addBuild(build, listener.getLogger());
-					}
+					}		
 	    		}	    		
     		}
     	}catch(IOException e){
@@ -489,16 +508,10 @@ public class LoadTestBuilder extends Builder {
 		} catch (ParserConfigurationException e) {
 			LOGGER.error("",e);
 			e.printStackTrace();
-		} catch (TransformerConfigurationException e) {
-			LOGGER.error("",e);
-			e.printStackTrace();
 		} catch (TransformerFactoryConfigurationError e) {
 			LOGGER.error("",e);
 			e.printStackTrace();
-		} catch (TransformerException e) {
-			LOGGER.error("",e);
-			e.printStackTrace();
-		} catch (InterruptedException e) {
+		}catch (InterruptedException e) {
 			LOGGER.error("",e);
 			e.printStackTrace();
 		}finally{
@@ -692,14 +705,14 @@ public class LoadTestBuilder extends Builder {
     	List<AbstractBuild<?,?>> trendReportPath = new ArrayList<AbstractBuild<?,?>>(build.getPreviousBuildsOverThreshold(build.getNumber(), Result.UNSTABLE));    	
     	File reportDirectory;
     	for ( AbstractBuild<?, ?> path : trendReportPath){
-    		reportDirectory = new File(path.getRootDir().getAbsolutePath() + "/report-" + Integer.toString(path.getNumber()));
+    		reportDirectory = new File(path.getRootDir().getAbsolutePath() + "/report-" + Integer.toString(path.getNumber()) + "/" + builderID);
     		if (reportDirectory.isDirectory()){
     			trendReportProperties.add(reportDirectory.toString());
     		}
     	}
     	
     	//add also report from current build to testReportProperties
-    	trendReportProperties.add(build.getRootDir().getAbsolutePath() + "/report-" + Integer.toString(build.getNumber()));
+    	trendReportProperties.add(build.getRootDir().getAbsolutePath() + "/report-" + Integer.toString(build.getNumber()) + "/" + builderID);
     	
         ProcessBuilder builder = new ProcessBuilder(trendReportProperties);
     	File path = new File(build.getProject().getRootDir() + "/" + Integer.toString(build.getNumber()) + "/bin");
