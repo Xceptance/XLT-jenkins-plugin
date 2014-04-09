@@ -744,9 +744,6 @@ public class LoadTestBuilder extends Builder {
     		listener.getLogger().println("Abort creating trend-report!");
     	}
     	listener.getLogger().println("return code trend-report-generator: " + process.waitFor());
-    	
-    	//TODO make link to trend-report visible
-		
 	}
 
 

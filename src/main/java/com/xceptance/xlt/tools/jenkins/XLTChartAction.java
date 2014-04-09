@@ -1,12 +1,19 @@
 package com.xceptance.xlt.tools.jenkins;
 
+import java.io.File;
+import java.io.IOException;
+import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.List;
+
+import javax.servlet.ServletException;
 
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
 
+import hudson.model.AbstractBuild;
 import hudson.model.Action;
+import hudson.model.Build;
 import hudson.model.AbstractProject;
 import hudson.plugins.plot.Plot;
 import hudson.plugins.plot.PlotReport;
@@ -20,6 +27,7 @@ public class XLTChartAction implements Action{
 	private String builderID;
 	private boolean isPlotVertical;
 	private AbstractProject<?, ?> project;
+	//public AbstractBuild<?, ?> build;
 		
 	public XLTChartAction(AbstractProject<?, ?> project, List<Plot> plots, int plotWidth, int plotHeight, String title, String builderID, boolean isPlotVertical) {
 		this.project = project;
@@ -77,5 +85,11 @@ public class XLTChartAction implements Action{
 	// called from jelly files
 	public void doGetPlotMap(StaplerRequest req, StaplerResponse rsp) {
 		report.doGetPlotMap(req, rsp);
-	}		
+	}
+	
+	// called from jelly files
+	public void doTrendReport(StaplerRequest req, StaplerResponse rsp) throws MalformedURLException, ServletException, IOException{
+		rsp.serveFile(req, new File(new File(project.getRootDir(),"trendreport"), req.getRestOfPath()).toURI().toURL());
+	}
+	
 }

@@ -8,7 +8,10 @@
 		<j:if test="${from.isPlotVertical()}">
 			<j:set var="imgDivStyle" value=""/>
 		</j:if>		
-			
+		
+	    <div>
+			<a href="${from.getUrlName()}/trendReport/index.html">XLT Trend Report</a>
+		</div>	
 		<div align="right">					
 			<br/>
 			<div align="right">
