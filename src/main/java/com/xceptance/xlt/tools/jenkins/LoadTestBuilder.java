@@ -697,7 +697,8 @@ public class LoadTestBuilder extends Builder {
     		}
     	}
     	
-    	//TODO add report from current build also to testReportProperties
+    	//add also report from current build to testReportProperties
+    	trendReportProperties.add(build.getRootDir().getAbsolutePath() + "/report-" + Integer.toString(build.getNumber()));
     	
         ProcessBuilder builder = new ProcessBuilder(trendReportProperties);
     	File path = new File(build.getProject().getRootDir() + "/" + Integer.toString(build.getNumber()) + "/bin");
