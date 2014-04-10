@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import com.xceptance.xlt.tools.jenkins.Chart.ChartLineValue;
+
 public class Chart<X, Y> {
 
 	private String chartID;
@@ -52,13 +54,19 @@ public class Chart<X, Y> {
 		
 		private List<ChartLineValue<X, Y>> values = new ArrayList<Chart.ChartLineValue<X, Y>>(20);
 		private String lineID;
+		private int maxCount;
 		
-		public ChartLine(String lineID) {
+		public ChartLine(String lineID, int maxCount) {
 			this.lineID = lineID;
+			this.maxCount = maxCount;
 		}
 		
 		public String getLineID() {
 			return lineID;
+		}
+		
+		public int getMaxCount() {
+			return maxCount;
 		}
 		
 		public String getDataString() {
@@ -76,6 +84,15 @@ public class Chart<X, Y> {
 
 		public List<ChartLineValue<X, Y>> getValues() {
 			return values;
+		}
+
+		public void addLineValue(ChartLineValue<X, Y> value) {
+			if(values.size() < maxCount){
+				values.add(value);	
+			}else{
+				values.remove(0);
+				values.add(value);
+			}			
 		}		
 	}
 	

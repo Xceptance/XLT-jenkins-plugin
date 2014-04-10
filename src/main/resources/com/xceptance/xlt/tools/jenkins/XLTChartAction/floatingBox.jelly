@@ -4,7 +4,7 @@
 		<j:set var="width" value="${from.getPlotWidth()}"/>
 		<j:set var="height" value="${from.getPlotHeight()}"/>
 		
-		<j:set var="imgDivStyle" value="display:inline;"/>
+		<j:set var="imgDivStyle" value="display:inline-block;"/>
 		<j:if test="${from.isPlotVertical()}">
 			<j:set var="imgDivStyle" value=""/>
 		</j:if>		
@@ -21,27 +21,30 @@
 				</a>
 			</div>			
 			<div>
+			
 				<!--<j:forEach var="plot" items="${from.getPlots()}" varStatus="loopStat">
 					<div style="${imgDivStyle}">
 						<img style="margin: 3px; border: 1px solid #BBBBBB; box-shadow: 1px 2px 6px -3px #555555;" src="${from.getUrlName()}/getPlot?index=${loopStat.index}&amp;width=${width}&amp;height=${height}" lazymap="${from.getUrlName()}/getPlotMap?index=${loopStat.index}&amp;width=${width}&amp;height=${height}"/>
 					</div>
 				</j:forEach>-->
-				
 				<script type="text/javascript" src="${resURL}/plugin/xlt-jenkins/flotr2.min.js"></script>
 				<j:forEach var="eachChart" items="${from.getCharts()}" varStatus="loopStat">
-					${eachChart.getChartID()}<br/>
-					<div id="plotContainer-${eachChart.getChartID()}" style="width:${width}px;height:${height}px"></div>
+					
+					<j:set var="plotContainerID" value="$plotContainer-${eachChart.getChartID()}-${from.getBuilderID()}" />
+
+					<div id="${plotContainerID}" style="width:${width}px;height:${height}px;${imgDivStyle}"></div>
 				    <script type="text/javascript">
 					(function(){
 					
 						var data = eval('${eachChart.getDataString()}'); 				    	
-				        var container = document.getElementById('plotContainer-${eachChart.getChartID()}');
+				        var container = document.getElementById('${plotContainerID}');
 				        var config = { 
 				        	title:'${eachChart.getTitle()}',
 				        	yaxis:{ 
 				        		min:null,
 				        		max:null,
-								tickDecimals:0,								
+								tickDecimals:0,		
+								tickFormatter:function(o){ return o},	
 							},
 							xaxis:{
 								min:null,

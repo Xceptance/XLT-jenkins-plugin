@@ -53,6 +53,10 @@ public class XLTChartAction implements Action{
 		return "xltChart"+builderID;
 	}
 	
+	public String getBuilderID() {
+		return builderID;
+	}
+	
 	public AbstractProject<?, ?> getProject() {
 		return project;
 	}

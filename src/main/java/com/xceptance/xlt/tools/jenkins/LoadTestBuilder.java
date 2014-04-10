@@ -26,6 +26,7 @@ import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -213,55 +214,157 @@ public class LoadTestBuilder extends Builder {
 			}
 		}
     	return enabledCharts;
-    }
-        
+    }    
+           
     private void loadCharts(AbstractProject<? extends AbstractProject<?, ?>, ? extends AbstractBuild<?, ?>> project){    	
-    	try{
-        	RunList<? extends AbstractBuild<?, ?>> allBuilds = project.getBuilds(); 
-        	List<Chart<Integer, Double>> loadedCharts = new ArrayList<Chart<Integer, Double>>();
-        	
+    	List<? extends AbstractBuild<?, ?>> allBuilds = project.getBuilds(); 
+    	if(allBuilds.isEmpty())
+    		return;
+    	
+		try {
+			int largestBuildCount = 0;
 			for(String eachPlotID : getPlotConfigIDs()){
-				String chartTitle = optPlotConfigValue(eachPlotID, CONFIG_PLOT_PARAMETER.title);
-				if(chartTitle == null){
-					chartTitle = "";
-				}
-				
-				Chart<Integer, Double> chart = new Chart<Integer, Double>(eachPlotID, chartTitle);
-				loadedCharts.add(chart);
-				
-				int buildCount = Integer.parseInt(getPlotConfigValue(eachPlotID, CONFIG_PLOT_PARAMETER.buildCount));
-				List<? extends AbstractBuild<?, ?>> builds = allBuilds.subList(0, buildCount);
-
-				for (int i = builds.size()-1; i > -1; i-- ) {
-					AbstractBuild<?, ?> eachBuild = builds.get(i);
-					
-					File testDataFile = getTestReportDataFile(eachBuild);										
-					if(testDataFile.exists()){
-						Document dataXml =DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(testDataFile);
-						
-						for (String eachCriteriaID : getCriteriaConfigIDs(eachPlotID)) {
-							ChartLine<Integer, Double> line = chart.getLine(eachCriteriaID);
-							if(line == null){
-									line = new ChartLine<Integer, Double>(eachCriteriaID);
-									chart.getLines().add(line);
+				String buildCountValue = optPlotConfigValue(eachPlotID, CONFIG_PLOT_PARAMETER.buildCount);				
+				if(StringUtils.isNotBlank(buildCountValue)){					
+						try {
+							int buildCount = Integer.parseInt(buildCountValue);
+							if(buildCount > largestBuildCount){
+								largestBuildCount = buildCount;
 							}
-							
-							String xPath = getCriteriaConfigValue(eachCriteriaID, CONFIG_CRITERIA_PARAMETER.xPath);							
-							Double number = (Double)XPathFactory.newInstance().newXPath().evaluate(xPath, dataXml, XPathConstants.NUMBER);
-							if(number.isNaN())
-								throw new NumberFormatException("Value is not a number. (criteria id: \""+eachCriteriaID+"\" XPath: \""+xPath+"\"");
-							else{
-								line.getValues().add(new ChartLineValue<Integer, Double>(eachBuild.number, number.doubleValue()));
-							}
-						}						
-					}
+						} catch (NumberFormatException e) {
+							LOGGER.error("Build count is not a number (plotID: \""+eachPlotID+"\")", e);
+							e.printStackTrace();
+						}
 				}
 			}
-			charts = loadedCharts;
-    	}catch(Exception e){
-    		LOGGER.error("Failed to load charts from history.", e);
-    		e.printStackTrace();
-    	}    	
+			if(largestBuildCount == 0){
+				largestBuildCount = allBuilds.size();
+			}
+			List<? extends AbstractBuild<?, ?>> builds = allBuilds.subList(0, Math.min(largestBuildCount, allBuilds.size()));
+			addBuildsToCharts(builds);
+		} catch (JSONException e) {
+			LOGGER.error("Failed to config section.", e);
+			e.printStackTrace();
+		}
+    }
+    
+    public Document getDataDocument(AbstractBuild<?, ?> build){
+		File testDataFile = getTestReportDataFile(build);										
+		if(testDataFile.exists()){
+				try {
+					return  DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(testDataFile);
+				} catch (SAXException e) {
+					LOGGER.error("", e);
+					e.printStackTrace();
+				} catch (IOException e) {
+					LOGGER.error("", e);
+					e.printStackTrace();
+				} catch (ParserConfigurationException e) {
+					LOGGER.error("", e);
+					e.printStackTrace();
+				}
+		}else{
+			LOGGER.warn("No test data found for build. (build: \""+build.number+"\" searchLocation: \""+testDataFile.getAbsolutePath()+"\")");
+		}
+		return null;
+    }
+    
+    private void addBuildToCharts(AbstractBuild<?, ?> build){
+    	List<AbstractBuild<?, ?>> builds = new ArrayList<AbstractBuild<?,?>>();
+    	builds.add(build);
+    	addBuildsToCharts(builds);
+    }
+    
+    private void addBuildsToCharts(List<? extends AbstractBuild<?, ?>> builds){
+		for (int i = builds.size()-1; i > -1; i-- ) {
+			AbstractBuild<?, ?> eachBuild = builds.get(i);
+
+			Document dataXml = getDataDocument(eachBuild);
+			if(dataXml != null){
+				try {
+					for(String eachPlotID : getPlotConfigIDs()){				
+						Chart<Integer, Double> chart = getChart(eachPlotID);
+						if(chart == null){
+							LOGGER.warn("No chart found for plotID: "+eachPlotID);
+							continue;
+						}
+						
+						try {
+							for (String eachCriteriaID : getCriteriaConfigIDs(eachPlotID)) {
+								ChartLine<Integer, Double> line = chart.getLine(eachCriteriaID);
+								if(line == null){
+									LOGGER.warn("No line found for criteria. (criteriaID: \""+eachCriteriaID+"\" chartID:\""+chart.getChartID()+"\")");
+									continue;
+								}
+								
+								try {
+									String xPath = getCriteriaConfigValue(eachCriteriaID, CONFIG_CRITERIA_PARAMETER.xPath);
+									try {
+										Double number = (Double)XPathFactory.newInstance().newXPath().evaluate(xPath, dataXml, XPathConstants.NUMBER);
+										if(number.isNaN()){
+											LOGGER.warn("Value is not a number. (criteria id: \""+eachCriteriaID+"\" XPath: \""+xPath+"\"");
+											continue;
+										}else{
+											line.addLineValue(new ChartLineValue<Integer, Double>(eachBuild.number, number.doubleValue()));
+										}
+									} catch (XPathExpressionException e) {
+										LOGGER.error("Invalid XPath. (criteriaID: \""+eachCriteriaID+"\" XPath: \""+xPath+"\")", e);
+										e.printStackTrace();
+									}
+								} catch (JSONException e) {
+									LOGGER.error("Failed to config section. (criteriaID: \""+eachCriteriaID+"\")", e);
+									e.printStackTrace();
+								}							
+							}
+						} catch (JSONException e) {
+							LOGGER.error("Failed to config section.", e);
+							e.printStackTrace();
+						}
+					}
+				} catch (JSONException e) {
+					LOGGER.error("Failed to config section.", e);
+					e.printStackTrace();
+				}
+			}else{
+				LOGGER.warn("No test data found for build. (build: \""+eachBuild.number+"\")");
+			}
+		}
+    }
+    
+    private Chart<Integer, Double> createChart(String plotID) throws JSONException{
+		String chartTitle = optPlotConfigValue(plotID, CONFIG_PLOT_PARAMETER.title);
+		if(chartTitle == null){
+			chartTitle = "";
+		}		
+		
+		String buildCountValue = optPlotConfigValue(plotID, CONFIG_PLOT_PARAMETER.buildCount);
+		int maxCount = Integer.MAX_VALUE;
+		if(StringUtils.isNotBlank(buildCountValue)){
+			try{
+				maxCount = Integer.parseInt(buildCountValue);
+			}catch(NumberFormatException e){
+				LOGGER.error("Build count is not a number (plotID: \""+plotID+"\")", e);
+				e.printStackTrace();
+			}
+		}
+		
+		Chart<Integer, Double> chart = new Chart<Integer, Double>(plotID, chartTitle);		
+		for (String eachCriteriaID : getCriteriaConfigIDs(plotID)) {
+			ChartLine<Integer, Double> line = new ChartLine<Integer, Double>(eachCriteriaID, maxCount);
+			chart.getLines().add(line);			
+		}
+		return chart;
+    }
+    
+    private void initializeCharts() throws JSONException{
+		for (String eachPlotID : getPlotConfigIDs()) {
+			try{
+				charts.add(createChart(eachPlotID));
+			}catch(JSONException e){
+	    		LOGGER.error("Failed to initialize chart. (plotID: \""+eachPlotID+"\")", e);
+	    		e.printStackTrace();
+			}
+		}
     }
     
     @Override
@@ -271,7 +374,14 @@ public class LoadTestBuilder extends Builder {
     		isSave = false;
     		
     		charts = new ArrayList<Chart<Integer,Double>>(); 
-			updateConfig();			
+			updateConfig();	
+			
+			try {
+				initializeCharts();
+			} catch (JSONException e) {
+	    		LOGGER.error("Failed to initialize charts", e);
+				e.printStackTrace();
+			}			
 			loadCharts(project);
 
 			chartAction = new XLTChartAction(project, getEnabledCharts(), plotWidth, plotHeight, plotTitle, builderID, isPlotVertical);
@@ -343,8 +453,8 @@ public class LoadTestBuilder extends Builder {
     	if(config != null){
 	    	JSONArray criteriaSection = config.getJSONArray(CONFIG_SECTIONS_PARAMETER.criteria.name());
 	    	for (int i = 0; i < criteriaSection.length(); i++) {
-	    		JSONObject each = criteriaSection.getJSONObject(i);
-	    		criteriaList.add(each.getString(CONFIG_CRITERIA_PARAMETER.id.name()));
+    			JSONObject each = criteriaSection.getJSONObject(i);
+    			criteriaList.add(each.getString(CONFIG_CRITERIA_PARAMETER.id.name()));
 			}
     	}
     	return criteriaList;
@@ -355,9 +465,20 @@ public class LoadTestBuilder extends Builder {
 
     	JSONArray criteriaSection = config.getJSONArray(CONFIG_SECTIONS_PARAMETER.criteria.name());
     	for (int i = 0; i < criteriaSection.length(); i++) {
-    		JSONObject each = criteriaSection.getJSONObject(i);
-    		if(plotID.equals(each.getString(CONFIG_CRITERIA_PARAMETER.plotID.name()))){
-	    		criteriaList.add(each.getString(CONFIG_CRITERIA_PARAMETER.id.name()));
+    		String criteriaID = null;
+    		try{
+	    		JSONObject each = criteriaSection.getJSONObject(i);
+    			criteriaID = each.getString(CONFIG_CRITERIA_PARAMETER.id.name());
+	    		if(plotID.equals(each.getString(CONFIG_CRITERIA_PARAMETER.plotID.name()))){
+		    		criteriaList.add(criteriaID);
+	    		}
+    		}catch(JSONException e){    			
+    			String message = "";
+    			if(criteriaID != null)
+    				message = "criteriaID: \""+criteriaID+"\"";
+    			
+    			LOGGER.error("Failed to get plot id for criteria. (index: "+i+" "+message+")" ,e);
+    			e.printStackTrace();
     		}
 		}
     	return criteriaList;
@@ -380,151 +501,98 @@ public class LoadTestBuilder extends Builder {
     	return  new File(build.getRootDir(), "report-" + Integer.toString(build.getNumber()) + "/" + builderID + "/testreport.xml");
     }
     
-    private void postTestExecution(AbstractBuild<?,?> build, BuildListener listener){
+    private List<CriteriaResult> validateCriteria(AbstractBuild<?,?> build, BuildListener listener){
     	List<CriteriaResult> failedAlerts = new ArrayList<CriteriaResult>();    	
-		listener.getLogger().println();
-		
-    	File dataFile = null;
-    	try{
-			// copy testreport.xml to workspace
-    		File testReportFileXml = getTestReportDataFile(build);
 
-    		dataFile = new File(new File(build.getModuleRoot().toURI()),"testreport.xml");    		
-    		if(!testReportFileXml.exists()){
-    			CriteriaResult criteriaResult = CriteriaResult.error("No test data found at: "+testReportFileXml.getAbsolutePath());    			
+		Document dataXml = getDataDocument(build);
+		if(dataXml == null){
+			CriteriaResult criteriaResult = CriteriaResult.error("No test data found.");    			
+			failedAlerts.add(criteriaResult);
+			listener.getLogger().println(criteriaResult.getLogMessage());
+		}else{				
+	    	try {
+				List<String> criteriaIDs = getCriteriaConfigIDs();
+				for (String eachID : criteriaIDs) {
+					listener.getLogger().println();
+					listener.getLogger().println("Start processing. Criteria:\""+eachID+"\"");
+					String xPath = null;
+					String condition = null;
+					try {
+						xPath = getCriteriaConfigValue(eachID, CONFIG_CRITERIA_PARAMETER.xPath);
+						condition = optCriteriaConfigValue(eachID, CONFIG_CRITERIA_PARAMETER.condition);	
+						if(StringUtils.isBlank(condition)){
+							LOGGER.warn("No condition for criteria. (criteriaID: \""+eachID+"\")");
+							continue;
+						}
+						if(StringUtils.isBlank(xPath)){
+			    			CriteriaResult criteriaResult = CriteriaResult.error("No xPath for Criteria");
+			    			criteriaResult.setCriteriaID(eachID);
+							failedAlerts.add(criteriaResult);
+							listener.getLogger().println(criteriaResult.getLogMessage());
+							continue;
+						}
+						String conditionPath = xPath+condition;
+						
+						Element node = (Element)XPathFactory.newInstance().newXPath().evaluate(xPath, dataXml, XPathConstants.NODE);
+						if(node == null){
+			    			CriteriaResult criteriaResult = CriteriaResult.error("No result for XPath");
+			    			criteriaResult.setCriteriaID(eachID);
+			    			criteriaResult.setXPath(xPath);
+							failedAlerts.add(criteriaResult);
+							listener.getLogger().println(criteriaResult.getLogMessage());
+							continue;
+						}						
+
+						//test the condition
+						listener.getLogger().println("Test condition. Criteria: \""+eachID+ "\"\t Path: \"" + xPath+"\t Condition: \""+condition + "\"");
+						Node result = (Node)XPathFactory.newInstance().newXPath().evaluate(conditionPath, dataXml, XPathConstants.NODE);
+						if (result == null)
+						{
+							String value = XPathFactory.newInstance().newXPath().evaluate(xPath, dataXml);
+			    			CriteriaResult criteriaResult = CriteriaResult.failed("Condition failed");
+			    			criteriaResult.setCriteriaID(eachID);
+			    			criteriaResult.setValue(value);
+			    			criteriaResult.setCondition(condition);
+			    			criteriaResult.setXPath(xPath);
+							failedAlerts.add(criteriaResult);
+							listener.getLogger().println(criteriaResult.getLogMessage());
+							continue;
+						}							
+					} catch (JSONException e) {
+		    			CriteriaResult criteriaResult = CriteriaResult.error("Failed to get parameter from configuration");
+		    			criteriaResult.setCriteriaID(eachID);
+		    			criteriaResult.setExceptionMessage(e.getMessage());
+		    			criteriaResult.setCauseMessage(e.getCause() != null ? e.getCause().getMessage() : null);
+						failedAlerts.add(criteriaResult);
+						listener.getLogger().println(criteriaResult.getLogMessage());
+					} catch (XPathExpressionException e) {
+		    			CriteriaResult criteriaResult = CriteriaResult.error("Incorrect xPath expression");
+		    			criteriaResult.setCriteriaID(eachID);
+		    			criteriaResult.setCondition(condition);
+		    			criteriaResult.setXPath(xPath);
+		    			criteriaResult.setExceptionMessage(e.getMessage());
+		    			criteriaResult.setCauseMessage(e.getCause() != null ? e.getCause().getMessage() : null);
+						failedAlerts.add(criteriaResult);
+						listener.getLogger().println(criteriaResult.getLogMessage());
+					}							
+				}
+			}catch (JSONException e) {
+    			CriteriaResult criteriaResult = CriteriaResult.error("Failed to start process criteria.");
+    			criteriaResult.setExceptionMessage(e.getMessage());
+    			criteriaResult.setCauseMessage(e.getCause() != null ? e.getCause().getMessage() : null);
 				failedAlerts.add(criteriaResult);
 				listener.getLogger().println(criteriaResult.getLogMessage());
-    		}else{
-    			FileUtils.copyFile(testReportFileXml, dataFile);
-	    		if(!dataFile.exists()){
-	    			CriteriaResult criteriaResult = CriteriaResult.error("Expected copy of test data at: "+dataFile.getAbsolutePath());
-					failedAlerts.add(criteriaResult);
-					listener.getLogger().println(criteriaResult.getLogMessage());
-	    		}else{		        	
-					Document dataXml =DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(dataFile);
-					
-			    	try {
-						List<String> criteriaIDs = getCriteriaConfigIDs();
-						for (String eachID : criteriaIDs) {
-							listener.getLogger().println();
-							listener.getLogger().println("Start processing. Criteria:\""+eachID+"\"");
-							String xPath = null;
-							String condition = null;
-							try {
-								xPath = getCriteriaConfigValue(eachID, CONFIG_CRITERIA_PARAMETER.xPath);
-								condition = getCriteriaConfigValue(eachID, CONFIG_CRITERIA_PARAMETER.condition);	
-								if(xPath == null){
-					    			CriteriaResult criteriaResult = CriteriaResult.error("No xPath for Criteria");
-					    			criteriaResult.setCriteriaID(eachID);
-									failedAlerts.add(criteriaResult);
-									listener.getLogger().println(criteriaResult.getLogMessage());
-									continue;
-								}
-								if(condition == null){
-									condition = "";
-								}								
-								String conditionPath = xPath+condition;
-								
-								Element node = (Element)XPathFactory.newInstance().newXPath().evaluate(xPath, dataXml, XPathConstants.NODE);
-								if(node == null){
-					    			CriteriaResult criteriaResult = CriteriaResult.error("No result found for xPath");
-					    			criteriaResult.setCriteriaID(eachID);
-					    			criteriaResult.setXPath(xPath);
-									failedAlerts.add(criteriaResult);
-									listener.getLogger().println(criteriaResult.getLogMessage());
-									continue;
-								}
-
-								String label = getCriteriaConfigValue(eachID, CONFIG_CRITERIA_PARAMETER.name);
-								if(StringUtils.isBlank(label)){
-									label = eachID;
-								}
-								node.setAttribute("name", label);							
-								
-								Double number = (Double)XPathFactory.newInstance().newXPath().evaluate(xPath, dataXml, XPathConstants.NUMBER);
-								if(!number.isNaN()){
-									String plotID = optCriteriaConfigValue(eachID, CONFIG_CRITERIA_PARAMETER.plotID);									 
-									Chart<Integer, Double> chart = getChart(plotID);
-									if(chart != null){
-										listener.getLogger().println("Add plot value. Criteria \""+eachID+"\"\t Value: \""+number+ "\"\t Path: \"" + xPath);
-										
-										ChartLine<Integer, Double> line = chart.getLine(eachID);	
-										line.getValues().add(new ChartLineValue<Integer, Double>(build.number, number));										
-									}	
-								}else{
-									listener.getLogger().println("Plot value is not a number. Criteria \""+eachID+"\"\t Value: \""+number+ "\"\t Path: \"" + xPath);
-								}
-
-								if(!condition.isEmpty()){
-									//test the condition
-									listener.getLogger().println("Test condition. Criteria: \""+eachID+ "\"\t Path: \"" + xPath+"\t Condition: \""+condition + "\"");
-									Node result =  (Node)XPathFactory.newInstance().newXPath().evaluate(conditionPath, dataXml, XPathConstants.NODE);
-									if (result == null)
-									{
-										String value = XPathFactory.newInstance().newXPath().evaluate(xPath, dataXml);
-						    			CriteriaResult criteriaResult = CriteriaResult.failed("Condition failed");
-						    			criteriaResult.setCriteriaID(eachID);
-						    			criteriaResult.setValue(value);
-						    			criteriaResult.setCondition(condition);
-						    			criteriaResult.setXPath(xPath);
-										failedAlerts.add(criteriaResult);
-										listener.getLogger().println(criteriaResult.getLogMessage());
-										continue;
-									}							
-								}else{
-									listener.getLogger().println("No condition to test. Criteria: \""+eachID+"\"");
-								}
-							} catch (JSONException e) {
-				    			CriteriaResult criteriaResult = CriteriaResult.error("Failed to get parameter from configuration");
-				    			criteriaResult.setCriteriaID(eachID);
-				    			criteriaResult.setExceptionMessage(e.getMessage());
-				    			criteriaResult.setCauseMessage(e.getCause() != null ? e.getCause().getMessage() : null);
-								failedAlerts.add(criteriaResult);
-								listener.getLogger().println(criteriaResult.getLogMessage());
-							} catch (XPathExpressionException e) {
-				    			CriteriaResult criteriaResult = CriteriaResult.error("Incorrect xPath expression");
-				    			criteriaResult.setCriteriaID(eachID);
-				    			criteriaResult.setCondition(condition);
-				    			criteriaResult.setXPath(xPath);
-				    			criteriaResult.setExceptionMessage(e.getMessage());
-				    			criteriaResult.setCauseMessage(e.getCause() != null ? e.getCause().getMessage() : null);
-								failedAlerts.add(criteriaResult);
-								listener.getLogger().println(criteriaResult.getLogMessage());
-							}							
-						}
-					}catch (JSONException e) {
-						//we have no citeria section or one criteria has no id defined...
-						LOGGER.error("",e);
-						e.printStackTrace();
-					}		
-	    		}	    		
-    		}
-    	}catch(IOException e){
-			LOGGER.error("",e);
-			e.printStackTrace();
-    	} catch (SAXException e) {
-			LOGGER.error("",e);
-			e.printStackTrace();
-		} catch (ParserConfigurationException e) {
-			LOGGER.error("",e);
-			e.printStackTrace();
-		} catch (TransformerFactoryConfigurationError e) {
-			LOGGER.error("",e);
-			e.printStackTrace();
-		}catch (InterruptedException e) {
-			LOGGER.error("",e);
-			e.printStackTrace();
-		}finally{
-			if(dataFile != null){
-				try {
-					Files.deleteIfExists(dataFile.toPath());
-				} catch (IOException e) {
-					LOGGER.error("",e);
-					e.printStackTrace();
-				}
-			}
-		}
-    	
+			}		
+		}	
+		return failedAlerts;
+    }
+        
+    private void postTestExecution(AbstractBuild<?,?> build, BuildListener listener){
+		listener.getLogger().println();
+		
+		addBuildToCharts(build);
+		List<CriteriaResult> failedAlerts = validateCriteria(build, listener);
+		
     	if (!failedAlerts.isEmpty())
     	{
     		listener.getLogger().println();
@@ -634,8 +702,7 @@ public class LoadTestBuilder extends Builder {
     		}
     		catch(Exception e)
     		{
-    			LOGGER.error("",e);
-    			e.printStackTrace();
+    			//TODO not so nice
     			continue;
     		}
     		break;
@@ -744,8 +811,7 @@ public class LoadTestBuilder extends Builder {
     		}
     		catch(Exception e)
     		{
-    			LOGGER.error("",e);
-    			e.printStackTrace();
+    			//TODO not so nice
     			continue;
     		}
     		break;
