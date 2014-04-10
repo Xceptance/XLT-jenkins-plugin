@@ -961,9 +961,9 @@ public class LoadTestBuilder extends Builder
 
         // print error-stream in jenkins-console
         builder.redirectErrorStream(true);
-        
+
         // in case of no previous builds no trend report will created
-        if (numberOfPreviousBuilds!=0)
+        if (numberOfPreviousBuilds != 0)
         {
             // start trend-report-generator of XLT
             Process process = builder.start();
@@ -1000,14 +1000,14 @@ public class LoadTestBuilder extends Builder
                 listener.getLogger().println("Abort creating trend-report!");
             }
             listener.getLogger().println("return code trend-report-generator: " + process.waitFor());
-            
+
         }
         else
         {
             listener.getLogger().println("Cannot create trend report because no previous reports available!");
         }
 
-            }
+    }
 
     @Override
     public DescriptorImpl getDescriptor()
