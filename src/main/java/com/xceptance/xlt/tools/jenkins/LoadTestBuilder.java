@@ -7,10 +7,6 @@ import hudson.model.BuildListener;
 import hudson.model.Result;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
-
-import hudson.model.Project;
-
-
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
 import hudson.util.FormValidation;
@@ -690,10 +686,18 @@ public class LoadTestBuilder extends Builder {
     private void createTrendReport(AbstractBuild<?, ?> build,
 			BuildListener listener) throws IOException, InterruptedException {
     	
-    	//TODO extend to windows support
-		
     	List<String> trendReportProperties = new ArrayList<String>();
-    	trendReportProperties.add("./create_trend_report.sh");
+
+        if (SystemUtils.IS_OS_WINDOWS)
+        {
+            trendReportProperties.add("cmd.exe");
+            trendReportProperties.add("/c");
+            trendReportProperties.add("create_trend_report.cmd");
+        }
+        else
+        {
+            trendReportProperties.add("./create_trend_report.sh");
+        }
     	
     	File trendReportDest = new File(build.getProject().getRootDir() + "/trendreport/" + builderID);
     	if (!trendReportDest.isDirectory()){
