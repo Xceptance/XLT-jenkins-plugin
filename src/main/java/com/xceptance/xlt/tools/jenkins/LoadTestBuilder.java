@@ -659,7 +659,7 @@ public class LoadTestBuilder extends Builder {
     		File[] filesReport = srcXltReport.listFiles();
     		File lastFileReport = filesReport[filesReport.length-1];
     		srcXltReport = lastFileReport;
-    		File destXltReport = new File(build.getRootDir(), "report-" + Integer.toString(build.getNumber()) + "/" + builderID);    	
+    		File destXltReport = new File(build.getRootDir(), "report/" + builderID + "/" + Integer.toString(build.getNumber()));    	
     		FileUtils.copyDirectory(srcXltReport, destXltReport, true); 
     	
     		// copy xlt-result to build directory
@@ -702,17 +702,23 @@ public class LoadTestBuilder extends Builder {
     	trendReportProperties.add("-o");
     	trendReportProperties.add(trendReportDest.toString());
     	
+    	// get all previous build objects they were UNSTABLE or SUCCESS
     	List<AbstractBuild<?,?>> trendReportPath = new ArrayList<AbstractBuild<?,?>>(build.getPreviousBuildsOverThreshold(build.getNumber(), Result.UNSTABLE));    	
     	File reportDirectory;
     	for ( AbstractBuild<?, ?> path : trendReportPath){
-    		reportDirectory = new File(path.getRootDir().getAbsolutePath() + "/report-" + Integer.toString(path.getNumber()) + "/" + builderID);
+    		reportDirectory = new File(path.getRootDir().getAbsolutePath() + "/report/" + builderID + "/" + Integer.toString(path.getNumber()));
     		if (reportDirectory.isDirectory()){
     			trendReportProperties.add(reportDirectory.toString());
     		}
     	}
     	
     	//add also report from current build to testReportProperties
-    	trendReportProperties.add(build.getRootDir().getAbsolutePath() + "/report-" + Integer.toString(build.getNumber()) + "/" + builderID);
+    	File currentReportDirectory = new File(build.getRootDir().getAbsolutePath() + "/report/" + builderID + "/" + Integer.toString(build.getNumber()));
+    	if (currentReportDirectory.isDirectory()){
+    		trendReportProperties.add(currentReportDirectory.toString());
+    	}
+    	
+    	listener.getLogger().println(trendReportProperties);
     	
         ProcessBuilder builder = new ProcessBuilder(trendReportProperties);
     	File path = new File(build.getProject().getRootDir() + "/" + Integer.toString(build.getNumber()) + "/bin");
