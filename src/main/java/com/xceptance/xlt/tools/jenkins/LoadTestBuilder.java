@@ -934,6 +934,7 @@ public class LoadTestBuilder extends Builder
         List<AbstractBuild<?, ?>> trendReportPath = new ArrayList<AbstractBuild<?, ?>>(
                                                                                        build.getPreviousBuildsOverThreshold(build.getNumber(),
                                                                                                                             Result.UNSTABLE));
+        int numberOfPreviousBuilds = 0;
         File reportDirectory;
         for (AbstractBuild<?, ?> path : trendReportPath)
         {
@@ -942,6 +943,7 @@ public class LoadTestBuilder extends Builder
             if (reportDirectory.isDirectory())
             {
                 trendReportProperties.add(reportDirectory.toString());
+                numberOfPreviousBuilds++;
             }
         }
 
@@ -959,43 +961,53 @@ public class LoadTestBuilder extends Builder
 
         // print error-stream in jenkins-console
         builder.redirectErrorStream(true);
-
-        // start trend-report-generator of XLT
-        Process process = builder.start();
-
-        // print XLT console output in Jenkins
-        InputStream is = process.getInputStream();
-        BufferedReader br = new BufferedReader(new InputStreamReader(is));
-        String line;
-        String lastline = null;
-
-        while ((line = br.readLine()) != null)
+        
+        // in case of no previous builds no trend report will created
+        if (numberOfPreviousBuilds!=0)
         {
-            if (line != null)
+            // start trend-report-generator of XLT
+            Process process = builder.start();
+
+            // print XLT console output in Jenkins
+            InputStream is = process.getInputStream();
+            BufferedReader br = new BufferedReader(new InputStreamReader(is));
+            String line;
+            String lastline = null;
+
+            while ((line = br.readLine()) != null)
             {
-                lastline = line;
-                listener.getLogger().println(lastline);
+                if (line != null)
+                {
+                    lastline = line;
+                    listener.getLogger().println(lastline);
+                }
+
+                try
+                {
+                    process.exitValue();
+                }
+                catch (Exception e)
+                {
+                    // TODO not so nice
+                    continue;
+                }
+                break;
             }
 
-            try
+            // waiting until trend-report is created
+            if (process.waitFor() != 0)
             {
-                process.exitValue();
+                listener.getLogger().println("Abort creating trend-report!");
             }
-            catch (Exception e)
-            {
-                // TODO not so nice
-                continue;
-            }
-            break;
+            listener.getLogger().println("return code trend-report-generator: " + process.waitFor());
+            
+        }
+        else
+        {
+            listener.getLogger().println("Cannot create trend report because no previous reports available!");
         }
 
-        // waiting until trend-report is created
-        if (process.waitFor() != 0)
-        {
-            listener.getLogger().println("Abort creating trend-report!");
-        }
-        listener.getLogger().println("return code trend-report-generator: " + process.waitFor());
-    }
+            }
 
     @Override
     public DescriptorImpl getDescriptor()
