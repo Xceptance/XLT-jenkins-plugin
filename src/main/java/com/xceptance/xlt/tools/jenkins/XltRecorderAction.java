@@ -5,7 +5,6 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 import javax.servlet.ServletException;
 
@@ -79,11 +78,15 @@ public class XltRecorderAction implements Action
         return errors;
     }
 
+    public String getBuildNumber()
+    {
+        return String.valueOf(build.number);
+    }
+
     public void doReport(StaplerRequest request, StaplerResponse response) throws MalformedURLException, ServletException, IOException
     {
-        response.serveFile(request,
-                           new File(new File(build.getRootDir().getAbsolutePath() + "/report-" + Integer.toString(build.getNumber())),
-                                    request.getRestOfPath()).toURI().toURL());
+        response.serveFile(request, new File(new File(build.getRootDir().getAbsolutePath() + "/report"), request.getRestOfPath()).toURI()
+                                                                                                                                 .toURL());
     }
 
 }

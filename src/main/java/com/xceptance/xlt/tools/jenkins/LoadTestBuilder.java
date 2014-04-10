@@ -7,9 +7,6 @@ import hudson.model.BuildListener;
 import hudson.model.Result;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
-
-import hudson.model.Project;
-
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
 import hudson.util.FormValidation;
@@ -25,7 +22,6 @@ import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -636,7 +632,7 @@ public class LoadTestBuilder extends Builder
 
     public File getTestReportDataFile(AbstractBuild<?, ?> build)
     {
-        return new File(build.getRootDir(), "report-" + Integer.toString(build.getNumber()) + "/" + builderID + "/testreport.xml");
+        return new File(build.getRootDir(), "report/" + builderID + "/" + Integer.toString(build.getNumber()) + "/testreport.xml");
     }
 
     private List<CriteriaResult> validateCriteria(AbstractBuild<?, ?> build, BuildListener listener)
@@ -882,7 +878,7 @@ public class LoadTestBuilder extends Builder
             File[] filesReport = srcXltReport.listFiles();
             File lastFileReport = filesReport[filesReport.length - 1];
             srcXltReport = lastFileReport;
-            File destXltReport = new File(build.getRootDir(), "report-" + Integer.toString(build.getNumber()) + "/" + builderID);
+            File destXltReport = new File(build.getRootDir(), "report/" + builderID + "/" + Integer.toString(build.getNumber()));
             FileUtils.copyDirectory(srcXltReport, destXltReport, true);
 
             // copy xlt-result to build directory
@@ -913,10 +909,18 @@ public class LoadTestBuilder extends Builder
     private void createTrendReport(AbstractBuild<?, ?> build, BuildListener listener) throws IOException, InterruptedException
     {
 
-        // TODO extend to windows support
-
         List<String> trendReportProperties = new ArrayList<String>();
-        trendReportProperties.add("./create_trend_report.sh");
+
+        if (SystemUtils.IS_OS_WINDOWS)
+        {
+            trendReportProperties.add("cmd.exe");
+            trendReportProperties.add("/c");
+            trendReportProperties.add("create_trend_report.cmd");
+        }
+        else
+        {
+            trendReportProperties.add("./create_trend_report.sh");
+        }
 
         File trendReportDest = new File(build.getProject().getRootDir() + "/trendreport/" + builderID);
         if (!trendReportDest.isDirectory())
@@ -926,14 +930,15 @@ public class LoadTestBuilder extends Builder
         trendReportProperties.add("-o");
         trendReportProperties.add(trendReportDest.toString());
 
+        // get all previous build objects they were UNSTABLE or SUCCESS
         List<AbstractBuild<?, ?>> trendReportPath = new ArrayList<AbstractBuild<?, ?>>(
                                                                                        build.getPreviousBuildsOverThreshold(build.getNumber(),
                                                                                                                             Result.UNSTABLE));
         File reportDirectory;
         for (AbstractBuild<?, ?> path : trendReportPath)
         {
-            reportDirectory = new File(path.getRootDir().getAbsolutePath() + "/report-" + Integer.toString(path.getNumber()) + "/" +
-                                       builderID);
+            reportDirectory = new File(path.getRootDir().getAbsolutePath() + "/report/" + builderID + "/" +
+                                       Integer.toString(path.getNumber()));
             if (reportDirectory.isDirectory())
             {
                 trendReportProperties.add(reportDirectory.toString());
@@ -941,7 +946,12 @@ public class LoadTestBuilder extends Builder
         }
 
         // add also report from current build to testReportProperties
-        trendReportProperties.add(build.getRootDir().getAbsolutePath() + "/report-" + Integer.toString(build.getNumber()) + "/" + builderID);
+        File currentReportDirectory = new File(build.getRootDir().getAbsolutePath() + "/report/" + builderID + "/" +
+                                               Integer.toString(build.getNumber()));
+        if (currentReportDirectory.isDirectory())
+        {
+            trendReportProperties.add(currentReportDirectory.toString());
+        }
 
         ProcessBuilder builder = new ProcessBuilder(trendReportProperties);
         File path = new File(build.getProject().getRootDir() + "/" + Integer.toString(build.getNumber()) + "/bin");
