@@ -40,6 +40,10 @@ public class XLTChartAction implements Action{
 		this.builderID = builderID;
 		this.isPlotVertical = isPlotVertical;
 	}
+	
+	public String getBuilderID( ){
+		return builderID;
+	}
 
 	public String getDisplayName() {
 		return "XLT Chart - "+title; //no link to action page
@@ -77,6 +81,11 @@ public class XLTChartAction implements Action{
 	public boolean isPlotVertical(){
 		return isPlotVertical;
 
-	}		
+	}
+	
+	// called from jelly files
+	public void doTrendReport(StaplerRequest req, StaplerResponse rsp) throws MalformedURLException, ServletException, IOException{
+		rsp.serveFile(req, new File(new File(project.getRootDir() + "/trendreport", builderID), req.getRestOfPath()).toURI().toURL());
+	}
 
 }
