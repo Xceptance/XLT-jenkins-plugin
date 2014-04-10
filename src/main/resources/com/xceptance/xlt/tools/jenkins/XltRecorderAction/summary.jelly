@@ -25,7 +25,7 @@
 				<tr>
 					<td>
 			        	<div>
-			        		<a href="xltResult/report/${it.getBuilderID()}/index.html">XLT Report</a>
+			        		<a href="xltResult/report/${it.getBuilderID()}/${it.getBuildNumber()}/index.html">XLT Report</a>
 						</div>
 			        </td>
 			    </tr>

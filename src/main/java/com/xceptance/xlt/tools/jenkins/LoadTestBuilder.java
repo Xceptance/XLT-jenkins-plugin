@@ -377,7 +377,7 @@ public class LoadTestBuilder extends Builder {
     }
 
     public File getTestReportDataFile(AbstractBuild<?,?> build){
-    	return  new File(build.getRootDir(), "report-" + Integer.toString(build.getNumber()) + "/" + builderID + "/testreport.xml");
+    	return  new File(build.getRootDir(), "report/" + builderID + "/" + Integer.toString(build.getNumber()) + "/testreport.xml");
     }
     
     private void postTestExecution(AbstractBuild<?,?> build, BuildListener listener){
@@ -717,8 +717,6 @@ public class LoadTestBuilder extends Builder {
     	if (currentReportDirectory.isDirectory()){
     		trendReportProperties.add(currentReportDirectory.toString());
     	}
-    	
-    	listener.getLogger().println(trendReportProperties);
     	
         ProcessBuilder builder = new ProcessBuilder(trendReportProperties);
     	File path = new File(build.getProject().getRootDir() + "/" + Integer.toString(build.getNumber()) + "/bin");
