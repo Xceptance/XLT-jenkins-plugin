@@ -10,7 +10,9 @@ import javax.servlet.ServletException;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
 
+import hudson.model.AbstractBuild;
 import hudson.model.Action;
+import hudson.model.Result;
 import hudson.model.AbstractProject;
 
 public class XLTChartAction implements Action
@@ -91,7 +93,18 @@ public class XLTChartAction implements Action
     public boolean isPlotVertical()
     {
         return isPlotVertical;
+    }
 
+    public boolean isNotFirstBuild()
+    {
+        if (project.getNextBuildNumber() >= 3)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
     }
 
     // called from jelly files

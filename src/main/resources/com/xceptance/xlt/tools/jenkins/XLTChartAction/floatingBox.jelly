@@ -9,9 +9,11 @@
 			<j:set var="imgDivStyle" value=""/>
 		</j:if>		
 		
-	    <div>
-			<a href="${from.getUrlName()}/trendReport/index.html">XLT Trend Report</a>
-		</div>	
+		<j:if test="${from.isNotFirstBuild()}">
+			<div>
+				<a href="${from.getUrlName()}/trendReport/index.html">XLT Trend Report</a>
+			</div>
+		</j:if>			
 		<div align="right">					
 			<br/>
 			<div align="right">
