@@ -21,6 +21,7 @@
 		<div align="left" style="margin:10px;">					
 			<br/>
 			<div align="left">
+				<div align="right"><b>${from.getTitle()}</b></div><hr/>			
 				<img src="${resURL}/plugin/xlt-jenkins/logo.png" height="16"/>
 				<j:if test="${from.isNotFirstBuild()}">
 					<a href="${from.getUrlName()}/trendReport/index.html">
@@ -49,7 +50,7 @@
 				    <script type="text/javascript">
 					(function(){
 					
-						var data = eval('${eachChart.getDataString()}');						
+						var data = eval('${eachChart.getDataString()}');
 				        var container = document.getElementById('${plotContainerID}');
 				        var config = { 
 				        	yaxis:{ 

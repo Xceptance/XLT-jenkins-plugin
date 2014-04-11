@@ -110,7 +110,9 @@ public class Chart<X, Y>
             mouse += "trackFormatter:function(o){ return \""+name+": \"+o.y+\" Build: \"+parseInt(o.x)},";
             mouse += "},";
             
-            lineObject += data+mouse+ "}";
+            String label = "label:\""+name+"\",";
+            
+            lineObject += data+mouse+label+"}";
             return lineObject;
         }
 
