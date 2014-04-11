@@ -70,11 +70,14 @@ public class Chart<X, Y>
         private String lineID;
 
         private int maxCount;
+        
+        private String name;
 
-        public ChartLine(String lineID, int maxCount)
+        public ChartLine(String lineID, String name, int maxCount)
         {
             this.lineID = lineID;
             this.maxCount = maxCount;
+            this.name = name;
         }
 
         public String getLineID()
@@ -89,7 +92,9 @@ public class Chart<X, Y>
 
         public String getDataString()
         {
-            String data = "[";
+            String lineObject = "{";
+            
+            String data = "data:[";
             Iterator<ChartLineValue<X, Y>> iterator = values.iterator();
             while (iterator.hasNext())
             {
@@ -99,8 +104,14 @@ public class Chart<X, Y>
                     data += ",";
                 }
             }
-            data += "]";
-            return data;
+            data += "],";
+            
+            String mouse = "mouse:{";
+            mouse += "trackFormatter:function(o){ return \""+name+": \"+o.y+\" Build: \"+parseInt(o.x)},";
+            mouse += "},";
+            
+            lineObject += data+mouse+ "}";
+            return lineObject;
         }
 
         public List<ChartLineValue<X, Y>> getValues()

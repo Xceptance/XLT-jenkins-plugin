@@ -5,14 +5,14 @@
             "xPath": "/testreport/summary/requests/max",
             "condition": "[number() < 10000]",
             "plotID": "summary",
-            "name": "max < 10s"
+            "name": "max(ms)"
         },
         {
             "id": "requestsMean",
             "xPath": "/testreport/summary/requests/mean",
             "condition": "",
             "plotID": "summary",
-            "name": "mean"
+            "name": "mean(ms)"
         },
         {
             "id": "requestErrors",
@@ -26,7 +26,7 @@
             "xPath": "/testreport/actions/action[./name[text() = 'Homepage']]/max",
             "condition": "[number() < 1000]",
             "plotID": "homepage",
-            "name": "max < 1s"
+            "name": "max(ms)"
         },
         {
             "id": "homepageMean",

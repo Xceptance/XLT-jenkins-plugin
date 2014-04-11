@@ -443,7 +443,12 @@ public class LoadTestBuilder extends Builder
         Chart<Integer, Double> chart = new Chart<Integer, Double>(plotID, chartTitle);
         for (String eachCriteriaID : getCriteriaConfigIDs(plotID))
         {
-            ChartLine<Integer, Double> line = new ChartLine<Integer, Double>(eachCriteriaID, maxCount);
+            String lineName = optCriteriaConfigValue(eachCriteriaID, CONFIG_CRITERIA_PARAMETER.name);
+            if(lineName == null)
+            {
+                lineName = "";
+            }
+            ChartLine<Integer, Double> line = new ChartLine<Integer, Double>(eachCriteriaID, lineName, maxCount);
             chart.getLines().add(line);
         }
         return chart;
