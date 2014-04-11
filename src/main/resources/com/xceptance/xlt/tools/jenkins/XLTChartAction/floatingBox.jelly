@@ -21,10 +21,12 @@
 		<div align="left" style="margin:10px;">					
 			<br/>
 			<div align="left">
-				<a href="${from.getUrlName()}/trendReport/index.html">
-					<img src="${resURL}/plugin/xlt-jenkins/logo.png" height="16"/>
-					<b>Trend Report</b>
-				</a>
+				<img src="${resURL}/plugin/xlt-jenkins/logo.png" height="16"/>
+				<j:if test="${from.isNotFirstBuild()}">
+					<a href="${from.getUrlName()}/trendReport/index.html">
+						<b>Trend Report</b>
+					</a>
+				</j:if>
 			</div>			
 			<div>
 			
