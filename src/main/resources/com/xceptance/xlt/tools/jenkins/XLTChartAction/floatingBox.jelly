@@ -67,10 +67,6 @@
 								max:null,
 								tickDecimals:0,
 								tickFormatter:function(o){ return o},
-								noTicks:4,
-								minorTickFreq:2,
-								autoscale:false,
-								autoscaleMargin:0.1,
 								margin:false,
 							},
 							selection: {
@@ -82,7 +78,7 @@
 					        	show:true
 					        },
 					        points:{
-					        	show:true
+					        	show:false
 					        },
 					        grid:{
 					        	verticalLines: false,
@@ -118,9 +114,12 @@
 					            yaxis: {
 					                min: area.y1,
 					                max: area.y2
-					            }
+					            },
+					            points:{
+					        		show:true
+					        	},					            
 					        });
-					    });
+					    });					    
 					
 					    // When graph is clicked, draw the graph with default area.
 					    Flotr.EventAdapter.observe(container, 'flotr:click', function() {
