@@ -4,20 +4,26 @@
 		<j:set var="width" value="${from.getPlotWidth()}"/>
 		<j:set var="height" value="${from.getPlotHeight()}"/>
 		
+		<style>
+			.flotr-grid-label-y{
+				text-align:left !important;
+				left:auto !important;
+				right:${width+5}px !important;
+			}	
+		</style>
+		
+		
 		<j:set var="imgDivStyle" value="display:inline-block;"/>
 		<j:if test="${from.isPlotVertical()}">
 			<j:set var="imgDivStyle" value=""/>
 		</j:if>		
 		
-	    <div>
-			<a href="${from.getUrlName()}/trendReport/index.html">XLT Trend Report</a>
-		</div>	
-		<div align="right">					
+		<div align="left" style="margin:10px;">					
 			<br/>
-			<div align="right">
-				<a href="${from.getUrlName()}">
+			<div align="left">
+				<a href="${from.getUrlName()}/trendReport/index.html">
 					<img src="${resURL}/plugin/xlt-jenkins/logo.png" height="16"/>
-					<b>${from.getTitle()}</b>
+					<b>Trend Report</b>
 				</a>
 			</div>			
 			<div>
@@ -32,32 +38,40 @@
 					
 					<j:set var="plotContainerID" value="$plotContainer-${eachChart.getChartID()}-${from.getBuilderID()}" />
 
-					<div id="${plotContainerID}" style="width:${width}px;height:${height}px;${imgDivStyle}"></div>
+					<div style="${imgDivStyle}">
+						<center>
+							<b>${eachChart.getTitle()}</b><br/>
+							<div id="${plotContainerID}" style="border: 1px solid #BBBBBB; box-shadow: 1px 2px 6px -3px #555555;margin:0px 10px 10px 30px;width:${width}px;height:${height}px;"></div>
+						</center>
+					</div>
 				    <script type="text/javascript">
 					(function(){
 					
 						var data = eval('${eachChart.getDataString()}'); 				    	
 				        var container = document.getElementById('${plotContainerID}');
 				        var config = { 
-				        	title:'${eachChart.getTitle()}',
 				        	yaxis:{ 
-				        		min:null,
+				        		min:0,
 				        		max:null,
 								tickDecimals:0,		
-								tickFormatter:function(o){ return o},	
+								tickFormatter:function(o){ return o},
+								margin:false,
+								autoscale:true,
+								autoscaleMargin:0.1,							
 							},
 							xaxis:{
 								min:null,
 								max:null,
 								tickDecimals:0,
-								tickFormatter:function(o){ return "Build "+o},
-								labelsAngle: 90,
+								tickFormatter:function(o){ return o},
 								noTicks:4,
 								minorTickFreq:2,
+								autoscale:false,
+								autoscaleMargin:0.1,
+								margin:false,
 							},
 							selection: {
 								show:true,				
-				    			scroll: true,			
 					            mode: 'xy',
 					            fps: 25
 					        },			
@@ -69,6 +83,8 @@
 					        },
 					        grid:{
 					        	verticalLines: false,
+								outlineWidth:1,
+								outline:'s',
 					        },
 					        mouse:{
 					        	track:true,
