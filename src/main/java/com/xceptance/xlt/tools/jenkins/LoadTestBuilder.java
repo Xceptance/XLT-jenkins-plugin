@@ -444,7 +444,7 @@ public class LoadTestBuilder extends Builder
         for (String eachCriteriaID : getCriteriaConfigIDs(plotID))
         {
             String lineName = optCriteriaConfigValue(eachCriteriaID, CONFIG_CRITERIA_PARAMETER.name);
-            if(lineName == null)
+            if (lineName == null)
             {
                 lineName = "";
             }
@@ -780,133 +780,147 @@ public class LoadTestBuilder extends Builder
         listener.getLogger().println(destDir.getAbsolutePath());
         destDir.mkdirs();
 
-        // copy XLT to certain directory
-        File srcDir = new File(Jenkins.getInstance().getRootDir(), "xlt-4.3.3");
-        listener.getLogger().println(srcDir.getAbsolutePath());
-
-        FileUtils.copyDirectory(srcDir, destDir, true);
-
-        // perform XLT
-        List<String> commandLine = new ArrayList<String>();
-
-        if (SystemUtils.IS_OS_WINDOWS)
+        try
         {
-            commandLine.add("cmd.exe");
-            commandLine.add("/c");
-            commandLine.add("mastercontroller.cmd");
-        }
-        else
-        {
-            commandLine.add("./mastercontroller.sh");
-        }
+            // copy XLT to certain directory
+            File srcDir = new File(Jenkins.getInstance().getRootDir(), "xlt-4.3.3");
+            listener.getLogger().println(srcDir.getAbsolutePath());
 
-        // if no specific machineHost set -embedded
-        if (machineHost.isEmpty())
-        {
-            commandLine.add("-embedded");
-        }
-        else
-        {
-            commandLine.add("-Dcom.xceptance.xlt.mastercontroller.agentcontrollers.ac1.url=" + machineHost);
-        }
+            FileUtils.copyDirectory(srcDir, destDir, true);
 
-        commandLine.add("-auto");
-        commandLine.add("-report");
+            // perform XLT
+            List<String> commandLine = new ArrayList<String>();
 
-        if (testPropertiesFileAvailable == true)
-        {
-            commandLine.add("-testPropertiesFile");
-            commandLine.add(testProperties);
-
-        }
-
-        commandLine.add("-Dcom.xceptance.xlt.mastercontroller.testSuitePath=" + build.getModuleRoot().toString());
-
-        ProcessBuilder builder = new ProcessBuilder(commandLine);
-
-        File path = new File(destDir + "/bin");
-
-        // access files
-        for (File child : path.listFiles())
-        {
-            child.setExecutable(true);
-        }
-
-        builder.directory(path);
-
-        // print error-stream in jenkins-console
-        builder.redirectErrorStream(true);
-
-        // start XLT
-        Process process = builder.start();
-
-        // print XLT console output in Jenkins
-        InputStream is = process.getInputStream();
-        BufferedReader br = new BufferedReader(new InputStreamReader(is));
-        String line;
-        String lastline = null;
-
-        while ((line = br.readLine()) != null)
-        {
-            if (line != null)
+            if (SystemUtils.IS_OS_WINDOWS)
             {
-                lastline = line;
-                listener.getLogger().println(lastline);
+                commandLine.add("cmd.exe");
+                commandLine.add("/c");
+                commandLine.add("mastercontroller.cmd");
+            }
+            else
+            {
+                commandLine.add("./mastercontroller.sh");
             }
 
-            try
+            // if no specific machineHost set -embedded
+            if (machineHost.isEmpty())
             {
-                process.exitValue();
+                commandLine.add("-embedded");
             }
-            catch (Exception e)
+            else
             {
-                // TODO not so nice
-                continue;
+                commandLine.add("-Dcom.xceptance.xlt.mastercontroller.agentcontrollers.ac1.url=" + machineHost);
             }
-            break;
-        }
 
-        // waiting until XLT is finished and set FAILED in case of unexpected termination
-        if (process.waitFor() != 0)
+            commandLine.add("-auto");
+            commandLine.add("-report");
+
+            if (testPropertiesFileAvailable == true)
+            {
+                commandLine.add("-testPropertiesFile");
+                commandLine.add(testProperties);
+
+            }
+
+            commandLine.add("-Dcom.xceptance.xlt.mastercontroller.testSuitePath=" + build.getModuleRoot().toString());
+
+            ProcessBuilder builder = new ProcessBuilder(commandLine);
+
+            File path = new File(destDir + "/bin");
+
+            // access files
+            for (File child : path.listFiles())
+            {
+                child.setExecutable(true);
+            }
+
+            builder.directory(path);
+
+            // print error-stream in jenkins-console
+            builder.redirectErrorStream(true);
+
+            // start XLT
+            Process process = builder.start();
+
+            // print XLT console output in Jenkins
+            InputStream is = process.getInputStream();
+            BufferedReader br = new BufferedReader(new InputStreamReader(is));
+            String line;
+            String lastline = null;
+
+            while ((line = br.readLine()) != null)
+            {
+                if (line != null)
+                {
+                    lastline = line;
+                    listener.getLogger().println(lastline);
+                }
+
+                try
+                {
+                    process.exitValue();
+                }
+                catch (Exception e)
+                {
+                    // TODO not so nice
+                    continue;
+                }
+                break;
+            }
+
+            // waiting until XLT is finished and set FAILED in case of unexpected termination
+            if (process.waitFor() != 0)
+            {
+                build.setResult(Result.FAILURE);
+            }
+            listener.getLogger().println("mastercontroller return code: " + process.waitFor());
+
+            listener.getLogger().println("XLT_FINISHED");
+
+            // perform only if XLT was successful
+            if (build.getResult() == null || !build.getResult().equals(Result.FAILURE))
+            {
+                // copy xlt-report to build directory
+                File srcXltReport = new File(destDir, "reports");
+                File[] filesReport = srcXltReport.listFiles();
+                File lastFileReport = filesReport[filesReport.length - 1];
+                srcXltReport = lastFileReport;
+                File destXltReport = new File(build.getRootDir(), "report/" + builderID + "/" + Integer.toString(build.getNumber()));
+                FileUtils.copyDirectory(srcXltReport, destXltReport, true);
+
+                // copy xlt-result to build directory
+                File srcXltResult = new File(destDir, "results");
+                File[] filesResult = srcXltResult.listFiles();
+                File lastFileResult = filesResult[filesResult.length - 1];
+                srcXltReport = lastFileResult;
+                File destXltResult = new File(build.getArtifactsDir(), "result/" + builderID);
+                FileUtils.copyDirectory(srcXltResult, destXltResult, true);
+
+                // copy xlt-logs to build directory
+                File srcXltLog = new File(destDir, "log");
+                File destXltLog = new File(build.getArtifactsDir() + "/log", builderID);
+                FileUtils.copyDirectory(srcXltLog, destXltLog, true);
+
+                postTestExecution(build, listener);
+
+                // update trend-report
+                createTrendReport(build, listener);
+
+            }
+
+            // delete temporary directory with local xlt
+            FileUtils.deleteDirectory(destDir);
+
+        }
+        catch (Exception e)
         {
             build.setResult(Result.FAILURE);
+            listener.getLogger().println("Build " + Integer.toString(build.getNumber()) + " is failed: " + e);
         }
-        listener.getLogger().println("mastercontroller return code: " + process.waitFor());
-
-        listener.getLogger().println("XLT_FINISHED");
-
-        // perform only if XLT was successful
-        if (build.getResult() == null || !build.getResult().equals(Result.FAILURE))
+        finally
         {
-            // copy xlt-report to build directory
-            File srcXltReport = new File(destDir, "reports");
-            File[] filesReport = srcXltReport.listFiles();
-            File lastFileReport = filesReport[filesReport.length - 1];
-            srcXltReport = lastFileReport;
-            File destXltReport = new File(build.getRootDir(), "report/" + builderID + "/" + Integer.toString(build.getNumber()));
-            FileUtils.copyDirectory(srcXltReport, destXltReport, true);
-
-            // copy xlt-result to build directory
-            File srcXltResult = new File(destDir, "results");
-            File[] filesResult = srcXltResult.listFiles();
-            File lastFileResult = filesResult[filesResult.length - 1];
-            srcXltReport = lastFileResult;
-            File destXltResult = new File(build.getArtifactsDir(), "result/" + builderID);
-            FileUtils.copyDirectory(srcXltResult, destXltResult, true);
-
-            // copy xlt-logs to build directory
-            File srcXltLog = new File(destDir, "log");
-            File destXltLog = new File(build.getArtifactsDir() + "/log", builderID);
-            FileUtils.copyDirectory(srcXltLog, destXltLog, true);
-
-            postTestExecution(build, listener);
-
-            // update trend-report
-            createTrendReport(build, listener);
+            FileUtils.deleteDirectory(destDir);
         }
-
-        // delete temporary directory with local xlt
-        FileUtils.deleteDirectory(destDir);
 
         return true;
     }
