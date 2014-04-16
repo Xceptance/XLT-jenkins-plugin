@@ -783,7 +783,7 @@ public class LoadTestBuilder extends Builder
         try
         {
             // copy XLT to certain directory
-            File srcDir = new File(Jenkins.getInstance().getRootDir(), "xlt-4.3.3");
+            File srcDir = new File(Jenkins.getInstance().getRootDir(), "xlt");
             listener.getLogger().println(srcDir.getAbsolutePath());
 
             FileUtils.copyDirectory(srcDir, destDir, true);
