@@ -776,7 +776,7 @@ public class LoadTestBuilder extends Builder
     public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws IOException, InterruptedException
     {
         // generate temporary directory for local xlt
-        File destDir = new File(build.getProject().getRootDir(), "xlt");
+        File destDir = new File(build.getProject().getRootDir(), Integer.toString(build.getNumber()));
         listener.getLogger().println(destDir.getAbsolutePath());
         destDir.mkdirs();
 
@@ -975,7 +975,7 @@ public class LoadTestBuilder extends Builder
         }
 
         ProcessBuilder builder = new ProcessBuilder(trendReportProperties);
-        File path = new File(build.getProject().getRootDir() + "/xlt/bin");
+        File path = new File(build.getProject().getRootDir() + "/" + Integer.toString(build.getNumber()) + "/bin");
         builder.directory(path);
 
         // print error-stream in jenkins-console
