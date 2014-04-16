@@ -85,8 +85,9 @@ public class XltRecorderAction implements Action
 
     public void doReport(StaplerRequest request, StaplerResponse response) throws MalformedURLException, ServletException, IOException
     {
-        response.serveFile(request, new File(new File(build.getRootDir().getAbsolutePath() + "/report"), request.getRestOfPath()).toURI()
-                                                                                                                                 .toURL());
+        response.serveFile(request,
+                           new File(new File(build.getArtifactsDir().getAbsolutePath()),
+                                    request.getRestOfPath()).toURI().toURL());
     }
 
 }

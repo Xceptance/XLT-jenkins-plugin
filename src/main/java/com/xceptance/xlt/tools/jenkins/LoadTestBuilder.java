@@ -637,7 +637,7 @@ public class LoadTestBuilder extends Builder
 
     public File getTestReportDataFile(AbstractBuild<?, ?> build)
     {
-        return new File(build.getRootDir(), "report/" + builderID + "/" + Integer.toString(build.getNumber()) + "/testreport.xml");
+        return new File(build.getArtifactsDir(), builderID + "/report/" + Integer.toString(build.getNumber()) + "/testreport.xml");
     }
 
     private List<CriteriaResult> validateCriteria(AbstractBuild<?, ?> build, BuildListener listener)
@@ -851,14 +851,15 @@ public class LoadTestBuilder extends Builder
             boolean interrupted = false;
             while ((line = br.readLine()) != null)
             {
-                if(Thread.currentThread().isInterrupted()){
+                if (Thread.currentThread().isInterrupted())
+                {
                     interrupted = true;
                     br.close();
                     process.destroy();
                     build.setResult(Result.ABORTED);
                     break;
                 }
-                
+
                 if (line != null)
                 {
                     lastline = line;
@@ -877,16 +878,17 @@ public class LoadTestBuilder extends Builder
                 break;
             }
 
-            if(!interrupted){
+            if (!interrupted)
+            {
                 // waiting until XLT is finished and set FAILED in case of unexpected termination
                 if (process.waitFor() != 0)
                 {
                     build.setResult(Result.FAILURE);
                 }
                 listener.getLogger().println("mastercontroller return code: " + process.waitFor());
-    
+
                 listener.getLogger().println("XLT_FINISHED");
-    
+
                 // perform only if XLT was successful
                 if (build.getResult() == null || !build.getResult().equals(Result.FAILURE))
                 {
@@ -895,27 +897,27 @@ public class LoadTestBuilder extends Builder
                     File[] filesReport = srcXltReport.listFiles();
                     File lastFileReport = filesReport[filesReport.length - 1];
                     srcXltReport = lastFileReport;
-                    File destXltReport = new File(build.getRootDir(), "report/" + builderID + "/" + Integer.toString(build.getNumber()));
+                    File destXltReport = new File(build.getArtifactsDir(), builderID + "/report/" + Integer.toString(build.getNumber()));
                     FileUtils.copyDirectory(srcXltReport, destXltReport, true);
-    
+
                     // copy xlt-result to build directory
                     File srcXltResult = new File(destDir, "results");
                     File[] filesResult = srcXltResult.listFiles();
                     File lastFileResult = filesResult[filesResult.length - 1];
                     srcXltReport = lastFileResult;
-                    File destXltResult = new File(build.getArtifactsDir(), "result/" + builderID);
+                    File destXltResult = new File(build.getArtifactsDir(), builderID + "/result");
                     FileUtils.copyDirectory(srcXltResult, destXltResult, true);
-    
+
                     // copy xlt-logs to build directory
                     File srcXltLog = new File(destDir, "log");
-                    File destXltLog = new File(build.getArtifactsDir() + "/log", builderID);
+                    File destXltLog = new File(build.getArtifactsDir(), builderID + "/log");
                     FileUtils.copyDirectory(srcXltLog, destXltLog, true);
-    
+
                     postTestExecution(build, listener);
-    
+
                     // update trend-report
                     createTrendReport(build, listener);
-    
+
                 }
             }
 
@@ -968,7 +970,7 @@ public class LoadTestBuilder extends Builder
         File reportDirectory;
         for (AbstractBuild<?, ?> path : trendReportPath)
         {
-            reportDirectory = new File(path.getRootDir().getAbsolutePath() + "/report/" + builderID + "/" +
+            reportDirectory = new File(path.getArtifactsDir().getAbsolutePath() + "/" + builderID + "/report/" +
                                        Integer.toString(path.getNumber()));
             if (reportDirectory.isDirectory())
             {
@@ -978,7 +980,7 @@ public class LoadTestBuilder extends Builder
         }
 
         // add also report from current build to testReportProperties
-        File currentReportDirectory = new File(build.getRootDir().getAbsolutePath() + "/report/" + builderID + "/" +
+        File currentReportDirectory = new File(build.getArtifactsDir().getAbsolutePath() + "/" + builderID + "/report/" +
                                                Integer.toString(build.getNumber()));
         if (currentReportDirectory.isDirectory())
         {
@@ -1005,17 +1007,18 @@ public class LoadTestBuilder extends Builder
             String lastline = null;
 
             boolean interrupted = false;
-            
+
             while ((line = br.readLine()) != null)
             {
-                if(Thread.currentThread().isInterrupted()){
+                if (Thread.currentThread().isInterrupted())
+                {
                     interrupted = true;
                     br.close();
                     process.destroy();
                     build.setResult(Result.ABORTED);
                     break;
                 }
-                
+
                 if (line != null)
                 {
                     lastline = line;
@@ -1034,7 +1037,8 @@ public class LoadTestBuilder extends Builder
                 break;
             }
 
-            if(!interrupted){
+            if (!interrupted)
+            {
                 // waiting until trend-report is created
                 if (process.waitFor() != 0)
                 {
