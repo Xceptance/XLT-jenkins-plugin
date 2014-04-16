@@ -848,8 +848,17 @@ public class LoadTestBuilder extends Builder
             String line;
             String lastline = null;
 
+            boolean interrupted = false;
             while ((line = br.readLine()) != null)
             {
+                if(Thread.currentThread().isInterrupted()){
+                    interrupted = true;
+                    br.close();
+                    process.destroy();
+                    build.setResult(Result.ABORTED);
+                    break;
+                }
+                
                 if (line != null)
                 {
                     lastline = line;
@@ -868,44 +877,46 @@ public class LoadTestBuilder extends Builder
                 break;
             }
 
-            // waiting until XLT is finished and set FAILED in case of unexpected termination
-            if (process.waitFor() != 0)
-            {
-                build.setResult(Result.FAILURE);
-            }
-            listener.getLogger().println("mastercontroller return code: " + process.waitFor());
-
-            listener.getLogger().println("XLT_FINISHED");
-
-            // perform only if XLT was successful
-            if (build.getResult() == null || !build.getResult().equals(Result.FAILURE))
-            {
-                // copy xlt-report to build directory
-                File srcXltReport = new File(destDir, "reports");
-                File[] filesReport = srcXltReport.listFiles();
-                File lastFileReport = filesReport[filesReport.length - 1];
-                srcXltReport = lastFileReport;
-                File destXltReport = new File(build.getRootDir(), "report/" + builderID + "/" + Integer.toString(build.getNumber()));
-                FileUtils.copyDirectory(srcXltReport, destXltReport, true);
-
-                // copy xlt-result to build directory
-                File srcXltResult = new File(destDir, "results");
-                File[] filesResult = srcXltResult.listFiles();
-                File lastFileResult = filesResult[filesResult.length - 1];
-                srcXltReport = lastFileResult;
-                File destXltResult = new File(build.getArtifactsDir(), "result/" + builderID);
-                FileUtils.copyDirectory(srcXltResult, destXltResult, true);
-
-                // copy xlt-logs to build directory
-                File srcXltLog = new File(destDir, "log");
-                File destXltLog = new File(build.getArtifactsDir() + "/log", builderID);
-                FileUtils.copyDirectory(srcXltLog, destXltLog, true);
-
-                postTestExecution(build, listener);
-
-                // update trend-report
-                createTrendReport(build, listener);
-
+            if(!interrupted){
+                // waiting until XLT is finished and set FAILED in case of unexpected termination
+                if (process.waitFor() != 0)
+                {
+                    build.setResult(Result.FAILURE);
+                }
+                listener.getLogger().println("mastercontroller return code: " + process.waitFor());
+    
+                listener.getLogger().println("XLT_FINISHED");
+    
+                // perform only if XLT was successful
+                if (build.getResult() == null || !build.getResult().equals(Result.FAILURE))
+                {
+                    // copy xlt-report to build directory
+                    File srcXltReport = new File(destDir, "reports");
+                    File[] filesReport = srcXltReport.listFiles();
+                    File lastFileReport = filesReport[filesReport.length - 1];
+                    srcXltReport = lastFileReport;
+                    File destXltReport = new File(build.getRootDir(), "report/" + builderID + "/" + Integer.toString(build.getNumber()));
+                    FileUtils.copyDirectory(srcXltReport, destXltReport, true);
+    
+                    // copy xlt-result to build directory
+                    File srcXltResult = new File(destDir, "results");
+                    File[] filesResult = srcXltResult.listFiles();
+                    File lastFileResult = filesResult[filesResult.length - 1];
+                    srcXltReport = lastFileResult;
+                    File destXltResult = new File(build.getArtifactsDir(), "result/" + builderID);
+                    FileUtils.copyDirectory(srcXltResult, destXltResult, true);
+    
+                    // copy xlt-logs to build directory
+                    File srcXltLog = new File(destDir, "log");
+                    File destXltLog = new File(build.getArtifactsDir() + "/log", builderID);
+                    FileUtils.copyDirectory(srcXltLog, destXltLog, true);
+    
+                    postTestExecution(build, listener);
+    
+                    // update trend-report
+                    createTrendReport(build, listener);
+    
+                }
             }
 
             // delete temporary directory with local xlt
@@ -993,8 +1004,18 @@ public class LoadTestBuilder extends Builder
             String line;
             String lastline = null;
 
+            boolean interrupted = false;
+            
             while ((line = br.readLine()) != null)
             {
+                if(Thread.currentThread().isInterrupted()){
+                    interrupted = true;
+                    br.close();
+                    process.destroy();
+                    build.setResult(Result.ABORTED);
+                    break;
+                }
+                
                 if (line != null)
                 {
                     lastline = line;
@@ -1013,13 +1034,14 @@ public class LoadTestBuilder extends Builder
                 break;
             }
 
-            // waiting until trend-report is created
-            if (process.waitFor() != 0)
-            {
-                listener.getLogger().println("Abort creating trend-report!");
+            if(!interrupted){
+                // waiting until trend-report is created
+                if (process.waitFor() != 0)
+                {
+                    listener.getLogger().println("Abort creating trend-report!");
+                }
+                listener.getLogger().println("return code trend-report-generator: " + process.waitFor());
             }
-            listener.getLogger().println("return code trend-report-generator: " + process.waitFor());
-
         }
         else
         {
