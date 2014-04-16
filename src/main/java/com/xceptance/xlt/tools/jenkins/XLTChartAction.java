@@ -3,6 +3,7 @@ package com.xceptance.xlt.tools.jenkins;
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.servlet.ServletException;
@@ -97,7 +98,20 @@ public class XLTChartAction implements Action
 
     public boolean isNotFirstBuild()
     {
-        if (project.getNextBuildNumber() >= 3)
+
+        int numberOfValidBuilds = 0;
+
+        List<AbstractBuild<?, ?>> allBuilds = new ArrayList<AbstractBuild<?, ?>>(project.getBuilds());
+
+        for (AbstractBuild<?, ?> singleBuild : allBuilds)
+        {
+            if (singleBuild.getResult().equals(Result.UNSTABLE) || singleBuild.getResult().equals(Result.SUCCESS))
+            {
+                numberOfValidBuilds++;
+            }
+        }
+
+        if (numberOfValidBuilds >= 2)
         {
             return true;
         }
@@ -105,6 +119,7 @@ public class XLTChartAction implements Action
         {
             return false;
         }
+
     }
 
     // called from jelly files
