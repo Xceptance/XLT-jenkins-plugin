@@ -13,7 +13,7 @@
 		</style>
 		
 		
-		<j:set var="imgDivStyle" value="display:inline-block;"/>
+		<j:set var="imgDivStyle" value="display:inline-block;margin:8px;"/>
 		<j:if test="${from.isPlotVertical()}">
 			<j:set var="imgDivStyle" value=""/>
 		</j:if>		
@@ -24,6 +24,7 @@
 				<div align="right"><b>${from.getTitle()}</b></div><hr/>			
 				<img src="${resURL}/plugin/xlt-jenkins/logo.png" height="16"/>
 				<j:if test="${from.isTrendReportAvailable()}">
+					&amp;nbsp;&amp;nbsp;&amp;nbsp;
 					<a href="${from.getUrlName()}/trendReport/index.html">
 						<b>Trend Report</b>
 					</a>
