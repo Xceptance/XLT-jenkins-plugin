@@ -8,6 +8,7 @@ import java.util.List;
 
 import javax.servlet.ServletException;
 
+import org.apache.commons.io.FileUtils;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
 
@@ -96,22 +97,11 @@ public class XLTChartAction implements Action
         return isPlotVertical;
     }
 
-    public boolean isNotFirstBuild()
+    public boolean isTrendReportAvailable()
     {
 
-        int numberOfValidBuilds = 0;
-
-        List<AbstractBuild<?, ?>> allBuilds = new ArrayList<AbstractBuild<?, ?>>(project.getBuilds());
-
-        for (AbstractBuild<?, ?> singleBuild : allBuilds)
-        {
-            if (singleBuild.getResult().equals(Result.UNSTABLE) || singleBuild.getResult().equals(Result.SUCCESS))
-            {
-                numberOfValidBuilds++;
-            }
-        }
-
-        if (numberOfValidBuilds >= 2)
+        File trendReportDirectory = new File(project.getRootDir() + "/trendreport/" + builderID);
+        if (trendReportDirectory.isDirectory() && trendReportDirectory.listFiles().length != 0)
         {
             return true;
         }
