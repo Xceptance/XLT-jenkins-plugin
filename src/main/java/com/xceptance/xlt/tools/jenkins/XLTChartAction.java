@@ -118,4 +118,16 @@ public class XLTChartAction implements Action
         rsp.serveFile(req, new File(new File(project.getRootDir() + "/trendreport", builderID), req.getRestOfPath()).toURI().toURL());
     }
 
+    public boolean isSummaryReportAvailable()
+    {
+        File summaryReport = new File(new File(project.getRootDir(), "summaryReport"), builderID);
+        return summaryReport.exists() && summaryReport.isDirectory() && summaryReport.listFiles().length > 0;
+    }
+
+    public void doSummaryReport(StaplerRequest req, StaplerResponse rsp) throws MalformedURLException, ServletException, IOException
+    {
+        rsp.serveFile(req, new File(new File(new File(project.getRootDir(), "summaryReport"), builderID), req.getRestOfPath()).toURI()
+                                                                                                                              .toURL());
+    }
+
 }

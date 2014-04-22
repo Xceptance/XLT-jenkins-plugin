@@ -29,6 +29,11 @@
 						<b>Trend Report</b>
 					</a>
 				</j:if>
+				<j:if test="${from.isSummaryReportAvailable()}">
+					<a style="margin-left:20px" href="${from.getUrlName()}/summaryReport/index.html">
+						<b>Summary Report</b>
+					</a>
+				</j:if>
 			</div>			
 			<div>
 			
