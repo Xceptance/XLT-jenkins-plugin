@@ -16,7 +16,6 @@ import hudson.model.AbstractBuild;
 
 public class XltRecorderAction implements Action
 {
-
     public String reportPath;
 
     public AbstractBuild<?, ?> build;
@@ -87,5 +86,4 @@ public class XltRecorderAction implements Action
     {
         response.serveFile(request, new File(new File(build.getArtifactsDir().getAbsolutePath()), request.getRestOfPath()).toURI().toURL());
     }
-
 }

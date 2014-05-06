@@ -7,16 +7,13 @@ import hudson.model.BuildListener;
 import hudson.model.Result;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
-import hudson.model.Fingerprint.RangeSet;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
 import hudson.util.FormValidation;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -70,12 +67,11 @@ import com.xceptance.xlt.tools.jenkins.Chart.ChartLineValue;
  */
 public class LoadTestBuilder extends Builder
 {
-
-    private final String testProperties;
+    private final String testPropertiesFile;
 
     private boolean testPropertiesFileAvailable = true;
 
-    private final String machineHost;
+    private final String agentControllerUrl;
 
     private final String xltConfig;
 
@@ -90,6 +86,10 @@ public class LoadTestBuilder extends Builder
     private final String builderID;
 
     private final boolean isPlotVertical;
+
+    private final boolean createTrendReport;
+
+    private final boolean createSummaryReport;
 
     transient public static final Logger LOGGER = Logger.getLogger(LoadTestBuilder.class);
 
@@ -135,8 +135,9 @@ public class LoadTestBuilder extends Builder
     }
 
     @DataBoundConstructor
-    public LoadTestBuilder(String testProperties, String machineHost, String xltConfig, int plotWidth, int plotHeight, String plotTitle,
-                           String builderID, boolean isPlotVertical)
+    public LoadTestBuilder(String testPropertiesFile, String agentControllerUrl, String xltConfig, int plotWidth, int plotHeight,
+                           String plotTitle, String builderID, boolean isPlotVertical, boolean createTrendReport,
+                           boolean createSummaryReport)
     {
         isSave = true;
         Thread.currentThread().setUncaughtExceptionHandler(new UncaughtExceptionHandler()
@@ -148,12 +149,12 @@ public class LoadTestBuilder extends Builder
             }
         });
 
-        if (testProperties == null || testProperties.isEmpty())
+        if (testPropertiesFile == null || testPropertiesFile.isEmpty())
         {
             testPropertiesFileAvailable = false;
         }
-        this.testProperties = testProperties;
-        this.machineHost = machineHost;
+        this.testPropertiesFile = testPropertiesFile;
+        this.agentControllerUrl = agentControllerUrl;
 
         if (StringUtils.isBlank(xltConfig))
         {
@@ -186,16 +187,18 @@ public class LoadTestBuilder extends Builder
         this.builderID = builderID;
 
         this.isPlotVertical = isPlotVertical;
+        this.createTrendReport = createTrendReport;
+        this.createSummaryReport = createSummaryReport;
     }
 
-    public String getTestProperties()
+    public String getTestPropertiesFile()
     {
-        return testProperties;
+        return testPropertiesFile;
     }
 
-    public String getMachineHost()
+    public String getAgentControllerUrl()
     {
-        return machineHost;
+        return agentControllerUrl;
     }
 
     public String getXltConfig()
@@ -226,6 +229,16 @@ public class LoadTestBuilder extends Builder
     public boolean getIsPlotVertical()
     {
         return isPlotVertical;
+    }
+
+    public boolean getCreateTrendReport()
+    {
+        return createTrendReport;
+    }
+
+    public boolean getCreateSummaryReport()
+    {
+        return createSummaryReport;
     }
 
     private Chart<Integer, Double> getChart(String plotID)
@@ -521,7 +534,8 @@ public class LoadTestBuilder extends Builder
             }
             loadCharts(project);
 
-            chartAction = new XltChartAction(project, getEnabledCharts(), plotWidth, plotHeight, plotTitle, builderID, isPlotVertical);
+            chartAction = new XltChartAction(project, getEnabledCharts(), plotWidth, plotHeight, plotTitle, builderID, isPlotVertical,
+                                             createTrendReport, createSummaryReport);
         }
         actions.add(chartAction);
 
@@ -921,13 +935,13 @@ public class LoadTestBuilder extends Builder
             }
 
             // if no specific machineHost set -embedded
-            if (machineHost.isEmpty())
+            if (agentControllerUrl.isEmpty())
             {
                 commandLine.add("-embedded");
             }
             else
             {
-                commandLine.add("-Dcom.xceptance.xlt.mastercontroller.agentcontrollers.ac1.url=" + machineHost);
+                commandLine.add("-Dcom.xceptance.xlt.mastercontroller.agentcontrollers.ac1.url=" + agentControllerUrl);
             }
 
             commandLine.add("-auto");
@@ -936,7 +950,7 @@ public class LoadTestBuilder extends Builder
             if (testPropertiesFileAvailable == true)
             {
                 commandLine.add("-testPropertiesFile");
-                commandLine.add(testProperties);
+                commandLine.add(testPropertiesFile);
 
             }
             commandLine.add("-Dcom.xceptance.xlt.mastercontroller.testSuitePath=" + build.getModuleRoot().toString());
@@ -1070,6 +1084,11 @@ public class LoadTestBuilder extends Builder
 
     private void createSummaryReport(AbstractBuild<?, ?> build, BuildListener listener) throws IOException
     {
+        if (!createSummaryReport)
+        {
+            return;
+        }
+
         try
         {
             List<String> commandLines = new ArrayList<String>();
@@ -1157,6 +1176,11 @@ public class LoadTestBuilder extends Builder
 
     private void createTrendReport(AbstractBuild<?, ?> build, BuildListener listener) throws IOException, InterruptedException
     {
+        if (!createTrendReport)
+        {
+            return;
+        }
+
         List<String> commandLines = new ArrayList<String>();
 
         if (SystemUtils.IS_OS_WINDOWS)
@@ -1232,7 +1256,6 @@ public class LoadTestBuilder extends Builder
         {
             listener.getLogger().println("Cannot create trend report because no previous reports available!");
         }
-
     }
 
     @Override
@@ -1294,6 +1317,16 @@ public class LoadTestBuilder extends Builder
         public boolean getDefaultIsPlotVertical()
         {
             return false;
+        }
+
+        public boolean getDefaultCreateTrendReport()
+        {
+            return true;
+        }
+
+        public boolean getDefaultCreateSummaryReport()
+        {
+            return true;
         }
 
         /**
@@ -1496,7 +1529,7 @@ public class LoadTestBuilder extends Builder
             }
             if (number != (int) number)
             {
-                return FormValidation.warning("Dezimal number for width. Width will be " + (int) number);
+                return FormValidation.warning("Decimal number for width. Width will be " + (int) number);
             }
             return FormValidation.ok();
         }
@@ -1521,7 +1554,7 @@ public class LoadTestBuilder extends Builder
             }
             if (number != (int) number)
             {
-                return FormValidation.warning("Dezimal number for height. Height will be " + (int) number);
+                return FormValidation.warning("Decimal number for height. Height will be " + (int) number);
             }
             return FormValidation.ok();
         }
@@ -1541,6 +1574,5 @@ public class LoadTestBuilder extends Builder
         {
             return "XLT Plugin";
         }
-
     }
 }

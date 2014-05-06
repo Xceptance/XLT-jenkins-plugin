@@ -6,28 +6,34 @@
 	xmlns:t="/lib/hudson" 
 	xmlns:f="/lib/form">
 	
-
+	
 	<f:section title="Load Test Configuration"> 
 	  	
-	  	<f:entry title="Test Configuration" field="testProperties">
+    	<f:entry title="Agent Controller URL" field="agentControllerUrl">
+    		<f:textbox  />  
+  		</f:entry>
+  	
+	  	<f:entry title="Test Configuration File" field="testPropertiesFile">
 	    	<f:textbox default="test.properties" />
 	  	</f:entry>
 	
 	</f:section> 	
 
+  	
+  	<f:section title="Report Options">
+  		
+  		<f:entry title="Create Trend Report" field="createTrendReport">   
+       		<f:checkbox field="createTrendReport" default="${descriptor.getDefaultCreateTrendReport()}" title="Create a trend report from all available individual reports."/>
+     	</f:entry>
 
+  		<f:entry title="Create Summary Report" field="createSummaryReport">   
+       		<f:checkbox field="createSummaryReport" default="${descriptor.getDefaultCreateSummaryReport()}" title="Create a summary load test report from the results of all test runs."/>
+     	</f:entry>
+	
+	</f:section> 
+  
 
-	<f:section title="Hardware Configuration">
-    	
-    	<f:entry title="host-url" field="machineHost">
-    		<f:textbox  />  
-  		</f:entry>
-  	
-  	</f:section>
-  	
-  	
-  	
-  	<f:section title="Validation\Plot Configuration">
+  	<f:section title="Validation/Plot Configuration">
 		<f:invisibleEntry >
 			<f:textbox field="builderID" value="${it.getBuilderID()}"/>
 		</f:invisibleEntry>

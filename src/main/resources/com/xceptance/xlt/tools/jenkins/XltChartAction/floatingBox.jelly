@@ -24,8 +24,7 @@
 				<div align="right"><b>${from.getTitle()}</b></div><hr/>			
 				<img src="${resURL}/plugin/xlt-jenkins/logo.png" height="16"/>
 				<j:if test="${from.isTrendReportAvailable()}">
-					&amp;nbsp;&amp;nbsp;&amp;nbsp;
-					<a href="${from.getUrlName()}/trendReport/index.html">
+					<a style="margin-left:20px" href="${from.getUrlName()}/trendReport/index.html">
 						<b>Trend Report</b>
 					</a>
 				</j:if>
