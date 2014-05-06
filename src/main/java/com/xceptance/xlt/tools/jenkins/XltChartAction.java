@@ -17,7 +17,7 @@ import hudson.model.Action;
 import hudson.model.Result;
 import hudson.model.AbstractProject;
 
-public class XLTChartAction implements Action
+public class XltChartAction implements Action
 {
 
     private List<Chart<Integer, Double>> charts;
@@ -34,7 +34,7 @@ public class XLTChartAction implements Action
 
     private AbstractProject<?, ?> project;
 
-    public XLTChartAction(AbstractProject<?, ?> project, List<Chart<Integer, Double>> charts, int plotWidth, int plotHeight, String title,
+    public XltChartAction(AbstractProject<?, ?> project, List<Chart<Integer, Double>> charts, int plotWidth, int plotHeight, String title,
                           String builderID, boolean isPlotVertical)
     {
         this.project = project;

@@ -97,7 +97,7 @@ public class LoadTestBuilder extends Builder
 
     transient private boolean isSave = false;
 
-    transient private XLTChartAction chartAction;
+    transient private XltChartAction chartAction;
 
     public enum CONFIG_CRITERIA_PARAMETER
     {
@@ -521,7 +521,7 @@ public class LoadTestBuilder extends Builder
             }
             loadCharts(project);
 
-            chartAction = new XLTChartAction(project, getEnabledCharts(), plotWidth, plotHeight, plotTitle, builderID, isPlotVertical);
+            chartAction = new XltChartAction(project, getEnabledCharts(), plotWidth, plotHeight, plotTitle, builderID, isPlotVertical);
         }
         actions.add(chartAction);
 
