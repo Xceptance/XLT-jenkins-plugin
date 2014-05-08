@@ -16,7 +16,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.io.PrintStream;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.net.URISyntaxException;
@@ -41,6 +40,7 @@ import javax.xml.xpath.XPathFactory;
 import jenkins.model.Jenkins;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.SystemUtils;
 import org.apache.log4j.FileAppender;
@@ -931,139 +931,128 @@ public class LoadTestBuilder extends Builder
     @Override
     public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws IOException, InterruptedException
     {
-        // generate temporary directory for local xlt
-        File destDir = getXltFolder(build);
-        listener.getLogger().println(destDir.getAbsolutePath());
-        destDir.mkdirs();
-
         try
         {
-            // copy XLT to certain directory
-            File srcDir = new File(Jenkins.getInstance().getRootDir(), "xlt");
-            listener.getLogger().println(srcDir.getAbsolutePath());
+            copyXlt(build, listener);
+            runMasterController(build, listener);
+            postTestExecution(build, listener);
 
-            FileUtils.copyDirectory(srcDir, destDir, true);
-
-            // make XLT start scripts executable
-            File workingDirectory = getXltExecutablesFolder(build);
-            for (File child : workingDirectory.listFiles())
+            if (createSummaryReport)
             {
-                child.setExecutable(true);
+                createSummaryReport(build, listener);
             }
 
-            // perform XLT
-            List<String> commandLine = new ArrayList<String>();
-
-            if (SystemUtils.IS_OS_WINDOWS)
+            if (createTrendReport)
             {
-                commandLine.add("cmd.exe");
-                commandLine.add("/c");
-                commandLine.add("mastercontroller.cmd");
+                createTrendReport(build, listener);
             }
-            else
-            {
-                commandLine.add("./mastercontroller.sh");
-            }
-
-            // if no specific machineHost set -embedded
-            if (agentControllerUrl.isEmpty())
-            {
-                commandLine.add("-embedded");
-            }
-            else
-            {
-                commandLine.add("-Dcom.xceptance.xlt.mastercontroller.agentcontrollers.ac1.url=" + agentControllerUrl);
-            }
-
-            commandLine.add("-auto");
-            commandLine.add("-report");
-
-            if (testPropertiesFileAvailable == true)
-            {
-                commandLine.add("-testPropertiesFile");
-                commandLine.add(testPropertiesFile);
-            }
-            commandLine.add("-Dcom.xceptance.xlt.mastercontroller.testSuitePath=" + build.getModuleRoot().toString());
-
-            boolean interrupted = false;
-            int commandResult = 0;
-            try
-            {
-                // start XLT
-                commandResult = executeCommand(workingDirectory, commandLine, listener.getLogger());
-            }
-            catch (InterruptedException e)
-            {
-                interrupted = true;
-                build.setResult(Result.ABORTED);
-            }
-
-            if (!interrupted)
-            {
-                // waiting until XLT is finished and set FAILED in case of unexpected termination
-                if (commandResult != 0)
-                {
-                    build.setResult(Result.FAILURE);
-                }
-                listener.getLogger().println("Master controller returned with exit code: " + commandResult);
-
-                // perform only if XLT was successful
-                if (build.getResult() == null || !build.getResult().equals(Result.FAILURE))
-                {
-                    // copy xlt-report to build directory
-                    FileUtils.copyDirectory(getFirstXltReportFolder(build), getBuildReportsFolder(build), true);
-
-                    // copy xlt-result to build directory
-                    FileUtils.copyDirectory(getFirstXltResultFolder(build), getBuildResultsFolder(build), true);
-
-                    // copy xlt-logs to build directory
-                    File srcXltLog = new File(getXltFolder(build), "log");
-                    File destXltLog = new File(build.getArtifactsDir(), builderID + "/log");
-                    FileUtils.copyDirectory(srcXltLog, destXltLog, true);
-
-                    postTestExecution(build, listener);
-
-                    if (createSummaryReport)
-                    {
-                        createSummaryReport(build, listener);
-                    }
-
-                    if (createTrendReport)
-                    {
-                        createTrendReport(build, listener);
-                    }
-                }
-            }
+        }
+        catch (InterruptedException e)
+        {
+            build.setResult(Result.ABORTED);
         }
         catch (Exception e)
         {
             build.setResult(Result.FAILURE);
-            listener.getLogger().println("Build " + Integer.toString(build.getNumber()) + " failed: " + e);
+            listener.getLogger().println("Build failed: " + e);
             LOGGER.error("", e);
         }
         finally
         {
-            // delete temporary directory with local xlt
-            FileUtils.deleteDirectory(destDir);
+            // delete any temporary directory with local XLT
+            File xltDir = getXltFolder(build);
+            FileUtils.deleteQuietly(xltDir);
         }
 
         return true;
     }
 
-    /**
-     * @param workingDirectory
-     * @param commandLines
-     * @param outputLogger
-     * @return
-     * @throws IOException
-     * @throws InterruptedException
-     */
-    private int executeCommand(File workingDirectory, List<String> commandLines, OutputStream outputLogger)
+    private void copyXlt(AbstractBuild<?, ?> build, BuildListener listener) throws IOException
+    {
+        // the directory with the XLT template installation
+        File srcDir = new File(Jenkins.getInstance().getRootDir(), "xlt");
+        listener.getLogger().println(srcDir.getAbsolutePath());
+
+        // copy XLT to a local directory
+        File destDir = getXltFolder(build);
+        listener.getLogger().println(destDir.getAbsolutePath());
+
+        FileUtils.copyDirectory(srcDir, destDir, true);
+
+        // make XLT start scripts executable
+        File workingDirectory = getXltExecutablesFolder(build);
+        for (File child : workingDirectory.listFiles())
+        {
+            child.setExecutable(true);
+        }
+    }
+
+    private void runMasterController(AbstractBuild<?, ?> build, BuildListener listener) throws IOException, InterruptedException
+    {
+        listener.getLogger().println("-----------------------------------------------------------------\nRunning master controller ...\n");
+
+        // build the master controller command line
+        List<String> commandLine = new ArrayList<String>();
+
+        if (SystemUtils.IS_OS_WINDOWS)
+        {
+            commandLine.add("cmd.exe");
+            commandLine.add("/c");
+            commandLine.add("mastercontroller.cmd");
+        }
+        else
+        {
+            commandLine.add("./mastercontroller.sh");
+        }
+
+        if (agentControllerUrl.isEmpty())
+        {
+            commandLine.add("-embedded");
+        }
+        else
+        {
+            commandLine.add("-Dcom.xceptance.xlt.mastercontroller.agentcontrollers.ac1.url=" + agentControllerUrl);
+        }
+
+        commandLine.add("-auto");
+        commandLine.add("-report");
+
+        if (testPropertiesFileAvailable == true)
+        {
+            commandLine.add("-testPropertiesFile");
+            commandLine.add(testPropertiesFile);
+        }
+
+        commandLine.add("-Dcom.xceptance.xlt.mastercontroller.testSuitePath=" + build.getModuleRoot().getRemote());
+
+        // run the master controller
+        File workingDirectory = getXltExecutablesFolder(build);
+        int commandResult = executeCommand(workingDirectory, commandLine, listener.getLogger());
+        listener.getLogger().println("Master controller returned with exit code: " + commandResult);
+
+        if (commandResult != 0)
+        {
+            build.setResult(Result.FAILURE);
+        }
+        else
+        {
+            // copy load test report to build directory
+            FileUtils.copyDirectory(getFirstXltReportFolder(build), getBuildReportsFolder(build), true);
+
+            // copy results to build directory
+            FileUtils.copyDirectory(getFirstXltResultFolder(build), getBuildResultsFolder(build), true);
+
+            // copy logs to build directory
+            File srcXltLog = new File(getXltFolder(build), "log");
+            File destXltLog = new File(build.getArtifactsDir(), builderID + "/log");
+            FileUtils.copyDirectory(srcXltLog, destXltLog, true);
+        }
+    }
+
+    private int executeCommand(File workingDirectory, List<String> commandLine, PrintStream logger)
         throws IOException, InterruptedException
     {
-        PrintStream logger = new PrintStream(outputLogger);
-
-        ProcessBuilder builder = new ProcessBuilder(commandLines);
+        ProcessBuilder builder = new ProcessBuilder(commandLine);
         builder.directory(workingDirectory);
         builder.redirectErrorStream(true);
 
@@ -1077,7 +1066,7 @@ public class LoadTestBuilder extends Builder
         {
             if (Thread.currentThread().isInterrupted())
             {
-                br.close();
+                IOUtils.closeQuietly(br);
                 process.destroy();
                 throw new InterruptedException();
             }
@@ -1088,46 +1077,39 @@ public class LoadTestBuilder extends Builder
         return process.waitFor();
     }
 
-    private void createSummaryReport(AbstractBuild<?, ?> build, BuildListener listener) throws IOException
+    private void createSummaryReport(AbstractBuild<?, ?> build, BuildListener listener) throws IOException, InterruptedException
     {
         listener.getLogger().println("-----------------------------------------------------------------\nCreating summary report ...\n");
 
-        try
+        // copy the results of the last n builds to the summary results directory
+        copyResults(build, listener);
+
+        // build report generator command line
+        List<String> commandLine = new ArrayList<String>();
+
+        if (SystemUtils.IS_OS_WINDOWS)
         {
-            //
-            copyResults(build, listener);
-
-            List<String> commandLine = new ArrayList<String>();
-
-            if (SystemUtils.IS_OS_WINDOWS)
-            {
-                commandLine.add("cmd.exe");
-                commandLine.add("/c");
-                commandLine.add("create_report.cmd");
-            }
-            else
-            {
-                commandLine.add("./create_report.sh");
-            }
-
-            File outputFolder = getSummaryReportFolder(build.getProject());
-
-            commandLine.add("-o");
-            commandLine.add(outputFolder.getAbsolutePath());
-            commandLine.add(getSummaryResultFolder(build.getProject()).getAbsolutePath());
-
-            int commandResult = executeCommand(getXltExecutablesFolder(build), commandLine, listener.getLogger());
-            listener.getLogger().println("Load report generator returned with exit code: " + commandResult);
-            if (commandResult != 0)
-            {
-                listener.error("Create report returned with code: " + commandResult);
-                build.setResult(Result.FAILURE);
-            }
+            commandLine.add("cmd.exe");
+            commandLine.add("/c");
+            commandLine.add("create_report.cmd");
         }
-        catch (InterruptedException e)
+        else
         {
-            listener.error("Creating summary report aborted.");
-            build.setResult(Result.ABORTED);
+            commandLine.add("./create_report.sh");
+        }
+
+        File outputFolder = getSummaryReportFolder(build.getProject());
+        commandLine.add("-o");
+        commandLine.add(outputFolder.getAbsolutePath());
+
+        commandLine.add(getSummaryResultFolder(build.getProject()).getAbsolutePath());
+
+        // run the report generator
+        int commandResult = executeCommand(getXltExecutablesFolder(build), commandLine, listener.getLogger());
+        listener.getLogger().println("Load report generator returned with exit code: " + commandResult);
+        if (commandResult != 0)
+        {
+            build.setResult(Result.FAILURE);
         }
     }
 
@@ -1145,7 +1127,7 @@ public class LoadTestBuilder extends Builder
 
         FileUtils.copyDirectory(configFolder, summaryConfigFolder, true);
 
-        // copy timer data from the last builds
+        // copy timer data from the last n builds
         List<AbstractBuild<?, ?>> builds = (List<AbstractBuild<?, ?>>) currentBuild.getPreviousBuildsOverThreshold(numberOfBuildsForSummaryReport - 1,
                                                                                                                    Result.UNSTABLE);
         builds.add(0, currentBuild);
@@ -1208,52 +1190,33 @@ public class LoadTestBuilder extends Builder
         commandLine.add(trendReportDest.toString());
 
         // get some previous builds that were either UNSTABLE or SUCCESS
-        List<AbstractBuild<?, ?>> trendReportPath = new ArrayList<AbstractBuild<?, ?>>(
-                                                                                       build.getPreviousBuildsOverThreshold(numberOfBuildsForTrendReport - 1,
-                                                                                                                            Result.UNSTABLE));
-        int numberOfPreviousBuilds = 0;
-        File reportDirectory;
-        for (AbstractBuild<?, ?> eachBuild : trendReportPath)
+        List<AbstractBuild<?, ?>> builds = new ArrayList<AbstractBuild<?, ?>>(
+                                                                              build.getPreviousBuildsOverThreshold(numberOfBuildsForTrendReport - 1,
+                                                                                                                   Result.UNSTABLE));
+        // add the current build
+        builds.add(build);
+
+        // add the report directories
+        int numberOfBuildsWithReports = 0;
+        for (AbstractBuild<?, ?> eachBuild : builds)
         {
-            reportDirectory = getBuildReportsFolder(eachBuild);
+            File reportDirectory = getBuildReportsFolder(eachBuild);
             if (reportDirectory.isDirectory())
             {
                 commandLine.add(reportDirectory.toString());
-                numberOfPreviousBuilds++;
+                numberOfBuildsWithReports++;
             }
         }
 
-        // add also report from current build to testReportProperties
-        File currentReportDirectory = getBuildReportsFolder(build);
-        if (currentReportDirectory.isDirectory())
+        // check whether we have enough builds with reports to create a trend report
+        if (numberOfBuildsWithReports >= 2)
         {
-            commandLine.add(currentReportDirectory.toString());
-        }
-
-        // in case of no previous builds no trend report will created
-        if (numberOfPreviousBuilds != 0)
-        {
-            boolean interrupted = false;
-            int commandResult = 0;
-            try
+            // run trend report generator
+            int commandResult = executeCommand(getXltExecutablesFolder(build), commandLine, listener.getLogger());
+            listener.getLogger().println("Trend report generator returned with exit code: " + commandResult);
+            if (commandResult != 0)
             {
-                // start XLT
-                commandResult = executeCommand(getXltExecutablesFolder(build), commandLine, listener.getLogger());
-            }
-            catch (InterruptedException e)
-            {
-                interrupted = true;
-                build.setResult(Result.ABORTED);
-            }
-
-            if (!interrupted)
-            {
-                // waiting until trend-report is created
-                if (commandResult != 0)
-                {
-                    listener.getLogger().println("Abort creating trend-report!");
-                }
-                listener.getLogger().println("Trend report generator returned with exit code: " + commandResult);
+                build.setResult(Result.FAILURE);
             }
         }
         else
