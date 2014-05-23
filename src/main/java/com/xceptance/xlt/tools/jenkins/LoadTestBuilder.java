@@ -38,9 +38,11 @@ import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 
 import jenkins.model.Jenkins;
+import lib.jenkins.NewFromListTagLib;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.io.filefilter.IOFileFilter;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.SystemUtils;
 import org.apache.log4j.FileAppender;
@@ -933,6 +935,7 @@ public class LoadTestBuilder extends Builder
     {
         try
         {
+            initialCleanUp(build, listener);
             copyXlt(build, listener);
             runMasterController(build, listener);
             postTestExecution(build, listener);
@@ -965,6 +968,27 @@ public class LoadTestBuilder extends Builder
         }
 
         return true;
+    }
+
+    private void initialCleanUp(AbstractBuild<?, ?> build, BuildListener listener) throws IOException
+    {
+        listener.getLogger()
+                .println("-----------------------------------------------------------------\nStarted clean up project directory ...\n");
+
+        String[] DIR = build.getProject().getRootDir().list();
+
+        for (int i = 0; i < DIR.length; i++)
+        {
+            if (DIR[i].matches("[0-9]*"))
+            {
+                File file = new File(build.getProject().getRootDir() + "/" + DIR[i]);
+                FileUtils.deleteDirectory(file);
+                listener.getLogger().println("deleted directory: " + file);
+            }
+        }
+
+        listener.getLogger()
+                .println("Finished\n-----------------------------------------------------------------\n");
     }
 
     private void copyXlt(AbstractBuild<?, ?> build, BuildListener listener) throws IOException
