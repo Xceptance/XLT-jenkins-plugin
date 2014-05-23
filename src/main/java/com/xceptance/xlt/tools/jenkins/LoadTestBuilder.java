@@ -987,7 +987,7 @@ public class LoadTestBuilder extends Builder
         }
     }
 
-    private void runMasterController(AbstractBuild<?, ?> build, BuildListener listener) throws IOException, InterruptedException
+    private void runMasterController(AbstractBuild<?, ?> build, BuildListener listener) throws Exception
     {
         listener.getLogger().println("-----------------------------------------------------------------\nRunning master controller ...\n");
 
@@ -1050,7 +1050,7 @@ public class LoadTestBuilder extends Builder
     }
 
     private int executeCommand(File workingDirectory, List<String> commandLine, PrintStream logger)
-        throws IOException, InterruptedException
+        throws InterruptedException, IOException
     {
         ProcessBuilder builder = new ProcessBuilder(commandLine);
         builder.directory(workingDirectory);
@@ -1062,22 +1062,27 @@ public class LoadTestBuilder extends Builder
         BufferedReader br = new BufferedReader(new InputStreamReader(is));
 
         String line;
-        while ((line = br.readLine()) != null)
+
+        try
         {
-            if (Thread.currentThread().isInterrupted())
+            while ((line = br.readLine()) != null)
             {
-                IOUtils.closeQuietly(br);
-                process.destroy();
-                throw new InterruptedException();
+                if (Thread.currentThread().isInterrupted())
+                {
+                    process.destroy();
+                    throw new InterruptedException();
+                }
+                logger.println(line);
             }
-
-            logger.println(line);
         }
-
+        finally
+        {
+            IOUtils.closeQuietly(br);
+        }
         return process.waitFor();
     }
 
-    private void createSummaryReport(AbstractBuild<?, ?> build, BuildListener listener) throws IOException, InterruptedException
+    private void createSummaryReport(AbstractBuild<?, ?> build, BuildListener listener) throws Exception
     {
         listener.getLogger().println("-----------------------------------------------------------------\nCreating summary report ...\n");
 
@@ -1168,7 +1173,7 @@ public class LoadTestBuilder extends Builder
         }
     }
 
-    private void createTrendReport(AbstractBuild<?, ?> build, BuildListener listener) throws IOException, InterruptedException
+    private void createTrendReport(AbstractBuild<?, ?> build, BuildListener listener) throws Exception
     {
         listener.getLogger().println("-----------------------------------------------------------------\nCreating trend report ...\n");
 
