@@ -13,7 +13,7 @@
 		</style>
 		
 		
-		<j:set var="imgDivStyle" value="display:inline-block;margin:8px;"/>
+		<j:set var="imgDivStyle" value="display:inline-block;"/>
 		<j:if test="${from.isPlotVertical()}">
 			<j:set var="imgDivStyle" value=""/>
 		</j:if>		
@@ -46,16 +46,16 @@
 					
 					<j:set var="plotContainerID" value="$plotContainer-${eachChart.getChartID()}-${from.getBuilderID()}" />
 
-					<div style="${imgDivStyle}">
+					<div style="${imgDivStyle}width:${width+100}px;height:${height+100}px;}">
 						<center>
 							<b>${eachChart.getTitle()}</b><br/>
-							<div id="${plotContainerID}" style="border: 1px solid #BBBBBB; box-shadow: 1px 2px 6px -3px #555555;margin:0px 0px 10px 45px;width:${width}px;height:${height}px;"></div>
+							<div id="${plotContainerID}" style="border: 1px solid #BBBBBB; box-shadow: 1px 2px 6px -3px #555555;width:${width}px;height:${height}px;"></div>
 						</center>
 					</div>
 				    <script type="text/javascript">
 					(function(){
-					
-						var data = eval('${eachChart.getDataString()}');
+						var xLabelsMap = ${eachChart.getXLabelsData()};					
+						var data = ${eachChart.getDataString()};						
 				        var container = document.getElementById('${plotContainerID}');
 				        var config = { 
 				        	yaxis:{ 
@@ -71,19 +71,19 @@
 								min:null,
 								max:null,
 								tickDecimals:0,
-								tickFormatter:function(o){ return o},
+								tickFormatter:function(o){ return xLabelsMap[new String(o)] },
 								margin:false,
 							},
 							selection: {
 								show:true,				
 					            mode: 'xy',
-					            fps: 25
+					            fps: 25,
 					        },			
 					        lines:{
-					        	show:true
+					        	show:true,
 					        },
 					        points:{
-					        	show:false
+					        	show:false,
 					        },
 					        grid:{
 					        	verticalLines: false,
@@ -95,8 +95,8 @@
 					        	position:'n',
 					        	relative:true,
 					        	margin:5,
-					        	trackFormatter:function(o){ return o.y}
-					        }	        
+					        	trackFormatter:function(o){ return o.y},
+					        },	   
 						};
 				        var graph;
 				        

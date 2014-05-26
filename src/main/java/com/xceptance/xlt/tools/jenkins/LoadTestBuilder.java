@@ -449,7 +449,10 @@ public class LoadTestBuilder extends Builder
                                         }
                                         else
                                         {
-                                            line.addLineValue(new ChartLineValue<Integer, Double>(eachBuild.number, number.doubleValue()));
+                                            line.addLineValue(new ChartLineValue<Integer, Double>(eachBuild.number, number.doubleValue(),
+                                                                                                  eachBuild.getTimestamp().getTime()
+                                                                                                           .toString() +
+                                                                                                      " Build:" + eachBuild.number));
                                         }
                                     }
                                     catch (XPathExpressionException e)
@@ -516,7 +519,7 @@ public class LoadTestBuilder extends Builder
             {
                 lineName = "";
             }
-            ChartLine<Integer, Double> line = new ChartLine<Integer, Double>(eachCriteriaID, lineName, maxCount);
+            ChartLine<Integer, Double> line = new ChartLine<Integer, Double>(chart, eachCriteriaID, lineName, maxCount);
             chart.getLines().add(line);
         }
         return chart;
@@ -987,8 +990,7 @@ public class LoadTestBuilder extends Builder
             }
         }
 
-        listener.getLogger()
-                .println("Finished\n-----------------------------------------------------------------\n");
+        listener.getLogger().println("Finished\n-----------------------------------------------------------------\n");
     }
 
     private void copyXlt(AbstractBuild<?, ?> build, BuildListener listener) throws IOException

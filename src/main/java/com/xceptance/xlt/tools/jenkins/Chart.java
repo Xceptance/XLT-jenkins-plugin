@@ -4,11 +4,8 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import com.xceptance.xlt.tools.jenkins.Chart.ChartLineValue;
-
 public class Chart<X, Y>
 {
-
     private String chartID;
 
     private String title;
@@ -62,6 +59,33 @@ public class Chart<X, Y>
         return data;
     }
 
+    public String getXLabelsData()
+    {
+        List<X> processedValues = new ArrayList<X>();
+
+        String data = "{";
+        for (ChartLine<X, Y> eachLine : lines)
+        {
+            Iterator<ChartLineValue<X, Y>> iterator = eachLine.getValues().iterator();
+            while (iterator.hasNext())
+            {
+                ChartLineValue<X, Y> value = iterator.next();
+                if (!processedValues.contains(value.xValue))
+                {
+                    processedValues.add(value.xValue);
+
+                    data += "\"" + value.xValue + "\":\"" + value.xLabel + "\"";
+                    if (iterator.hasNext())
+                    {
+                        data += ",";
+                    }
+                }
+            }
+        }
+        data += "}";
+        return data;
+    }
+
     public static class ChartLine<X, Y>
     {
 
@@ -70,11 +94,14 @@ public class Chart<X, Y>
         private String lineID;
 
         private int maxCount;
-        
+
         private String name;
 
-        public ChartLine(String lineID, String name, int maxCount)
+        private Chart<X, Y> chart;
+
+        public ChartLine(Chart<X, Y> chart, String lineID, String name, int maxCount)
         {
+            this.chart = chart;
             this.lineID = lineID;
             this.maxCount = maxCount;
             this.name = name;
@@ -93,7 +120,7 @@ public class Chart<X, Y>
         public String getDataString()
         {
             String lineObject = "{";
-            
+
             String data = "data:[";
             Iterator<ChartLineValue<X, Y>> iterator = values.iterator();
             while (iterator.hasNext())
@@ -105,14 +132,15 @@ public class Chart<X, Y>
                 }
             }
             data += "],";
-            
+
             String mouse = "mouse:{";
-            mouse += "trackFormatter:function(o){ return \""+name+": \"+o.y+\" Build: \"+parseInt(o.x)},";
+            mouse += "trackFormatter:function(o){ var xLabelsMap = " + chart.getXLabelsData() + "; return \"" + name +
+                     ": \"+o.y+\" Date: \"+xLabelsMap[new String(parseInt(o.x))]},";
             mouse += "},";
-            
-            String label = "label:\""+name+"\",";
-            
-            lineObject += data+mouse+label+"}";
+
+            String label = "label:\"" + name + "\",";
+
+            lineObject += data + mouse + label + "}";
             return lineObject;
         }
 
@@ -142,10 +170,13 @@ public class Chart<X, Y>
 
         private Y yValue;
 
-        public ChartLineValue(X xValue, Y yValue)
+        private String xLabel;
+
+        public ChartLineValue(X xValue, Y yValue, String xLabel)
         {
             this.xValue = xValue;
             this.yValue = yValue;
+            this.xLabel = xLabel;
         }
 
         public String getDataString()
