@@ -1132,10 +1132,7 @@ public class LoadTestBuilder extends Builder
         finally
         {
             IOUtils.closeQuietly(br);
-        }
-        
-        process.wait();
-        
+        }        
         return process.waitFor();
     }
 
