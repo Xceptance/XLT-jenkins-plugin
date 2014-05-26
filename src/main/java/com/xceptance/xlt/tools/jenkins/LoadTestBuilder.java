@@ -717,6 +717,11 @@ public class LoadTestBuilder extends Builder
         return new File(getXltFolder(build), "results");
     }
 
+    private File getFirstXltLogFolder(AbstractBuild<?, ?> build)
+    {
+        return new File(getXltFolder(build), "log");
+    }
+
     private File getFirstXltResultFolder(AbstractBuild<?, ?> build)
     {
         File reportFolder = getXltResultsFolder(build);
@@ -759,6 +764,11 @@ public class LoadTestBuilder extends Builder
     private File getBuildResultConfigFolder(AbstractBuild<?, ?> build)
     {
         return new File(getBuildResultsFolder(build), "config");
+    }
+
+    private File getBuildLogsFolder(AbstractBuild<?, ?> build)
+    {
+        return new File(build.getArtifactsDir(), builderID + "/log");
     }
 
     private File getBuildReportsFolder(AbstractBuild<?, ?> build)
@@ -965,12 +975,22 @@ public class LoadTestBuilder extends Builder
         }
         finally
         {
+            if (!artifactsExist(build))
+            {
+                saveArtifacts(build);
+            }
+
             // delete any temporary directory with local XLT
             File xltDir = getXltFolder(build);
             FileUtils.deleteQuietly(xltDir);
         }
 
         return true;
+    }
+
+    private boolean artifactsExist(AbstractBuild<?, ?> build)
+    {
+        return getBuildReportsFolder(build).exists() && getBuildResultsFolder(build).exists() && getBuildLogsFolder(build).exists();
     }
 
     private void initialCleanUp(AbstractBuild<?, ?> build, BuildListener listener) throws IOException
@@ -1060,19 +1080,30 @@ public class LoadTestBuilder extends Builder
         {
             build.setResult(Result.FAILURE);
         }
-        else
+
+        saveArtifacts(build);
+
+    }
+
+    private void saveArtifacts(AbstractBuild<?, ?> build) throws IOException
+    {
+        // copy load test report to build directory
+        if (getFirstXltReportFolder(build) != null)
         {
-            // copy load test report to build directory
             FileUtils.copyDirectory(getFirstXltReportFolder(build), getBuildReportsFolder(build), true);
-
-            // copy results to build directory
-            FileUtils.copyDirectory(getFirstXltResultFolder(build), getBuildResultsFolder(build), true);
-
-            // copy logs to build directory
-            File srcXltLog = new File(getXltFolder(build), "log");
-            File destXltLog = new File(build.getArtifactsDir(), builderID + "/log");
-            FileUtils.copyDirectory(srcXltLog, destXltLog, true);
         }
+
+         // copy results to build directory
+         if (getFirstXltResultFolder(build) != null)
+         {
+         FileUtils.copyDirectory(getFirstXltResultFolder(build), getBuildResultsFolder(build), true);
+         }
+        
+         // copy logs to build directory
+         if (getFirstXltLogFolder(build) != null)
+         {
+         FileUtils.copyDirectory(getFirstXltLogFolder(build), getBuildLogsFolder(build), true);
+         }
     }
 
     private int executeCommand(File workingDirectory, List<String> commandLine, PrintStream logger)
@@ -1104,7 +1135,7 @@ public class LoadTestBuilder extends Builder
         finally
         {
             IOUtils.closeQuietly(br);
-        }
+        }        
         return process.waitFor();
     }
 
