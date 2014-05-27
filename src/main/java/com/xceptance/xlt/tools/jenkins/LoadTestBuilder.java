@@ -150,7 +150,6 @@ public class LoadTestBuilder extends Builder
             public void uncaughtException(Thread t, Throwable e)
             {
                 LOGGER.error("Uncaught exception", e);
-                e.printStackTrace();
             }
         });
 
@@ -320,7 +319,6 @@ public class LoadTestBuilder extends Builder
                     catch (NumberFormatException e)
                     {
                         LOGGER.error("Build count is not a number (plotID: \"" + eachPlotID + "\")", e);
-                        e.printStackTrace();
                     }
                 }
             }
@@ -334,7 +332,6 @@ public class LoadTestBuilder extends Builder
         catch (JSONException e)
         {
             LOGGER.error("Failed to config section.", e);
-            e.printStackTrace();
         }
     }
 
@@ -374,17 +371,14 @@ public class LoadTestBuilder extends Builder
             catch (SAXException e)
             {
                 LOGGER.error("", e);
-                e.printStackTrace();
             }
             catch (IOException e)
             {
                 LOGGER.error("", e);
-                e.printStackTrace();
             }
             catch (ParserConfigurationException e)
             {
                 LOGGER.error("", e);
-                e.printStackTrace();
             }
         }
         else
@@ -449,36 +443,34 @@ public class LoadTestBuilder extends Builder
                                         }
                                         else
                                         {
-                                            ChartLineValue<Integer, Double> lineValue = new ChartLineValue<Integer, Double>(eachBuild.number, number.doubleValue());
-                                            lineValue.setDataObjectValue("buildNumber", "\""+eachBuild.number+"\"");
-                                            lineValue.setDataObjectValue("buildTime", "\""+eachBuild.getTime()+"\"");
+                                            ChartLineValue<Integer, Double> lineValue = new ChartLineValue<Integer, Double>(
+                                                                                                                            eachBuild.number,
+                                                                                                                            number.doubleValue());
+                                            lineValue.setDataObjectValue("buildNumber", "\"" + eachBuild.number + "\"");
+                                            lineValue.setDataObjectValue("buildTime", "\"" + eachBuild.getTime() + "\"");
                                             line.addLineValue(lineValue);
                                         }
                                     }
                                     catch (XPathExpressionException e)
                                     {
                                         LOGGER.error("Invalid XPath. (criteriaID: \"" + eachCriteriaID + "\" XPath: \"" + xPath + "\")", e);
-                                        e.printStackTrace();
                                     }
                                 }
                                 catch (JSONException e)
                                 {
                                     LOGGER.error("Failed to config section. (criteriaID: \"" + eachCriteriaID + "\")", e);
-                                    e.printStackTrace();
                                 }
                             }
                         }
                         catch (JSONException e)
                         {
                             LOGGER.error("Failed to config section.", e);
-                            e.printStackTrace();
                         }
                     }
                 }
                 catch (JSONException e)
                 {
                     LOGGER.error("Failed to config section.", e);
-                    e.printStackTrace();
                 }
             }
             else
@@ -507,7 +499,6 @@ public class LoadTestBuilder extends Builder
             catch (NumberFormatException e)
             {
                 LOGGER.error("Build count is not a number (plotID: \"" + plotID + "\")", e);
-                e.printStackTrace();
             }
         }
 
@@ -536,7 +527,6 @@ public class LoadTestBuilder extends Builder
             catch (JSONException e)
             {
                 LOGGER.error("Failed to initialize chart. (plotID: \"" + eachPlotID + "\")", e);
-                e.printStackTrace();
             }
         }
     }
@@ -559,7 +549,6 @@ public class LoadTestBuilder extends Builder
             catch (JSONException e)
             {
                 LOGGER.error("Failed to initialize charts", e);
-                e.printStackTrace();
             }
             loadCharts(project);
 
@@ -580,7 +569,6 @@ public class LoadTestBuilder extends Builder
         catch (JSONException e)
         {
             LOGGER.error("", e);
-            e.printStackTrace();
         }
     }
 
@@ -607,7 +595,6 @@ public class LoadTestBuilder extends Builder
         catch (JSONException e)
         {
             LOGGER.error("", e);
-            e.printStackTrace();
         }
         return null;
     }
@@ -685,7 +672,6 @@ public class LoadTestBuilder extends Builder
                     message = "criteriaID: \"" + criteriaID + "\"";
 
                 LOGGER.error("Failed to get plot id for criteria. (index: " + i + " " + message + ")", e);
-                e.printStackTrace();
             }
         }
         return criteriaList;
@@ -1318,12 +1304,10 @@ public class LoadTestBuilder extends Builder
             catch (URISyntaxException e)
             {
                 LOGGER.error("", e);
-                e.printStackTrace();
             }
             catch (IOException e)
             {
                 LOGGER.error("", e);
-                e.printStackTrace();
             }
             return null;
         }
