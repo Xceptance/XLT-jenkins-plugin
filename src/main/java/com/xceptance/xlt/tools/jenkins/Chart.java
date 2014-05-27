@@ -1,8 +1,11 @@
 package com.xceptance.xlt.tools.jenkins;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 
 public class Chart<X, Y>
 {
@@ -43,13 +46,13 @@ public class Chart<X, Y>
         return null;
     }
 
-    public String getDataString()
+    public String getDataString(String toolTipFormatter)
     {
         String data = "[";
         Iterator<ChartLine<X, Y>> iterator = lines.iterator();
         while (iterator.hasNext())
         {
-            data += iterator.next().getDataString();
+            data += iterator.next().getDataString(toolTipFormatter);
             if (iterator.hasNext())
             {
                 data += ",";
@@ -59,7 +62,7 @@ public class Chart<X, Y>
         return data;
     }
 
-    public String getXLabelsData()
+    public String getXData()
     {
         List<X> processedValues = new ArrayList<X>();
 
@@ -74,7 +77,7 @@ public class Chart<X, Y>
                 {
                     processedValues.add(value.xValue);
 
-                    data += "\"" + value.xValue + "\":\"" + value.xLabel + "\"";
+                    data += "\"" + value.xValue + "\":{" + value.getDataObjectValues() + "}";
                     if (iterator.hasNext())
                     {
                         data += ",";
@@ -117,7 +120,7 @@ public class Chart<X, Y>
             return maxCount;
         }
 
-        public String getDataString()
+        public String getDataString(String toolTipFormatter)
         {
             String lineObject = "{";
 
@@ -134,8 +137,7 @@ public class Chart<X, Y>
             data += "],";
 
             String mouse = "mouse:{";
-            mouse += "trackFormatter:function(o){ var xLabelsMap = " + chart.getXLabelsData() + "; return \"" + name +
-                     ": \"+o.y+\" Date: \"+xLabelsMap[new String(parseInt(o.x))]},";
+            mouse += "trackFormatter:function(o){ var xData = " + chart.getXData() + "; return ("+toolTipFormatter+")(\""+name+"\", o, xData);},";
             mouse += "},";
 
             String label = "label:\"" + name + "\",";
@@ -170,13 +172,31 @@ public class Chart<X, Y>
 
         private Y yValue;
 
-        private String xLabel;
+        private Map<String, String> dataObjectValues = new HashMap<String, String>();
 
-        public ChartLineValue(X xValue, Y yValue, String xLabel)
+        public ChartLineValue(X xValue, Y yValue)
         {
             this.xValue = xValue;
             this.yValue = yValue;
-            this.xLabel = xLabel;
+        }
+
+        public void setDataObjectValue(String key, String value)
+        {
+            dataObjectValues.put(key, value);
+        }
+
+        public String getDataObjectValues()
+        {
+            String data = "";
+            for (Entry<String, String> eachEntry : dataObjectValues.entrySet())
+            {
+                data += "," + eachEntry.getKey() + ":" + eachEntry.getValue();
+            }
+            data = data.substring(1);
+            data += ",xValue:" + xValue;
+            data += ",yValue:" + yValue;
+            
+            return data;
         }
 
         public String getDataString()

@@ -449,10 +449,10 @@ public class LoadTestBuilder extends Builder
                                         }
                                         else
                                         {
-                                            line.addLineValue(new ChartLineValue<Integer, Double>(eachBuild.number, number.doubleValue(),
-                                                                                                  eachBuild.getTimestamp().getTime()
-                                                                                                           .toString() +
-                                                                                                      " Build:" + eachBuild.number));
+                                            ChartLineValue<Integer, Double> lineValue = new ChartLineValue<Integer, Double>(eachBuild.number, number.doubleValue());
+                                            lineValue.setDataObjectValue("buildNumber", "\""+eachBuild.number+"\"");
+                                            lineValue.setDataObjectValue("buildTime", "\""+eachBuild.getTime()+"\"");
+                                            line.addLineValue(lineValue);
                                         }
                                     }
                                     catch (XPathExpressionException e)
@@ -1093,17 +1093,17 @@ public class LoadTestBuilder extends Builder
             FileUtils.copyDirectory(getFirstXltReportFolder(build), getBuildReportsFolder(build), true);
         }
 
-         // copy results to build directory
-         if (getFirstXltResultFolder(build) != null)
-         {
-         FileUtils.copyDirectory(getFirstXltResultFolder(build), getBuildResultsFolder(build), true);
-         }
-        
-         // copy logs to build directory
-         if (getFirstXltLogFolder(build) != null)
-         {
-         FileUtils.copyDirectory(getFirstXltLogFolder(build), getBuildLogsFolder(build), true);
-         }
+        // copy results to build directory
+        if (getFirstXltResultFolder(build) != null)
+        {
+            FileUtils.copyDirectory(getFirstXltResultFolder(build), getBuildResultsFolder(build), true);
+        }
+
+        // copy logs to build directory
+        if (getFirstXltLogFolder(build) != null)
+        {
+            FileUtils.copyDirectory(getFirstXltLogFolder(build), getBuildLogsFolder(build), true);
+        }
     }
 
     private int executeCommand(File workingDirectory, List<String> commandLine, PrintStream logger)
@@ -1135,7 +1135,7 @@ public class LoadTestBuilder extends Builder
         finally
         {
             IOUtils.closeQuietly(br);
-        }        
+        }
         return process.waitFor();
     }
 

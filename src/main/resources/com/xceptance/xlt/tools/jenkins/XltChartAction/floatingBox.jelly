@@ -54,8 +54,8 @@
 					</div>
 				    <script type="text/javascript">
 					(function(){
-						var xLabelsMap = ${eachChart.getXLabelsData()};					
-						var data = ${eachChart.getDataString()};						
+						var xData = ${eachChart.getXData()};					
+						var data = ${eachChart.getDataString('function(lineName, o, xData){ var data = xData[new String(parseInt(o.x))]; return "&lt;div align=\"left\" &gt;" + lineName +": "+o.y+"&lt;br&gt;Build: "+data.buildNumber + "&lt;br&gt;" + "Date: " + data.buildTime + "&lt;/div&gt;" }')};						
 				        var container = document.getElementById('${plotContainerID}');
 				        var config = { 
 				        	yaxis:{ 
@@ -71,7 +71,7 @@
 								min:null,
 								max:null,
 								tickDecimals:0,
-								tickFormatter:function(o){ return xLabelsMap[new String(o)] },
+								tickFormatter:function(o){ var data = xData[new String(o)]; return '#'+data.buildNumber + "&lt;br&gt;" + data.buildTime },
 								margin:false,
 							},
 							selection: {
