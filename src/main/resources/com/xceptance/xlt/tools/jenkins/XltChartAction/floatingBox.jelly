@@ -92,10 +92,12 @@
 					        },
 					        mouse:{
 					        	track:true,
-					        	position:'n',
-					        	relative:true,
-					        	margin:5,
-					        	trackFormatter:function(o){ return o.y},
+					        	trackAll:false,
+					        	position:'ne',
+					        	relative:false,
+					        	//margin:5,
+					        	radius:2,
+					        	sensibility:7,
 					        },	   
 						};
 						var currentConfig = Flotr.clone(config);
@@ -121,6 +123,19 @@
 						document.body.addEventListener ('mousedown', function() { mousePressed = true; }, false);
 						document.body.addEventListener ('mouseup', function() { mousePressed = false; }, false);
 						
+ 						Flotr.EventAdapter.observe(container, 'flotr:mousemove', function(e, pos) {
+ 							//console.log("x:"+canvasContainer.width/2+"  posRelX:"+Math.floor(pos.relX)+" posX:"+pos.x);
+ 							if(mousePressed == false){
+								if(pos.relX > canvasContainer.width/2){
+									if(currentConfig.mouse.position != 'sw')
+										drawGraph({mouse:{position:'sw'}});
+								}else{
+									if(currentConfig.mouse.position != 'ne')
+										drawGraph({mouse:{position:'ne'}});
+								}
+							}
+					    });		
+					    				
 						// Hook into the 'flotr:select' event.
 					    Flotr.EventAdapter.observe(container, 'flotr:select', function(area) {													
 					        // Draw graph with new area
