@@ -63,7 +63,7 @@
 				    <script type="text/javascript">
 					(function(){
 						var xData = ${eachChart.getXData()};					
-						var data = ${eachChart.getDataString('function(lineName, o, xData){ var data = xData[new String(parseInt(o.x))]; return "&lt;div align=\"left\" &gt;" + lineName +": "+o.y+"&lt;br&gt;Build: "+data.buildNumber + "&lt;br&gt;" + "Date: " + data.buildTime + "&lt;/div&gt;" }')};						
+						var data = ${eachChart.getDataString('function(lineName, o, xData){ var data = xData[parseInt(o.x)]; return "&lt;div align=\"left\" &gt;" + lineName +": "+o.y+"&lt;br&gt;Build: "+data.buildNumber + "&lt;br&gt;" + "Date: " + data.buildTime + "&lt;/div&gt;" }')};						
 				        var container = document.getElementById('${plotContainerID}');
 				        var config = { 
 				        	yaxis:{ 
@@ -79,7 +79,7 @@
 								min:null,
 								max:null,
 								tickDecimals:0,
-								tickFormatter:function(o){ var data = xData[new String(o)]; return '#'+data.buildNumber + " " + data.buildTime },
+								tickFormatter:function(o){ var data = xData[o]; return '#'+data.buildNumber + " " + data.buildTime },
 								margin:false,
 							},
 							selection: {
@@ -100,12 +100,12 @@
 					        },
 					        mouse:{
 					        	track:true,
-					        	trackAll:false,
+					        	trackAll:true,
 					        	position:'ne',
 					        	relative:false,
 					        	//margin:5,
-					        	radius:2,
-					        	sensibility:15,
+					        	//radius:1,
+					        	//sensibility:1,
 					        },	   
 						};
 						var currentConfig = Flotr.clone(config);
@@ -147,9 +147,9 @@
 								}
 								
 								if(location.length == 2 &amp;&amp; currentConfig.mouse.position != location)
-									drawGraph({mouse:{position:location}});								
+									drawGraph({mouse:{position:location,}});								
 							}
-					    });		
+					    });
 					    				
 						// Hook into the 'flotr:select' event.
 					    Flotr.EventAdapter.observe(container, 'flotr:select', function(area) {													

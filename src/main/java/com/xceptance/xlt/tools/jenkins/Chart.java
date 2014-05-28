@@ -66,7 +66,7 @@ public class Chart<X, Y>
     {
         List<X> processedValues = new ArrayList<X>();
 
-        String data = "{";
+        String data = "[";
         for (ChartLine<X, Y> eachLine : lines)
         {
             Iterator<ChartLineValue<X, Y>> iterator = eachLine.getValues().iterator();
@@ -77,7 +77,7 @@ public class Chart<X, Y>
                 {
                     processedValues.add(value.xValue);
 
-                    data += "\"" + value.xValue + "\":{" + value.getDataObjectValues() + "}";
+                    data += "{" + value.getDataObjectValues() + "}";
                     if (iterator.hasNext())
                     {
                         data += ",";
@@ -85,7 +85,7 @@ public class Chart<X, Y>
                 }
             }
         }
-        data += "}";
+        data += "]";
         return data;
     }
 
@@ -137,7 +137,8 @@ public class Chart<X, Y>
             data += "],";
 
             String mouse = "mouse:{";
-            mouse += "trackFormatter:function(o){ var xData = " + chart.getXData() + "; return ("+toolTipFormatter+")(\""+name+"\", o, xData);},";
+            mouse += "trackFormatter:function(o){ var xData = " + chart.getXData() + "; return (" + toolTipFormatter + ")(\"" + name +
+                     "\", o, xData);},";
             mouse += "},";
 
             String label = "label:\"" + name + "\",";
@@ -162,6 +163,7 @@ public class Chart<X, Y>
                 values.remove(0);
                 values.add(value);
             }
+            value.index = values.size() - 1;
         }
     }
 
@@ -171,6 +173,8 @@ public class Chart<X, Y>
         private X xValue;
 
         private Y yValue;
+
+        private int index;
 
         private Map<String, String> dataObjectValues = new HashMap<String, String>();
 
@@ -195,13 +199,13 @@ public class Chart<X, Y>
             data = data.substring(1);
             data += ",xValue:" + xValue;
             data += ",yValue:" + yValue;
-            
+
             return data;
         }
 
         public String getDataString()
         {
-            return "[" + String.valueOf(xValue) + "," + String.valueOf(yValue) + "]";
+            return "[" + String.valueOf(index) + "," + String.valueOf(yValue) + "]";
         }
     }
 }
