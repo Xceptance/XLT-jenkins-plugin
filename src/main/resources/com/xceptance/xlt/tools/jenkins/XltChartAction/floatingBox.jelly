@@ -134,13 +134,20 @@
  						Flotr.EventAdapter.observe(container, 'flotr:mousemove', function(e, pos) {
  							//console.log("x:"+canvasContainer.width/2+"  posRelX:"+Math.floor(pos.relX)+" posX:"+pos.x);
  							if(mousePressed == false){
-								if(pos.relX > canvasContainer.width/2){
-									if(currentConfig.mouse.position != 'sw')
-										drawGraph({mouse:{position:'sw'}});
+ 								var location = ''; 		
+ 								if(pos.relY > canvasContainer.height/2){
+									location += 'n';
 								}else{
-									if(currentConfig.mouse.position != 'ne')
-										drawGraph({mouse:{position:'ne'}});
+									location += 's';
+								}					
+								if(pos.relX > canvasContainer.width/2){
+									location += 'w';
+								}else{
+									location += 'e';
 								}
+								
+								if(location.length == 2 &amp;&amp; currentConfig.mouse.position != location)
+									drawGraph({mouse:{position:location}});								
 							}
 					    });		
 					    				
