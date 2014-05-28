@@ -97,7 +97,7 @@
 					        	relative:false,
 					        	//margin:5,
 					        	radius:2,
-					        	sensibility:7,
+					        	sensibility:15,
 					        },	   
 						};
 						var currentConfig = Flotr.clone(config);
