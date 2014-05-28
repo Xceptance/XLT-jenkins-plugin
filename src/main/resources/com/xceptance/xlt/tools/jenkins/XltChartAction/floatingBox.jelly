@@ -98,14 +98,23 @@
 					        	trackFormatter:function(o){ return o.y},
 					        },	   
 						};
+						var currentConfig = Flotr.clone(config);
 				        var graph;
 				        
 						function drawGraph(options){
-							var newConfig = Flotr.merge(options, Flotr.clone(config));
-							return Flotr.draw(container, data, newConfig);
+							currentConfig = Flotr.merge(options, currentConfig);
+							return Flotr.draw(container, data, currentConfig);
 						}
 						
-						graph = drawGraph(config);
+						function resetGraph(options){
+							return drawGraph(Flotr.clone(config))
+						}						
+						
+						graph = drawGraph({});
+						
+						var canvasContainer = container.childNodes[1];
+						canvasContainer.addEventListener ('mouseover', function() { drawGraph({legend:{show:false,},}) }, false);
+						canvasContainer.addEventListener ('mouseout', function() { drawGraph({legend:{show:true,},}) }, false);
 						
 						// Hook into the 'flotr:select' event.
 					    Flotr.EventAdapter.observe(container, 'flotr:select', function(area) {
@@ -122,13 +131,16 @@
 					            },
 					            points:{
 					        		show:true
+					        	},
+					        	legend:{
+					        		show:false,
 					        	},					            
 					        });
 					    });					    
 					
 					    // When graph is clicked, draw the graph with default area.
 					    Flotr.EventAdapter.observe(container, 'flotr:click', function() {
-					        drawGraph(config);
+					        resetGraph({});
 					    });
 					})();    
 					</script>
