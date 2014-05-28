@@ -100,6 +100,8 @@
 						};
 						var currentConfig = Flotr.clone(config);
 				        var graph;
+				        var mousePressed = false;
+				        var mouseOver = false;
 				        
 						function drawGraph(options){
 							currentConfig = Flotr.merge(options, currentConfig);
@@ -113,14 +115,16 @@
 						graph = drawGraph({});
 						
 						var canvasContainer = container.childNodes[1];
-						canvasContainer.addEventListener ('mouseover', function() { drawGraph({legend:{show:false,},}) }, false);
-						canvasContainer.addEventListener ('mouseout', function() { drawGraph({legend:{show:true,},}) }, false);
+						canvasContainer.addEventListener ('mouseover', function() { mouseOver = true; drawGraph({legend:{show:false,},}) }, false);
+						canvasContainer.addEventListener ('mouseout', function() { mouseOver = false; if(mousePressed == false)drawGraph({legend:{show:true,},}) }, false);
+						
+						document.body.addEventListener ('mousedown', function() { mousePressed = true; }, false);
+						document.body.addEventListener ('mouseup', function() { mousePressed = false; }, false);
 						
 						// Hook into the 'flotr:select' event.
-					    Flotr.EventAdapter.observe(container, 'flotr:select', function(area) {
-						
+					    Flotr.EventAdapter.observe(container, 'flotr:select', function(area) {													
 					        // Draw graph with new area
-					        graph = drawGraph({
+					        var newConfig = {
 					            xaxis: {
 					                min: area.x1,
 					                max: area.x2
@@ -135,12 +139,18 @@
 					        	legend:{
 					        		show:false,
 					        	},					            
-					        });
+					        };
+					        
+					        if(mouseOver == false){
+					        	newConfig.legend.show = true;
+					        }					        	
+					        
+					        drawGraph(newConfig);
 					    });					    
 					
 					    // When graph is clicked, draw the graph with default area.
 					    Flotr.EventAdapter.observe(container, 'flotr:click', function() {
-					        resetGraph({});
+							resetGraph({});
 					    });
 					})();    
 					</script>
