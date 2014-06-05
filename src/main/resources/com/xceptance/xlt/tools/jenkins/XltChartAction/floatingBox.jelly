@@ -103,7 +103,7 @@
 					        	trackAll:false,
 					        	position:'se',
 					        	relative:true,
-					        	margin:5,
+					        	margin:15,
 					        	radius:3,
 					        	sensibility:10,
 					        },	   
