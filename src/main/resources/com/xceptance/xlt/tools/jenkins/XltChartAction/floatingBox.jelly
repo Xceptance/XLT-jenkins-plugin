@@ -100,12 +100,12 @@
 					        },
 					        mouse:{
 					        	track:true,
-					        	trackAll:true,
-					        	position:'ne',
-					        	relative:false,
-					        	//margin:5,
-					        	//radius:1,
-					        	//sensibility:1,
+					        	trackAll:false,
+					        	position:'se',
+					        	relative:true,
+					        	margin:5,
+					        	radius:3,
+					        	sensibility:10,
 					        },	   
 						};
 						var currentConfig = Flotr.clone(config);
@@ -125,15 +125,15 @@
 						graph = drawGraph({});
 						
 						var canvasContainer = container.childNodes[1];
-						canvasContainer.addEventListener ('mouseover', function() { mouseOver = true; drawGraph({legend:{show:false,},}) }, false);
-						canvasContainer.addEventListener ('mouseout', function() { mouseOver = false; if(mousePressed == false)drawGraph({legend:{show:true,},}) }, false);
+						canvasContainer.addEventListener ('mouseover', function() { mouseOver = true; if(mousePressed == false) drawGraph({legend:{show:false,},mouse:{track:true}}) }, false);
+						canvasContainer.addEventListener ('mouseout', function() { mouseOver = false; if(mousePressed == false) drawGraph({legend:{show:true,},mouse:{track:false}}) }, false);
 						
 						document.body.addEventListener ('mousedown', function() { mousePressed = true; }, false);
 						document.body.addEventListener ('mouseup', function() { mousePressed = false; }, false);
 						
  						Flotr.EventAdapter.observe(container, 'flotr:mousemove', function(e, pos) {
  							//console.log("x:"+canvasContainer.width/2+"  posRelX:"+Math.floor(pos.relX)+" posX:"+pos.x);
- 							if(mousePressed == false){
+  							if(mousePressed == false){
  								var location = ''; 		
  								if(pos.relY > canvasContainer.height/2){
 									location += 'n';
