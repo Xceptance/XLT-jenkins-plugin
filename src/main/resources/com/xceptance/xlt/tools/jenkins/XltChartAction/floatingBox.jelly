@@ -67,131 +67,132 @@
 							<b>${eachChart.getTitle()}</b><br/>
 							<div id="${plotContainerID}" style="border: 1px solid #BBBBBB; box-shadow: 1px 2px 6px -3px #555555;width:${width}px;height:${height}px;"></div>
 						</center>
-					</div>
-				    <script type="text/javascript">
-					(function(){
-						var xData = ${eachChart.getXData()};					
-						var data = ${eachChart.getDataString('function(lineName, o, xData){ var data = xData[parseInt(o.x)]; return "&lt;div align=\"left\" &gt;" + lineName +": "+o.y+"&lt;br&gt;Build: "+data.buildNumber + "&lt;br&gt;" + "Date: " + data.buildTime + "&lt;/div&gt;" }')};						
-				        var container = document.getElementById('${plotContainerID}');
-				        var config = { 
-				        	yaxis:{ 
-				        		min:0,
-				        		max:null,
-								tickDecimals:0,		
-								tickFormatter:function(o){ return o},
-								margin:false,
-								autoscale:true,
-								autoscaleMargin:0.1,							
-							},
-							xaxis:{
-								min:null,
-								max:null,
-								tickDecimals:0,
-								tickFormatter:function(o){ var data = xData[o]; return '#'+data.buildNumber + " " + data.buildTime },
-								margin:false,
-							},
-							selection: {
-								show:true,				
-					            mode: 'xy',
-					            fps: 25,
-					        },			
-					        lines:{
-					        	show:true,
-					        },
-					        points:{
-					        	show:false,
-					        },
-					        grid:{
-					        	verticalLines: false,
-								outlineWidth:1,
-								outline:'s',
-					        },
-					        mouse:{
-					        	track:true,
-					        	trackAll:false,
-					        	position:'se',
-					        	relative:true,
-					        	margin:15,
-					        	radius:3,
-					        	sensibility:10,
-					        },	   
-						};
-						var currentConfig = Flotr.clone(config);
-				        var graph;
-				        var mousePressed = false;
-				        var mouseOver = false;
-				        
-						function drawGraph(options){
-							currentConfig = Flotr.merge(options, currentConfig);
-							return Flotr.draw(container, data, currentConfig);
-						}
-						
-						function resetGraph(options){
-							return drawGraph(Flotr.clone(config))
-						}						
-						
-						graph = drawGraph({});
-						
-						var canvasContainer = container.childNodes[1];
-						canvasContainer.addEventListener ('mouseover', function() { mouseOver = true; if(mousePressed == false) drawGraph({legend:{show:false,},mouse:{track:true}}) }, false);
-						canvasContainer.addEventListener ('mouseout', function() { mouseOver = false; if(mousePressed == false) drawGraph({legend:{show:true,},mouse:{track:false}}) }, false);
-						
-						document.body.addEventListener ('mousedown', function() { mousePressed = true; }, false);
-						document.body.addEventListener ('mouseup', function() { mousePressed = false; }, false);
-						
- 						Flotr.EventAdapter.observe(container, 'flotr:mousemove', function(e, pos) {
- 							//console.log("x:"+canvasContainer.width/2+"  posRelX:"+Math.floor(pos.relX)+" posX:"+pos.x);
-  							if(mousePressed == false){
- 								var location = ''; 		
- 								if(pos.relY > canvasContainer.height/2){
-									location += 'n';
-								}else{
-									location += 's';
-								}					
-								if(pos.relX > canvasContainer.width/2){
-									location += 'w';
-								}else{
-									location += 'e';
-								}
-								
-								if(location.length == 2 &amp;&amp; currentConfig.mouse.position != location)
-									drawGraph({mouse:{position:location,}});								
+					    <script type="text/javascript">
+						(function(){
+							var xData = ${eachChart.getXData()};					
+							var data = ${eachChart.getDataString('function(lineName, o, xData){ var data = xData[parseInt(o.x)]; return "&lt;div align=\"left\" &gt;" + lineName +": "+o.y+"&lt;br&gt;Build: "+data.buildNumber + "&lt;br&gt;" + "Date: " + data.buildTime + "&lt;/div&gt;" }')};						
+					        var container = document.getElementById('${plotContainerID}');
+					        var config = { 
+					        	yaxis:{ 
+					        		min:0,
+					        		max:null,
+									tickDecimals:0,		
+									tickFormatter:function(o){ return o},
+									margin:false,
+									autoscale:true,
+									autoscaleMargin:0.1,							
+								},
+								xaxis:{
+									min:null,
+									max:null,
+									tickDecimals:0,
+									tickFormatter:function(o){ var data = xData[o]; return '#'+data.buildNumber + " " + data.buildTime },
+									margin:false,
+								},
+								selection: {
+									show:true,				
+						            mode: 'xy',
+						            fps: 25,
+						        },			
+						        lines:{
+						        	show:true,
+						        },
+						        points:{
+						        	show:false,
+						        },
+						        grid:{
+						        	verticalLines: false,
+									outlineWidth:1,
+									outline:'s',
+						        },
+						        mouse:{
+						        	track:true,
+						        	trackAll:false,
+						        	position:'se',
+						        	relative:true,
+						        	margin:15,
+						        	radius:3,
+						        	sensibility:10,
+						        },	   
+							};
+							var currentConfig = Flotr.clone(config);
+					        var graph;
+					        var mousePressed = false;
+					        var mouseOver = false;
+					        
+							function drawGraph(options){
+								currentConfig = Flotr.merge(options, currentConfig);
+								return Flotr.draw(container, data, currentConfig);
 							}
-					    });
-					    				
-						// Hook into the 'flotr:select' event.
-					    Flotr.EventAdapter.observe(container, 'flotr:select', function(area) {													
-					        // Draw graph with new area
-					        var newConfig = {
-					            xaxis: {
-					                min: area.x1,
-					                max: area.x2
-					            },
-					            yaxis: {
-					                min: area.y1,
-					                max: area.y2
-					            },
-					            points:{
-					        		show:true
-					        	},
-					        	legend:{
-					        		show:false,
-					        	},					            
-					        };
-					        
-					        if(mouseOver == false){
-					        	newConfig.legend.show = true;
-					        }					        	
-					        
-					        drawGraph(newConfig);
-					    });					    
+							
+							function resetGraph(options){
+								return drawGraph(Flotr.clone(config))
+							}						
+							
+							graph = drawGraph({});
+							
+							var canvasContainer = container.childNodes[1];
+							canvasContainer.addEventListener ('mouseover', function() { mouseOver = true; if(mousePressed == false) drawGraph({legend:{show:false,},mouse:{track:true}}) }, false);
+							canvasContainer.addEventListener ('mouseout', function() { mouseOver = false; if(mousePressed == false) drawGraph({legend:{show:true,},mouse:{track:false}}) }, false);
+							
+							document.body.addEventListener ('mousedown', function() { mousePressed = true; }, false);
+							document.body.addEventListener ('mouseup', function() { mousePressed = false; }, false);
+							
+	 						Flotr.EventAdapter.observe(container, 'flotr:mousemove', function(e, pos) {
+	 							//console.log("x:"+canvasContainer.width/2+"  posRelX:"+Math.floor(pos.relX)+" posX:"+pos.x);
+	  							if(mousePressed == false){
+	 								var location = ''; 		
+	 								if(pos.relY > canvasContainer.height/2){
+										location += 'n';
+									}else{
+										location += 's';
+									}					
+									if(pos.relX > canvasContainer.width/2){
+										location += 'w';
+									}else{
+										location += 'e';
+									}
+									
+									if(location.length == 2 &amp;&amp; currentConfig.mouse.position != location)
+										drawGraph({mouse:{position:location,}});								
+								}
+						    });
+						    				
+							// Hook into the 'flotr:select' event.
+						    Flotr.EventAdapter.observe(container, 'flotr:select', function(area) {													
+						        // Draw graph with new area
+						        var newConfig = {
+						            xaxis: {
+						                min: area.x1,
+						                max: area.x2
+						            },
+						            yaxis: {
+						                min: area.y1,
+						                max: area.y2
+						            },
+						            points:{
+						        		show:true
+						        	},
+						        	legend:{
+						        		show:false,
+						        	},					            
+						        };
+						        
+						        if(mouseOver == false){
+						        	newConfig.legend.show = true;
+						        }					        	
+						        
+						        drawGraph(newConfig);
+						    });					    
+						
+						    // When graph is clicked, draw the graph with default area.
+						    Flotr.EventAdapter.observe(container, 'flotr:click', function() {
+								resetGraph({});
+						    });
+						})();    
+						</script>
+					</div>
 					
-					    // When graph is clicked, draw the graph with default area.
-					    Flotr.EventAdapter.observe(container, 'flotr:click', function() {
-							resetGraph({});
-					    });
-					})();    
-					</script>
 				</j:forEach>
 			</div>
 		</div>
