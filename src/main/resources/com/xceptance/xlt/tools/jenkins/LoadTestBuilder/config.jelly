@@ -7,13 +7,25 @@
 	xmlns:f="/lib/form">
 	
 	<f:section title="Load Test Configuration"> 
-    	<f:entry title="Agent Controller URL" field="agentControllerUrl">
-    		<f:textbox  />  
-  		</f:entry>
-  	
-	  	<f:entry title="Test Configuration File" field="testPropertiesFile">
+    		  	<f:entry title="Test Configuration File" field="testPropertiesFile">
 	    	<f:textbox default="test.properties" />
 	  	</f:entry>
+    	
+    	<f:entry title="Agent Controller URL" field="agentControllerUrl">  
+  		</f:entry>
+  		
+  		<f:radioBlock name="AgentControllerURL" value="ap" title="Textlist" checked="${descriptor.isType1()}">
+          <f:entry>
+            <f:textarea  />
+          </f:entry>
+        </f:radioBlock>
+        
+        <f:radioBlock name="AgentControllerURL" value="ebox" title="From File" checked="${descriptor.isType2()}">
+          <f:entry>
+            <f:textbox  />
+          </f:entry>
+        </f:radioBlock>
+        
 	</f:section> 	
   	
   	<f:section title="Report Options">
