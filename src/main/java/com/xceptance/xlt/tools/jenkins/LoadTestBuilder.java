@@ -7,6 +7,7 @@ import hudson.model.BuildListener;
 import hudson.model.Result;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
+import hudson.model.StringParameterValue;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
 import hudson.util.FormValidation;
@@ -72,7 +73,11 @@ public class LoadTestBuilder extends Builder
 
     private boolean testPropertiesFileAvailable = true;
 
-    private final String agentControllerUrl;
+    private String agentControllerUrl;
+    
+    private String agentControllerFile;
+    
+    private String agentControllerSelected;
 
     private final String xltConfig;
 
@@ -138,12 +143,33 @@ public class LoadTestBuilder extends Builder
             e.printStackTrace();
         }
     }
+    
+    public static class AgentControllerConfig extends StringParameterValue
+    {
+        String agentControllerUrl;
+        String agentControllerFile;
+        
+        
+        @DataBoundConstructor
+        public AgentControllerConfig(String name, String value, String agentControllerUrl, String agentControllerFile)
+        {            
+            super(name, value);
+            System.out.println("created "+value);
+            this.agentControllerUrl = agentControllerUrl;
+            this.agentControllerFile = agentControllerFile;
+        }
+    }
 
     @DataBoundConstructor
-    public LoadTestBuilder(String testPropertiesFile, String agentControllerUrl, String xltConfig, int plotWidth, int plotHeight,
+    public LoadTestBuilder(String testPropertiesFile, String xltConfig, int plotWidth, int plotHeight,
                            String plotTitle, String builderID, boolean isPlotVertical, boolean createTrendReport,
-                           int numberOfBuildsForTrendReport, boolean createSummaryReport, int numberOfBuildsForSummaryReport)
+                           int numberOfBuildsForTrendReport, boolean createSummaryReport, int numberOfBuildsForSummaryReport, AgentControllerConfig agentController)
     {
+        agentControllerSelected = agentController.value;
+        System.out.println("saved "+agentControllerSelected);
+        System.out.println("saved "+agentController.agentControllerFile);
+        System.out.println("saved "+agentController.agentControllerUrl);
+        
         isSave = true;
         Thread.currentThread().setUncaughtExceptionHandler(new UncaughtExceptionHandler()
         {
@@ -158,7 +184,9 @@ public class LoadTestBuilder extends Builder
             testPropertiesFileAvailable = false;
         }
         this.testPropertiesFile = testPropertiesFile;
-        this.agentControllerUrl = agentControllerUrl;
+        
+        this.agentControllerUrl = agentController.agentControllerUrl;
+        this.agentControllerFile = agentController.agentControllerFile;
 
         if (StringUtils.isBlank(xltConfig))
         {
@@ -210,11 +238,6 @@ public class LoadTestBuilder extends Builder
     public String getTestPropertiesFile()
     {
         return testPropertiesFile;
-    }
-
-    public String getAgentControllerUrl()
-    {
-        return agentControllerUrl;
     }
 
     public String getXltConfig()
@@ -745,6 +768,22 @@ public class LoadTestBuilder extends Builder
             }
         }
         return null;
+    }
+    
+    public String getAgentControllerSelected()
+    {
+        System.out.println("loaded "+agentControllerSelected);
+        return agentControllerSelected;
+    }
+    
+    public String getAgentControllerUrl()
+    {
+        return agentControllerUrl;
+    }
+    
+    public String getAgentControllerFile()
+    {
+        return agentControllerFile;
     }
 
     private File getBuildResultConfigFolder(AbstractBuild<?, ?> build)
