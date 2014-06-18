@@ -17,7 +17,7 @@
   		
   		<f:radioBlock name="agentController" value="list" title="Textlist" checked="${instance.agentControllerSelected == 'list'}">
           <f:entry field="agentControllerUrl" >
-            <f:textbox />
+            <f:textarea />
           </f:entry>
         </f:radioBlock>
         
