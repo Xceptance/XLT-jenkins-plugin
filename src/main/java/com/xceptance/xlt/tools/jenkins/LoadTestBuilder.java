@@ -2,6 +2,7 @@ package com.xceptance.xlt.tools.jenkins;
 
 import hudson.Extension;
 import hudson.Launcher;
+import hudson.Launcher.ProcStarter;
 import hudson.model.Action;
 import hudson.model.BuildListener;
 import hudson.model.Result;
@@ -11,13 +12,13 @@ import hudson.model.StringParameterValue;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
 import hudson.util.FormValidation;
+import hudson.util.StreamTaskListener;
 
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.PrintStream;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.net.URISyntaxException;
@@ -40,11 +41,8 @@ import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 
 import jenkins.model.Jenkins;
-import lib.jenkins.NewFromListTagLib;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.io.filefilter.IOFileFilter;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.SystemUtils;
 import org.apache.log4j.FileAppender;
@@ -73,13 +71,13 @@ public class LoadTestBuilder extends Builder
     private final String testPropertiesFile;
 
     private boolean testPropertiesFileAvailable = true;
-    
+
     private String[] agentControllerUrlEncoded;
 
     private String agentControllerUrl;
-    
+
     private String agentControllerFile;
-    
+
     private String agentControllerSelected;
 
     private final String xltConfig;
@@ -146,16 +144,16 @@ public class LoadTestBuilder extends Builder
             e.printStackTrace();
         }
     }
-    
+
     public static class AgentControllerConfig extends StringParameterValue
     {
         String agentControllerUrl;
+
         String agentControllerFile;
-        
-        
+
         @DataBoundConstructor
         public AgentControllerConfig(String name, String value, String agentControllerUrl, String agentControllerFile)
-        {            
+        {
             super(name, value);
             this.agentControllerUrl = agentControllerUrl;
             this.agentControllerFile = agentControllerFile;
@@ -163,12 +161,12 @@ public class LoadTestBuilder extends Builder
     }
 
     @DataBoundConstructor
-    public LoadTestBuilder(String testPropertiesFile, String xltConfig, int plotWidth, int plotHeight,
-                           String plotTitle, String builderID, boolean isPlotVertical, boolean createTrendReport,
-                           int numberOfBuildsForTrendReport, boolean createSummaryReport, int numberOfBuildsForSummaryReport, AgentControllerConfig agentController)
+    public LoadTestBuilder(String testPropertiesFile, String xltConfig, int plotWidth, int plotHeight, String plotTitle, String builderID,
+                           boolean isPlotVertical, boolean createTrendReport, int numberOfBuildsForTrendReport,
+                           boolean createSummaryReport, int numberOfBuildsForSummaryReport, AgentControllerConfig agentController)
     {
         agentControllerSelected = agentController.value;
-        
+
         isSave = true;
         Thread.currentThread().setUncaughtExceptionHandler(new UncaughtExceptionHandler()
         {
@@ -183,10 +181,10 @@ public class LoadTestBuilder extends Builder
             testPropertiesFileAvailable = false;
         }
         this.testPropertiesFile = testPropertiesFile;
-        
+
         this.agentControllerUrl = agentController.agentControllerUrl;
         this.agentControllerFile = agentController.agentControllerFile;
-        
+
         if (StringUtils.isBlank(xltConfig))
         {
             xltConfig = getDescriptor().getDefaultXltConfig();
@@ -234,12 +232,12 @@ public class LoadTestBuilder extends Builder
         this.numberOfBuildsForSummaryReport = numberOfBuildsForSummaryReport;
     }
 
-    private String[] parseAgentControllerUrlFromFile(String agentControllerFile,AbstractBuild<?, ?> build) throws IOException
+    private String[] parseAgentControllerUrlFromFile(String agentControllerFile, AbstractBuild<?, ?> build) throws IOException
     {
         FileReader file = null;
         String readedFile = "";
         String line = "";
-        
+
         try
         {
             file = new FileReader(getTestConfig(build) + agentControllerFile);
@@ -249,15 +247,15 @@ public class LoadTestBuilder extends Builder
             e.printStackTrace();
         }
         BufferedReader reader = new BufferedReader(file);
-        
-        while ((line = reader.readLine()) != null) 
+
+        while ((line = reader.readLine()) != null)
         {
             readedFile += line + "\n";
         }
         reader.close();
- 
+
         String[] encodedUrls = parseAgentControllerUrl(readedFile);
-        
+
         return encodedUrls;
     }
 
@@ -265,7 +263,7 @@ public class LoadTestBuilder extends Builder
     {
         // FIXME optimize regex for seperate the whole String into single URLs
         String[] encodedUrls = agentControllerUrl.split("\n|,|;| ");
-        
+
         return encodedUrls;
     }
 
@@ -803,17 +801,17 @@ public class LoadTestBuilder extends Builder
         }
         return null;
     }
-    
+
     public String getAgentControllerSelected()
     {
         return agentControllerSelected;
     }
-    
+
     public String getAgentControllerUrl()
     {
         return agentControllerUrl;
     }
-    
+
     public String getAgentControllerFile()
     {
         return agentControllerFile;
@@ -1049,14 +1047,15 @@ public class LoadTestBuilder extends Builder
 
     private void configureAgentController(AbstractBuild<?, ?> build, BuildListener listener) throws IOException
     {
-        listener.getLogger().println("-----------------------------------------------------------------\nStarted configuring agent controller ...\n");
-        
+        listener.getLogger()
+                .println("-----------------------------------------------------------------\nStarted configuring agent controller ...\n");
+
         if (agentControllerFile == null)
         {
-            if(!agentControllerUrl.isEmpty())
+            if (!agentControllerUrl.isEmpty())
             {
                 agentControllerUrlEncoded = parseAgentControllerUrl(agentControllerUrl);
-                
+
                 listener.getLogger().println("agent controller URLs:\n");
                 for (int i = 0; i < agentControllerUrlEncoded.length; i++)
                 {
@@ -1073,8 +1072,8 @@ public class LoadTestBuilder extends Builder
             if (!agentControllerFile.isEmpty())
             {
                 agentControllerUrlEncoded = parseAgentControllerUrlFromFile(agentControllerFile, build);
-                
-                listener.getLogger().println("agent controller URLs from File: " + getTestConfig(build) + agentControllerFile +"\n");
+
+                listener.getLogger().println("agent controller URLs from File: " + getTestConfig(build) + agentControllerFile + "\n");
                 for (int i = 0; i < agentControllerUrlEncoded.length; i++)
                 {
                     listener.getLogger().println(agentControllerUrlEncoded[i]);
@@ -1085,7 +1084,7 @@ public class LoadTestBuilder extends Builder
                 listener.getLogger().println("Set to embedded mode");
             }
         }
-        
+
         listener.getLogger().println("\nFinished");
     }
 
@@ -1165,7 +1164,7 @@ public class LoadTestBuilder extends Builder
         {
             for (int i = 1; i <= agentControllerUrlEncoded.length; i++)
             {
-                commandLine.add("-Dcom.xceptance.xlt.mastercontroller.agentcontrollers.ac" + i + ".url=" + agentControllerUrlEncoded[i-1]);
+                commandLine.add("-Dcom.xceptance.xlt.mastercontroller.agentcontrollers.ac" + i + ".url=" + agentControllerUrlEncoded[i - 1]);
             }
         }
 
@@ -1182,7 +1181,7 @@ public class LoadTestBuilder extends Builder
 
         // run the master controller
         File workingDirectory = getXltExecutablesFolder(build);
-        int commandResult = executeCommand(workingDirectory, commandLine, listener.getLogger());
+        int commandResult = executeCommand(build, workingDirectory, commandLine, listener.getLogger());
         listener.getLogger().println("Master controller returned with exit code: " + commandResult);
 
         if (commandResult != 0)
@@ -1215,37 +1214,20 @@ public class LoadTestBuilder extends Builder
         }
     }
 
-    private int executeCommand(File workingDirectory, List<String> commandLine, PrintStream logger)
-        throws InterruptedException, IOException
+    private int executeCommand(AbstractBuild<?, ?> build, File workingDirectory, List<String> commandLine, PrintStream logger)
+        throws IOException, InterruptedException
     {
-        ProcessBuilder builder = new ProcessBuilder(commandLine);
-        builder.directory(workingDirectory);
-        builder.redirectErrorStream(true);
+        hudson.model.Node buildNode = build.getBuiltOn();
+        StreamTaskListener streamListener = new StreamTaskListener((OutputStream) logger);
 
-        Process process = builder.start();
+        Launcher launcher = buildNode.createLauncher(streamListener);
+        launcher.decorateFor(buildNode);
 
-        InputStream is = process.getInputStream();
-        BufferedReader br = new BufferedReader(new InputStreamReader(is));
+        ProcStarter starter = launcher.launch();
+        starter.pwd(workingDirectory);
+        starter.cmds(commandLine);
 
-        String line;
-
-        try
-        {
-            while ((line = br.readLine()) != null)
-            {
-                if (Thread.currentThread().isInterrupted())
-                {
-                    process.destroy();
-                    throw new InterruptedException();
-                }
-                logger.println(line);
-            }
-        }
-        finally
-        {
-            IOUtils.closeQuietly(br);
-        }
-        return process.waitFor();
+        return starter.join();
     }
 
     private void createSummaryReport(AbstractBuild<?, ?> build, BuildListener listener) throws Exception
@@ -1276,7 +1258,7 @@ public class LoadTestBuilder extends Builder
         commandLine.add(getSummaryResultFolder(build.getProject()).getAbsolutePath());
 
         // run the report generator
-        int commandResult = executeCommand(getXltExecutablesFolder(build), commandLine, listener.getLogger());
+        int commandResult = executeCommand(build, getXltExecutablesFolder(build), commandLine, listener.getLogger());
         listener.getLogger().println("Load report generator returned with exit code: " + commandResult);
         if (commandResult != 0)
         {
@@ -1383,7 +1365,7 @@ public class LoadTestBuilder extends Builder
         if (numberOfBuildsWithReports >= 2)
         {
             // run trend report generator
-            int commandResult = executeCommand(getXltExecutablesFolder(build), commandLine, listener.getLogger());
+            int commandResult = executeCommand(build, getXltExecutablesFolder(build), commandLine, listener.getLogger());
             listener.getLogger().println("Trend report generator returned with exit code: " + commandResult);
             if (commandResult != 0)
             {
