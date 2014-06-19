@@ -239,17 +239,13 @@ public class LoadTestBuilder extends Builder
         FileReader file = null;
         try
         {
-            file = new FileReader(build.getRootDir() + "/config/" + agentControllerFile);
-            System.out.println(file);
+            file = new FileReader(build.getModuleRoot() + "/config/" + agentControllerFile);
         }
         catch (Exception e)
         {
             e.printStackTrace();
         }
         BufferedReader reader = new BufferedReader(file);
-        
-        System.out.println(reader);
-        
         String[] encodedUrls = parseAgentControllerUrl(reader.readLine());
         
         return encodedUrls;
@@ -1001,13 +997,9 @@ public class LoadTestBuilder extends Builder
         try
         {
             initialCleanUp(build, listener);
-            System.out.println("done");
             copyXlt(build, listener);
-            System.out.println("done");
             configureAgentController(build, listener);
-            System.out.println("done");
             runMasterController(build, listener);
-            System.out.println("done");
             postTestExecution(build, listener);
 
             if (createSummaryReport)
@@ -1046,46 +1038,29 @@ public class LoadTestBuilder extends Builder
     }
 
     private void configureAgentController(AbstractBuild<?, ?> build, BuildListener listener) throws IOException
-    {
-        System.out.println(agentControllerUrl);
-        System.out.println(agentControllerFile);
-        
-        if (!agentControllerUrl.isEmpty() && agentControllerFile == null)
+    {          
+        if (agentControllerFile == null)
         {
-            agentControllerUrlEncoded = parseAgentControllerUrl(agentControllerUrl);
-            
-            for (int i = 0; i < agentControllerUrlEncoded.length; i++)
+            if(!agentControllerUrl.isEmpty())
             {
-                System.out.println(agentControllerUrlEncoded[i]);
+                agentControllerUrlEncoded = parseAgentControllerUrl(agentControllerUrl);
             }
-            
-            System.out.println("by textbox");
+            else
+            {
+                listener.getLogger().println("Set to embedded mode");
+            }
         }
-        
-        System.out.println("aus if raus");
-        System.out.println(agentControllerUrl);
-        System.out.println(agentControllerFile);
-        
-        System.out.println(!agentControllerFile.isEmpty());
-        System.out.println(agentControllerUrl);
-        
-        if (!agentControllerFile.isEmpty() && agentControllerUrl == null)
+        else if (agentControllerUrl == null)
         {
-            System.out.println("drinnen");
-            agentControllerUrlEncoded = parseAgentControllerUrlFromFile(agentControllerFile, build);
-            System.out.println("by file");
-        }
-        
-        System.out.println(agentControllerUrl);
-        System.out.println(agentControllerFile);
-        
-        for (int i = 0; i < agentControllerUrlEncoded.length; i++)
-        {
-            System.out.println(agentControllerUrlEncoded[i]);
-        }
-        
-        System.out.println(agentControllerUrl);
-        System.out.println(agentControllerFile);
+            if (!agentControllerFile.isEmpty())
+            {
+                agentControllerUrlEncoded = parseAgentControllerUrlFromFile(agentControllerFile, build);
+            }
+            else
+            {
+                listener.getLogger().println("Set to embedded mode");
+            }
+        }  
     }
 
     private boolean artifactsExist(AbstractBuild<?, ?> build)
@@ -1154,21 +1129,13 @@ public class LoadTestBuilder extends Builder
         if (agentControllerUrlEncoded == null)
         {
             commandLine.add("-embedded");
-            System.out.println("embedded");
         }
         else
         {
-            for (int i = 0; i < agentControllerUrlEncoded.length; i++)
+            for (int i = 1; i <= agentControllerUrlEncoded.length; i++)
             {
-                commandLine.add("-Dcom.xceptance.xlt.mastercontroller.agentcontrollers.ac" + (i+1) + ".url=" + agentControllerUrlEncoded[i]);
+                commandLine.add("-Dcom.xceptance.xlt.mastercontroller.agentcontrollers.ac" + i + ".url=" + agentControllerUrlEncoded[i-1]);
             }
-            
-            for (int i = 0; i < agentControllerUrlEncoded.length; i++)
-            {
-                System.out.println("agentControllerUrlEncoded[i]");
-            }
-            
-            System.out.println("nicht embedded");
         }
 
         commandLine.add("-auto");
