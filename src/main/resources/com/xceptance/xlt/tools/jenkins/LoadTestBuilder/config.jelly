@@ -7,13 +7,26 @@
 	xmlns:f="/lib/form">
 	
 	<f:section title="Load Test Configuration"> 
-    	<f:entry title="Agent Controller URL" field="agentControllerUrl">
-    		<f:textbox  />  
-  		</f:entry>
-  	
-	  	<f:entry title="Test Configuration File" field="testPropertiesFile">
+        
+        <f:entry title="Test Configuration File" field="testPropertiesFile">
 	    	<f:textbox default="test.properties" />
 	  	</f:entry>
+    	
+    	<f:entry title="Agent Controller URL" >  
+  		</f:entry>
+  		
+  		<f:radioBlock name="agentController" value="list" title="Textlist" checked="${instance.agentControllerSelected == 'list'}">
+          <f:entry field="agentControllerUrl" >
+            <f:textarea />
+          </f:entry>
+        </f:radioBlock>
+        
+        <f:radioBlock name="agentController" value="file" title="From File" checked="${instance.agentControllerSelected == 'file'}">
+          <f:entry field="agentControllerFile" >
+            <f:textbox />
+          </f:entry>
+        </f:radioBlock>
+        
 	</f:section> 	
   	
   	<f:section title="Report Options">
