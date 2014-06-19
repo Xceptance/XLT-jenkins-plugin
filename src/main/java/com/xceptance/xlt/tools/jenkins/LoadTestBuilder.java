@@ -1226,6 +1226,8 @@ public class LoadTestBuilder extends Builder
         ProcStarter starter = launcher.launch();
         starter.pwd(workingDirectory);
         starter.cmds(commandLine);
+        
+        starter.stdout(streamListener);
 
         return starter.join();
     }
