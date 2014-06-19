@@ -237,16 +237,26 @@ public class LoadTestBuilder extends Builder
     private String[] parseAgentControllerUrlFromFile(String agentControllerFile,AbstractBuild<?, ?> build) throws IOException
     {
         FileReader file = null;
+        String readedFile = "";
+        String line = "";
+        
         try
         {
-            file = new FileReader(build.getModuleRoot() + "/config/" + agentControllerFile);
+            file = new FileReader(getTestConfig(build) + agentControllerFile);
         }
         catch (Exception e)
         {
             e.printStackTrace();
         }
         BufferedReader reader = new BufferedReader(file);
-        String[] encodedUrls = parseAgentControllerUrl(reader.readLine());
+        
+        while ((line = reader.readLine()) != null) 
+        {
+            readedFile += line + "\n";
+        }
+        reader.close();
+ 
+        String[] encodedUrls = parseAgentControllerUrl(readedFile);
         
         return encodedUrls;
     }
@@ -1038,12 +1048,20 @@ public class LoadTestBuilder extends Builder
     }
 
     private void configureAgentController(AbstractBuild<?, ?> build, BuildListener listener) throws IOException
-    {          
+    {
+        listener.getLogger().println("-----------------------------------------------------------------\nStarted configuring agent controller ...\n");
+        
         if (agentControllerFile == null)
         {
             if(!agentControllerUrl.isEmpty())
             {
                 agentControllerUrlEncoded = parseAgentControllerUrl(agentControllerUrl);
+                
+                listener.getLogger().println("agent controller URLs:\n");
+                for (int i = 0; i < agentControllerUrlEncoded.length; i++)
+                {
+                    listener.getLogger().println(agentControllerUrlEncoded[i]);
+                }
             }
             else
             {
@@ -1055,12 +1073,25 @@ public class LoadTestBuilder extends Builder
             if (!agentControllerFile.isEmpty())
             {
                 agentControllerUrlEncoded = parseAgentControllerUrlFromFile(agentControllerFile, build);
+                
+                listener.getLogger().println("agent controller URLs from File: " + getTestConfig(build) + agentControllerFile +"\n");
+                for (int i = 0; i < agentControllerUrlEncoded.length; i++)
+                {
+                    listener.getLogger().println(agentControllerUrlEncoded[i]);
+                }
             }
             else
             {
                 listener.getLogger().println("Set to embedded mode");
             }
-        }  
+        }
+        
+        listener.getLogger().println("\nFinished");
+    }
+
+    private String getTestConfig(AbstractBuild<?, ?> build)
+    {
+        return build.getModuleRoot() + "/config/";
     }
 
     private boolean artifactsExist(AbstractBuild<?, ?> build)
