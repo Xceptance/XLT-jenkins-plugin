@@ -1271,6 +1271,8 @@ public class LoadTestBuilder extends Builder
         ProcStarter starter = launcher.launch();
         starter.pwd(workingDirectory);
         starter.cmds(commandLine);
+        
+        //TODO make mastercontroller output visible in jenkins console
 
         return starter.join();
     }
