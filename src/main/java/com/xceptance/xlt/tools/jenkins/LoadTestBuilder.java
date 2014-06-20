@@ -48,7 +48,6 @@ import javax.xml.xpath.XPathFactory;
 import jenkins.model.Jenkins;
 import lib.jenkins.NewFromListTagLib;
 
-import org.apache.bcel.generic.RETURN;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.filefilter.IOFileFilter;
