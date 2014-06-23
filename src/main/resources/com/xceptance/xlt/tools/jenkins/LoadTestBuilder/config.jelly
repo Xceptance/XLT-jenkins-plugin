@@ -6,6 +6,12 @@
 	xmlns:t="/lib/hudson" 
 	xmlns:f="/lib/form">
 	
+	<f:section title="XLT Configuration">
+		<f:entry title="Path to XLT Template" field="xltTemplate">
+	    	<f:textbox />
+	  	</f:entry>
+	</f:section>
+		
 	<f:section title="Load Test Configuration"> 
         
         <f:entry title="Test Configuration File" field="testPropertiesFile">

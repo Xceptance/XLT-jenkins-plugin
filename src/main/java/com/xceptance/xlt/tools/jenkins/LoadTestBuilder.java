@@ -89,6 +89,8 @@ public class LoadTestBuilder extends Builder
     private String agentControllerSelected;
 
     private final String xltConfig;
+    
+    private final String xltTemplate;
 
     transient private JSONObject config = new JSONObject();
 
@@ -169,10 +171,12 @@ public class LoadTestBuilder extends Builder
     }
 
     @DataBoundConstructor
-    public LoadTestBuilder(String testPropertiesFile, String xltConfig, int plotWidth, int plotHeight, String plotTitle, String builderID,
+    public LoadTestBuilder(String xltTemplate, String testPropertiesFile, String xltConfig, int plotWidth, int plotHeight, String plotTitle, String builderID,
                            boolean isPlotVertical, boolean createTrendReport, int numberOfBuildsForTrendReport,
                            boolean createSummaryReport, int numberOfBuildsForSummaryReport, AgentControllerConfig agentController)
     {
+        this.xltTemplate = xltTemplate;
+        
         agentControllerSelected = agentController.value;
 
         isSave = true;
@@ -283,6 +287,11 @@ public class LoadTestBuilder extends Builder
     public String getXltConfig()
     {
         return xltConfig;
+    }
+    
+    public String getXltTemplate()
+    {
+        return xltTemplate;
     }
 
     public int getPlotWidth()
@@ -1129,7 +1138,7 @@ public class LoadTestBuilder extends Builder
     private void copyXlt(AbstractBuild<?, ?> build, BuildListener listener) throws IOException
     {
         // the directory with the XLT template installation
-        File srcDir = new File(Jenkins.getInstance().getRootDir(), "xlt");
+        File srcDir = new File(getXltTemplate());
         listener.getLogger().println(srcDir.getAbsolutePath());
 
         // copy XLT to a local directory
