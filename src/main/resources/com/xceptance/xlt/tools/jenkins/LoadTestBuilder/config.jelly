@@ -59,7 +59,11 @@
     	<f:advanced>
 			<f:entry title="Time Format Pattern">
 	    		<f:textbox field="timeFormatPattern"/>
-	  		</f:entry>  	
+	  		</f:entry>  
+	  		
+			<f:entry title="Show Buildnumber">
+	    		<f:checkbox field="showBuildNumber" default="false"/>
+	  		</f:entry>  		  			
     	
 			<f:entry title="Plot Title">
 	    		<f:textbox field="plotTitle" default="${descriptor.getDefaultPlotTitle()}"/>

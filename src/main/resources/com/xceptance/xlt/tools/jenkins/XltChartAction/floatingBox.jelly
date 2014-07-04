@@ -86,7 +86,7 @@
 									min:null,
 									max:null,
 									tickDecimals:0,
-									tickFormatter:function(o){ var data = xData[o]; return '#'+data.buildNumber + " " + data.buildTime },
+									tickFormatter:function(o){ var data = xData[o]; var message = ''; if(data.showBuildNumber){ message += '#'+data.buildNumber + " "; }; message += data.buildTime; return message },
 									margin:false,
 								},
 								selection: {

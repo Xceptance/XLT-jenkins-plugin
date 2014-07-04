@@ -103,6 +103,8 @@ public class LoadTestBuilder extends Builder
 
     transient private SimpleDateFormat dateFormat;
 
+    private boolean showBuildNumber;
+
     private final int plotWidth;
 
     private final int plotHeight;
@@ -183,7 +185,7 @@ public class LoadTestBuilder extends Builder
     public LoadTestBuilder(String xltTemplate, String testPropertiesFile, String xltConfig, int plotWidth, int plotHeight,
                            String plotTitle, String builderID, boolean isPlotVertical, boolean createTrendReport,
                            int numberOfBuildsForTrendReport, boolean createSummaryReport, int numberOfBuildsForSummaryReport,
-                           AgentControllerConfig agentController, String timeFormatPattern)
+                           AgentControllerConfig agentController, String timeFormatPattern, boolean showBuildNumber)
     {
         this.xltTemplate = xltTemplate;
 
@@ -217,6 +219,7 @@ public class LoadTestBuilder extends Builder
         {
             this.timeFormatPattern = timeFormatPattern;
         }
+        this.showBuildNumber = showBuildNumber;
         if (plotWidth == 0)
         {
             plotWidth = getDescriptor().getDefaultPlotWidth();
@@ -328,6 +331,11 @@ public class LoadTestBuilder extends Builder
     public String getTimeFormatPattern()
     {
         return timeFormatPattern;
+    }
+
+    public boolean getShowBuildNumber()
+    {
+        return showBuildNumber;
     }
 
     public int getPlotWidth()
@@ -556,6 +564,7 @@ public class LoadTestBuilder extends Builder
                                                                                                                             number.doubleValue());
 
                                             lineValue.setDataObjectValue("buildNumber", "\"" + eachBuild.number + "\"");
+                                            lineValue.setDataObjectValue("showBuildNumber", "" + showBuildNumber);
                                             lineValue.setDataObjectValue("buildTime", "\"" + getDateFormat().format(eachBuild.getTime()) +
                                                                                       "\"");
                                             line.addLineValue(lineValue);
