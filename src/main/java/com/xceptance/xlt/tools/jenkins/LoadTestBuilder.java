@@ -28,8 +28,12 @@ import java.net.ServerSocket;
 import java.net.SocketException;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collection;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -53,6 +57,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.filefilter.IOFileFilter;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.SystemUtils;
+import org.apache.commons.lang.time.DateUtils;
 import org.apache.log4j.FileAppender;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PatternLayout;
@@ -89,10 +94,14 @@ public class LoadTestBuilder extends Builder
     private String agentControllerSelected;
 
     private final String xltConfig;
-    
+
     private final String xltTemplate;
 
     transient private JSONObject config = new JSONObject();
+
+    private String timeFormatPattern = null;
+
+    transient private SimpleDateFormat dateFormat;
 
     private final int plotWidth;
 
@@ -171,12 +180,13 @@ public class LoadTestBuilder extends Builder
     }
 
     @DataBoundConstructor
-    public LoadTestBuilder(String xltTemplate, String testPropertiesFile, String xltConfig, int plotWidth, int plotHeight, String plotTitle, String builderID,
-                           boolean isPlotVertical, boolean createTrendReport, int numberOfBuildsForTrendReport,
-                           boolean createSummaryReport, int numberOfBuildsForSummaryReport, AgentControllerConfig agentController)
+    public LoadTestBuilder(String xltTemplate, String testPropertiesFile, String xltConfig, int plotWidth, int plotHeight,
+                           String plotTitle, String builderID, boolean isPlotVertical, boolean createTrendReport,
+                           int numberOfBuildsForTrendReport, boolean createSummaryReport, int numberOfBuildsForSummaryReport,
+                           AgentControllerConfig agentController, String timeFormatPattern)
     {
         this.xltTemplate = xltTemplate;
-        
+
         agentControllerSelected = agentController.value;
 
         isSave = true;
@@ -202,6 +212,20 @@ public class LoadTestBuilder extends Builder
             xltConfig = getDescriptor().getDefaultXltConfig();
         }
         this.xltConfig = xltConfig;
+
+        if (StringUtils.isNotBlank(timeFormatPattern))
+        {
+            this.timeFormatPattern = timeFormatPattern;
+        }
+        try
+        {
+            dateFormat = new SimpleDateFormat(this.timeFormatPattern);
+        }
+        catch (Exception ex)
+        {
+            LOGGER.warn("Failed to create date format for pattern: " + this.timeFormatPattern, ex);
+            dateFormat = new SimpleDateFormat();
+        }
 
         if (plotWidth == 0)
         {
@@ -288,10 +312,15 @@ public class LoadTestBuilder extends Builder
     {
         return xltConfig;
     }
-    
+
     public String getXltTemplate()
     {
         return xltTemplate;
+    }
+
+    public String getTimeFormatPattern()
+    {
+        return timeFormatPattern;
     }
 
     public int getPlotWidth()
@@ -518,8 +547,9 @@ public class LoadTestBuilder extends Builder
                                             ChartLineValue<Integer, Double> lineValue = new ChartLineValue<Integer, Double>(
                                                                                                                             eachBuild.number,
                                                                                                                             number.doubleValue());
+
                                             lineValue.setDataObjectValue("buildNumber", "\"" + eachBuild.number + "\"");
-                                            lineValue.setDataObjectValue("buildTime", "\"" + eachBuild.getTime() + "\"");
+                                            lineValue.setDataObjectValue("buildTime", "\"" + dateFormat.format(eachBuild.getTime()) + "\"");
                                             line.addLineValue(lineValue);
                                         }
                                     }
@@ -1741,6 +1771,25 @@ public class LoadTestBuilder extends Builder
                 return FormValidation.warning("Decimal number for height. Height will be " + (int) number);
             }
             return FormValidation.ok();
+        }
+
+        public FormValidation doCheckTimeFormatPattern(@QueryParameter String value)
+        {
+            SimpleDateFormat format = new SimpleDateFormat();
+            if (StringUtils.isNotBlank(value))
+            {
+                try
+                {
+                    System.out.println(value);
+                    format = new SimpleDateFormat(value);                    
+                }
+                catch (Exception e)
+                {
+                    return FormValidation.error(e, "Invalid time format pattern.");
+                }
+            }
+            System.out.println(format.format(new Date()));
+            return FormValidation.ok("Example: " + format.format(new Date()));
         }
 
         @Override
