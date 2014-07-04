@@ -217,16 +217,6 @@ public class LoadTestBuilder extends Builder
         {
             this.timeFormatPattern = timeFormatPattern;
         }
-        try
-        {
-            dateFormat = new SimpleDateFormat(this.timeFormatPattern);
-        }
-        catch (Exception ex)
-        {
-            LOGGER.warn("Failed to create date format for pattern: " + this.timeFormatPattern, ex);
-            dateFormat = new SimpleDateFormat();
-        }
-
         if (plotWidth == 0)
         {
             plotWidth = getDescriptor().getDefaultPlotWidth();
@@ -266,6 +256,23 @@ public class LoadTestBuilder extends Builder
             numberOfBuildsForSummaryReport = getDescriptor().getDefaultNumberOfBuildsForSummaryReport();
         }
         this.numberOfBuildsForSummaryReport = numberOfBuildsForSummaryReport;
+    }
+
+    public SimpleDateFormat getDateFormat()
+    {
+        if (dateFormat == null)
+        {
+            try
+            {
+                dateFormat = new SimpleDateFormat(this.timeFormatPattern);
+            }
+            catch (Exception ex)
+            {
+                LOGGER.warn("Failed to create date format for pattern: " + this.timeFormatPattern, ex);
+                dateFormat = new SimpleDateFormat();
+            }
+        }
+        return dateFormat;
     }
 
     private String[] parseAgentControllerUrlFromFile(String agentControllerFile, AbstractBuild<?, ?> build) throws IOException
@@ -549,7 +556,8 @@ public class LoadTestBuilder extends Builder
                                                                                                                             number.doubleValue());
 
                                             lineValue.setDataObjectValue("buildNumber", "\"" + eachBuild.number + "\"");
-                                            lineValue.setDataObjectValue("buildTime", "\"" + dateFormat.format(eachBuild.getTime()) + "\"");
+                                            lineValue.setDataObjectValue("buildTime", "\"" + getDateFormat().format(eachBuild.getTime()) +
+                                                                                      "\"");
                                             line.addLineValue(lineValue);
                                         }
                                     }
@@ -1168,6 +1176,11 @@ public class LoadTestBuilder extends Builder
     private void copyXlt(AbstractBuild<?, ?> build, BuildListener listener) throws IOException
     {
         // the directory with the XLT template installation
+        if (StringUtils.isBlank(getXltTemplate()))
+        {
+            LOGGER.error("Path to xlt not set.");
+            throw new IllegalStateException("Path to xlt not set.");
+        }
         File srcDir = new File(getXltTemplate());
         listener.getLogger().println(srcDir.getAbsolutePath());
 
@@ -1279,19 +1292,19 @@ public class LoadTestBuilder extends Builder
     private void saveArtifacts(AbstractBuild<?, ?> build) throws IOException
     {
         // copy load test report to build directory
-        if (getFirstXltReportFolder(build) != null)
+        if (getFirstXltReportFolder(build) != null && getFirstXltReportFolder(build).exists())
         {
             FileUtils.copyDirectory(getFirstXltReportFolder(build), getBuildReportsFolder(build), true);
         }
 
         // copy results to build directory
-        if (getFirstXltResultFolder(build) != null)
+        if (getFirstXltResultFolder(build) != null && getFirstXltResultFolder(build).exists())
         {
             FileUtils.copyDirectory(getFirstXltResultFolder(build), getBuildResultsFolder(build), true);
         }
 
         // copy logs to build directory
-        if (getFirstXltLogFolder(build) != null)
+        if (getFirstXltLogFolder(build).exists())
         {
             FileUtils.copyDirectory(getFirstXltLogFolder(build), getBuildLogsFolder(build), true);
         }
@@ -1780,16 +1793,23 @@ public class LoadTestBuilder extends Builder
             {
                 try
                 {
-                    System.out.println(value);
-                    format = new SimpleDateFormat(value);                    
+                    format = new SimpleDateFormat(value);
                 }
                 catch (Exception e)
                 {
                     return FormValidation.error(e, "Invalid time format pattern.");
                 }
             }
-            System.out.println(format.format(new Date()));
-            return FormValidation.ok("Example: " + format.format(new Date()));
+            return FormValidation.ok("Preview: " + format.format(new Date()));
+        }
+
+        public FormValidation doCheckXltTemplate(@QueryParameter String value)
+        {
+            if (value == null || !new File(value).exists())
+            {
+                return FormValidation.error("Please enter a valid xlt location");
+            }
+            return FormValidation.ok();
         }
 
         @Override
