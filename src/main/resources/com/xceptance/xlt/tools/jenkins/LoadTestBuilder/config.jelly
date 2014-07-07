@@ -56,30 +56,30 @@
 			<f:textbox field="builderID" value="${it.getBuilderID()}"/>
 		</f:invisibleEntry>
     	
-    	<f:advanced>
-			<f:entry title="Time Format Pattern">
-	    		<f:textbox field="timeFormatPattern"/>
-	  		</f:entry>  
-	  		
-			<f:entry title="Show Buildnumber">
-	    		<f:checkbox field="showBuildNumber" default="false"/>
-	  		</f:entry>  		  			
-    	
-			<f:entry title="Plot Title">
+    	<f:advanced>    	
+			<f:entry title="Plot Title" field="plotTitle">
 	    		<f:textbox field="plotTitle" default="${descriptor.getDefaultPlotTitle()}"/>
 	  		</f:entry>  	
 	  	 
-			<f:entry title="Plot Width">
+			<f:entry title="Plot Width" field="plotWidth">
 	    		<f:textbox field="plotWidth" default="${descriptor.getDefaultPlotWidth()}"/>
 	  		</f:entry>  	
 	  		
-	  		<f:entry title="Plot Height">
+	  		<f:entry title="Plot Height" field="plotHeight">
 				<f:textbox field="plotHeight" default="${descriptor.getDefaultPlotHeight()}"/>  
 	  		</f:entry>
 	  		
 	  		<f:entry title="Stay Vertical" field="stayVertical">   
 	       		<f:checkbox field="isPlotVertical" default="${descriptor.getDefaultIsPlotVertical()}" title="Stack charts vertical at the right side panel and do not let them float."/>
 	     	</f:entry>
+	     	
+	     	<f:entry title="Time Format Pattern" field="timeFormat">
+	    		<f:textbox field="timeFormatPattern"/>
+	  		</f:entry>  
+	  		
+			<f:entry title="Show Buildnumber" field="timeFormatBuildNumber">
+	    		<f:checkbox field="showBuildNumber" default="false" title="Display the build number at the x-axis of the charts."/>
+	  		</f:entry>
   		</f:advanced>
 	  	
 	  	<f:entry title="Configuration" field="parsers">

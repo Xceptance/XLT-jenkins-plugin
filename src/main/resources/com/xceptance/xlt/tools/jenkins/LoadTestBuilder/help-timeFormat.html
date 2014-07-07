@@ -1,0 +1,154 @@
+<div>
+
+	<p>
+		This option allows you to customize the date time presentation in the charts. If empty, the default will be used. The pattern "' '" (Without the double quotes) can be used to hide the date time, for example if you just want to see the build number (See option "Show Buildnumber"). 
+	</p>
+
+	<hr>
+	<p>
+		Within the pattern, unquoted letters from 'A' to 'Z' and from 'a' to 'z' are interpreted as pattern letters. Text can be quoted using single quotes (') to avoid interpretation. "''" represents a single quote. All other characters are not interpreted. they're simply copied into the output.		 
+	</p>		 
+	<p>
+	
+		<table border="0" cellspacing="3" cellpadding="0" summary="Chart shows pattern letters, date/time component, presentation, and examples.">
+		     <tbody><tr bgcolor="#ccccff">
+		         <th align="left">Letter
+		         </th><th align="left">Date or Time Component
+		         </th><th align="left">Examples
+		     </th></tr><tr>
+		         <td><code>G</code>
+		         </td><td>Era designator
+		         </td><td><code>AD</code>
+		     </td></tr><tr bgcolor="#eeeeff">
+		         <td><code>y</code>
+		         </td><td>Year
+		         </td><td><code>1996</code>; <code>96</code>
+		     </td></tr><tr>
+		         <td><code>Y</code>
+		         </td><td>Week year
+		         </td><td><code>2009</code>; <code>09</code>
+		     </td></tr><tr bgcolor="#eeeeff">
+		         <td><code>M</code>
+		         </td><td>Month in year
+		         </td><td><code>July</code>; <code>Jul</code>; <code>07</code>
+		     </td></tr><tr>
+		         <td><code>w</code>
+		         </td><td>Week in year
+		         </td><td><code>27</code>
+		     </td></tr><tr bgcolor="#eeeeff">
+		         <td><code>W</code>
+		         </td><td>Week in month
+		         </td><td><code>2</code>
+		     </td></tr><tr>
+		         <td><code>D</code>
+		         </td><td>Day in year
+		         </td><td><code>189</code>
+		     </td></tr><tr bgcolor="#eeeeff">
+		         <td><code>d</code>
+		         </td><td>Day in month
+		         </td><td><code>10</code>
+		     </td></tr><tr>
+		         <td><code>F</code>
+		         </td><td>Day of week in month
+		         </td><td><code>2</code>
+		     </td></tr><tr bgcolor="#eeeeff">
+		         <td><code>E</code>
+		         </td><td>Day name in week
+		         </td><td><code>Tuesday</code>; <code>Tue</code>
+		     </td></tr><tr>
+		         <td><code>u</code>
+		         </td><td>Day number of week (1 = Monday, ..., 7 = Sunday)
+		         </td><td><code>1</code>
+		     </td></tr><tr bgcolor="#eeeeff">
+		         <td><code>a</code>
+		         </td><td>Am/pm marker
+		         </td><td><code>PM</code>
+		     </td></tr><tr>
+		         <td><code>H</code>
+		         </td><td>Hour in day (0-23)
+		         </td><td><code>0</code>
+		     </td></tr><tr bgcolor="#eeeeff">
+		         <td><code>k</code>
+		         </td><td>Hour in day (1-24)
+		         </td><td><code>24</code>
+		     </td></tr><tr>
+		         <td><code>K</code>
+		         </td><td>Hour in am/pm (0-11)
+		         </td><td><code>0</code>
+		     </td></tr><tr bgcolor="#eeeeff">
+		         <td><code>h</code>
+		         </td><td>Hour in am/pm (1-12)
+		         </td><td><code>12</code>
+		     </td></tr><tr>
+		         <td><code>m</code>
+		         </td><td>Minute in hour
+		         </td><td><code>30</code>
+		     </td></tr><tr bgcolor="#eeeeff">
+		         <td><code>s</code>
+		         </td><td>Second in minute
+		         </td><td><code>55</code>
+		     </td></tr><tr>
+		         <td><code>S</code>
+		         </td><td>Millisecond
+		         </td><td><code>978</code>
+		     </td></tr><tr bgcolor="#eeeeff">
+		         <td><code>z</code>
+		         </td><td>Time zone
+		         </td><td><code>Pacific Standard Time</code>; <code>PST</code>; <code>GMT-08:00</code>
+		     </td></tr><tr>
+		         <td><code>Z</code>
+		         </td><td>Time zone
+		         </td><td><code>-0800</code>
+		     </td></tr><tr bgcolor="#eeeeff">
+		         <td><code>X</code>
+		         </td><td>Time zone
+		         </td><td><code>-08</code>; <code>-0800</code>;  <code>-08:00</code>
+		 </td></tr></tbody></table>
+	
+	</p>
+	
+	<hr>
+	<p><b>Examples</b></p>
+	<p>		
+	
+			<table border="0" cellspacing="3" cellpadding="0">
+		     <tbody><tr bgcolor="#ccccff">
+		         <th align="left">Pattern
+		         </th><th align="left">Result
+		     </th></tr><tr>
+		         <td><code>"yyyy.MM.dd G 'at' HH:mm:ss z"</code>
+		         </td><td><code>2001.07.04 AD at 12:08:56 PDT</code>
+		     </td></tr><tr bgcolor="#eeeeff">
+		         <td><code>"EEE, MMM d, ''yy"</code>
+		         </td><td><code>Wed, Jul 4, '01</code>
+		     </td></tr><tr>
+		         <td><code>"h:mm a"</code>
+		         </td><td><code>12:08 PM</code>
+		     </td></tr><tr bgcolor="#eeeeff">
+		         <td><code>"hh 'o''clock' a, zzzz"</code>
+		         </td><td><code>12 o'clock PM, Pacific Daylight Time</code>
+		     </td></tr><tr>
+		         <td><code>"K:mm a, z"</code>
+		         </td><td><code>0:08 PM, PDT</code>
+		     </td></tr><tr bgcolor="#eeeeff">
+		         <td><code>"yyyyy.MMMMM.dd GGG hh:mm aaa"</code>
+		         </td><td><code>02001.July.04 AD 12:08 PM</code>
+		     </td></tr><tr>
+		         <td><code>"EEE, d MMM yyyy HH:mm:ss Z"</code>
+		         </td><td><code>Wed, 4 Jul 2001 12:08:56 -0700</code>
+		     </td></tr><tr bgcolor="#eeeeff">
+		         <td><code>"yyMMddHHmmssZ"</code>
+		         </td><td><code>010704120856-0700</code>
+		     </td></tr><tr>
+		         <td><code>"yyyy-MM-dd'T'HH:mm:ss.SSSZ"</code>
+		         </td><td><code>2001-07-04T12:08:56.235-0700</code>
+		     </td></tr><tr bgcolor="#eeeeff">
+		         <td><code>"yyyy-MM-dd'T'HH:mm:ss.SSSXXX"</code>
+		         </td><td><code>2001-07-04T12:08:56.235-07:00</code>
+		     </td></tr><tr>
+		         <td><code>"YYYY-'W'ww-u"</code>
+		         </td><td><code>2001-W27-3</code>
+		 </td></tr></tbody></table>
+		 
+	</p>	
+</div>
