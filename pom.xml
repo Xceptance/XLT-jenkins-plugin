@@ -14,7 +14,7 @@
 
   <groupId>com.xceptance</groupId>
   <artifactId>xlt-jenkins</artifactId>
-  <version>1.0-SNAPSHOT</version>
+  <version>1.0-alpha1</version>
   <packaging>hpi</packaging>
 
 
@@ -40,16 +40,26 @@
   
   
   <dependencies>
-  	<dependency>
-  		<groupId>org.json</groupId>
-  		<artifactId>org.json</artifactId>
-  		<version>chargebee-1.0</version>
-  	</dependency>
-  	<dependency>
-  		<groupId>log4j</groupId>
-  		<artifactId>log4j</artifactId>
-  		<version>1.2.17</version>
-  	</dependency>
-  </dependencies>
+        <dependency>
+            <groupId>org.json</groupId>
+            <artifactId>org.json</artifactId>
+            <version>chargebee-1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+            <version>1.2.17</version>
+        </dependency>
+    </dependencies>
+
+    <distributionManagement>
+        <repository>
+            <uniqueVersion>false</uniqueVersion>
+            <id>nexus-deploy</id>
+            <url>https://lab.xceptance.de/nexus/content/repositories/local</url>
+            <layout>default</layout>
+        </repository>
+    </distributionManagement>
+
 
 </project>
