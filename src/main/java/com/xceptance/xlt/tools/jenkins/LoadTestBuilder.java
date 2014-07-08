@@ -14,24 +14,17 @@ import hudson.tasks.Builder;
 import hudson.util.FormValidation;
 import hudson.util.StreamTaskListener;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.net.DatagramSocket;
-import java.net.ServerSocket;
 import java.net.SocketException;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
-import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
@@ -50,14 +43,10 @@ import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 
 import jenkins.model.Jenkins;
-import lib.jenkins.NewFromListTagLib;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.io.filefilter.IOFileFilter;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.SystemUtils;
-import org.apache.commons.lang.time.DateUtils;
 import org.apache.log4j.FileAppender;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PatternLayout;
@@ -83,9 +72,7 @@ public class LoadTestBuilder extends Builder
 {
     private final String testPropertiesFile;
 
-    private boolean testPropertiesFileAvailable = true;
-
-    private String[] agentControllerUrlEncoded;
+    private String[] agentControllerUrls;
 
     private String agentControllerUrl;
 
@@ -200,9 +187,9 @@ public class LoadTestBuilder extends Builder
             }
         });
 
-        if (testPropertiesFile == null || testPropertiesFile.isEmpty())
+        if (StringUtils.isBlank(testPropertiesFile))
         {
-            testPropertiesFileAvailable = false;
+            testPropertiesFile = null;
         }
         this.testPropertiesFile = testPropertiesFile;
 
@@ -278,39 +265,17 @@ public class LoadTestBuilder extends Builder
         return dateFormat;
     }
 
-    private String[] parseAgentControllerUrlFromFile(String agentControllerFile, AbstractBuild<?, ?> build) throws IOException
+    private String[] parseAgentControllerUrlsFromFile(String agentControllerFile, AbstractBuild<?, ?> build) throws IOException
     {
-        FileReader file = null;
-        String readedFile = "";
-        String line = "";
+        File file = new File(getTestSuiteConfigFolder(build) + agentControllerFile);
+        String fileContent = FileUtils.readFileToString(file, "UTF-8");
 
-        try
-        {
-            file = new FileReader(getTestConfig(build) + agentControllerFile);
-        }
-        catch (Exception e)
-        {
-            e.printStackTrace();
-        }
-        BufferedReader reader = new BufferedReader(file);
-
-        while ((line = reader.readLine()) != null)
-        {
-            readedFile += line + "\n";
-        }
-        reader.close();
-
-        String[] encodedUrls = parseAgentControllerUrl(readedFile);
-
-        return encodedUrls;
+        return parseAgentControllerUrls(fileContent);
     }
 
-    private String[] parseAgentControllerUrl(String agentControllerUrl)
+    private String[] parseAgentControllerUrls(String agentControllerUrls)
     {
-        // FIXME optimize regex for seperate the whole String into single URLs
-        String[] encodedUrls = agentControllerUrl.split("\n|,|;| ");
-
-        return encodedUrls;
+        return StringUtils.split(agentControllerUrls, "\r\n\t|,; ");
     }
 
     public String getTestPropertiesFile()
@@ -822,12 +787,12 @@ public class LoadTestBuilder extends Builder
         return new File(getXltFolder(build), "results");
     }
 
-    private File getFirstXltLogFolder(AbstractBuild<?, ?> build)
+    private File getXltLogFolder(AbstractBuild<?, ?> build)
     {
         return new File(getXltFolder(build), "log");
     }
 
-    private File getFirstXltResultFolder(AbstractBuild<?, ?> build)
+    private File getFirstXltResultsFolder(AbstractBuild<?, ?> build)
     {
         File reportFolder = getXltResultsFolder(build);
         if (reportFolder.exists() && reportFolder.isDirectory())
@@ -891,34 +856,34 @@ public class LoadTestBuilder extends Builder
         return new File(build.getArtifactsDir(), builderID + "/log");
     }
 
-    private File getBuildReportsFolder(AbstractBuild<?, ?> build)
+    private File getBuildReportFolder(AbstractBuild<?, ?> build)
     {
         return new File(build.getArtifactsDir(), builderID + "/report/" + Integer.toString(build.getNumber()));
     }
 
     private File getBuildResultsFolder(AbstractBuild<?, ?> build)
     {
-        return new File(build.getArtifactsDir(), builderID + "/result");
+        return new File(build.getArtifactsDir(), builderID + "/results");
     }
 
     private File getTrendReportFolder(AbstractProject<?, ?> project)
     {
-        return new File(project.getRootDir() + "/trendreport/" + builderID);
+        return new File(project.getRootDir(), "trendreport/" + builderID);
     }
 
     private File getSummaryReportFolder(AbstractProject<?, ?> project)
     {
-        return new File(new File(project.getRootDir(), "summaryReport"), builderID);
+        return new File(project.getRootDir(), "summaryReport/" + builderID);
     }
 
-    private File getSummaryResultFolder(AbstractProject<?, ?> project)
+    private File getSummaryResultsFolder(AbstractProject<?, ?> project)
     {
-        return new File(new File(project.getRootDir(), "summaryResult"), builderID);
+        return new File(project.getRootDir(), "summaryResult/" + builderID);
     }
 
-    private File getSummaryResultConfigFolder(AbstractProject<?, ?> project)
+    private File getSummaryResultsConfigFolder(AbstractProject<?, ?> project)
     {
-        return new File(getSummaryResultFolder(project), "config");
+        return new File(getSummaryResultsFolder(project), "config");
     }
 
     private File getXltFolder(AbstractBuild<?, ?> build)
@@ -926,7 +891,7 @@ public class LoadTestBuilder extends Builder
         return new File(build.getProject().getRootDir(), Integer.toString(build.getNumber()));
     }
 
-    private File getXltExecutablesFolder(AbstractBuild<?, ?> build)
+    private File getXltBinFolder(AbstractBuild<?, ?> build)
     {
         return new File(getXltFolder(build), "bin");
     }
@@ -961,7 +926,7 @@ public class LoadTestBuilder extends Builder
                         condition = optCriteriaConfigValue(eachID, CONFIG_CRITERIA_PARAMETER.condition);
                         if (StringUtils.isBlank(condition))
                         {
-                            LOGGER.warn("No condition for criteria. (criteriaID: \"" + eachID + "\")");
+                            LOGGER.debug("No condition for criteria. (criteriaID: \"" + eachID + "\")");
                             continue;
                         }
                         if (StringUtils.isBlank(xPath))
@@ -1096,10 +1061,8 @@ public class LoadTestBuilder extends Builder
         }
         finally
         {
-            if (!artifactsExist(build))
-            {
-                saveArtifacts(build);
-            }
+            // save any build artifact created so far 
+            saveArtifacts(build);
 
             // delete any temporary directory with local XLT
             File xltDir = getXltFolder(build);
@@ -1114,16 +1077,17 @@ public class LoadTestBuilder extends Builder
         listener.getLogger()
                 .println("-----------------------------------------------------------------\nStarted configuring agent controller ...\n");
 
+        // TODO: to be reviewed
         if (agentControllerFile == null)
         {
             if (!agentControllerUrl.isEmpty())
             {
-                agentControllerUrlEncoded = parseAgentControllerUrl(agentControllerUrl);
+                agentControllerUrls = parseAgentControllerUrls(agentControllerUrl);
 
                 listener.getLogger().println("agent controller URLs:\n");
-                for (int i = 0; i < agentControllerUrlEncoded.length; i++)
+                for (int i = 0; i < agentControllerUrls.length; i++)
                 {
-                    listener.getLogger().println(agentControllerUrlEncoded[i]);
+                    listener.getLogger().println(agentControllerUrls[i]);
                 }
             }
             else
@@ -1135,12 +1099,13 @@ public class LoadTestBuilder extends Builder
         {
             if (!agentControllerFile.isEmpty())
             {
-                agentControllerUrlEncoded = parseAgentControllerUrlFromFile(agentControllerFile, build);
+                agentControllerUrls = parseAgentControllerUrlsFromFile(agentControllerFile, build);
 
-                listener.getLogger().println("agent controller URLs from File: " + getTestConfig(build) + agentControllerFile + "\n");
-                for (int i = 0; i < agentControllerUrlEncoded.length; i++)
+                listener.getLogger().println("agent controller URLs from File: " + getTestSuiteConfigFolder(build) + agentControllerFile +
+                                                 "\n");
+                for (int i = 0; i < agentControllerUrls.length; i++)
                 {
-                    listener.getLogger().println(agentControllerUrlEncoded[i]);
+                    listener.getLogger().println(agentControllerUrls[i]);
                 }
             }
             else
@@ -1152,14 +1117,9 @@ public class LoadTestBuilder extends Builder
         listener.getLogger().println("\nFinished");
     }
 
-    private String getTestConfig(AbstractBuild<?, ?> build)
+    private String getTestSuiteConfigFolder(AbstractBuild<?, ?> build)
     {
         return build.getModuleRoot() + "/config/";
-    }
-
-    private boolean artifactsExist(AbstractBuild<?, ?> build)
-    {
-        return getBuildReportsFolder(build).exists() && getBuildResultsFolder(build).exists() && getBuildLogsFolder(build).exists();
     }
 
     private void initialCleanUp(AbstractBuild<?, ?> build, BuildListener listener) throws IOException
@@ -1190,6 +1150,7 @@ public class LoadTestBuilder extends Builder
             LOGGER.error("Path to xlt not set.");
             throw new IllegalStateException("Path to xlt not set.");
         }
+
         File srcDir = new File(getXltTemplate());
         listener.getLogger().println(srcDir.getAbsolutePath());
 
@@ -1200,7 +1161,7 @@ public class LoadTestBuilder extends Builder
         FileUtils.copyDirectory(srcDir, destDir, true);
 
         // make XLT start scripts executable
-        File workingDirectory = getXltExecutablesFolder(build);
+        File workingDirectory = getXltBinFolder(build);
         for (File child : workingDirectory.listFiles())
         {
             child.setExecutable(true);
@@ -1225,25 +1186,24 @@ public class LoadTestBuilder extends Builder
             commandLine.add("./mastercontroller.sh");
         }
 
-        if (agentControllerUrlEncoded == null)
+        if (agentControllerUrls == null)
         {
             commandLine.add("-embedded");
             // connect to free port
             commandLine.add("-Dcom.xceptance.xlt.agentcontroller.port=" + Integer.toString(getAvailablePort(listener)));
-
         }
         else
         {
-            for (int i = 1; i <= agentControllerUrlEncoded.length; i++)
+            for (int i = 1; i <= agentControllerUrls.length; i++)
             {
-                commandLine.add("-Dcom.xceptance.xlt.mastercontroller.agentcontrollers.ac" + i + ".url=" + agentControllerUrlEncoded[i - 1]);
+                commandLine.add("-Dcom.xceptance.xlt.mastercontroller.agentcontrollers.ac" + i + ".url=" + agentControllerUrls[i - 1]);
             }
         }
 
         commandLine.add("-auto");
         commandLine.add("-report");
 
-        if (testPropertiesFileAvailable == true)
+        if (testPropertiesFile != null)
         {
             commandLine.add("-testPropertiesFile");
             commandLine.add(testPropertiesFile);
@@ -1252,7 +1212,7 @@ public class LoadTestBuilder extends Builder
         commandLine.add("-Dcom.xceptance.xlt.mastercontroller.testSuitePath=" + build.getModuleRoot().getRemote());
 
         // run the master controller
-        File workingDirectory = getXltExecutablesFolder(build);
+        File workingDirectory = getXltBinFolder(build);
         int commandResult = executeCommand(build, workingDirectory, commandLine, listener.getLogger());
         listener.getLogger().println("Master controller returned with exit code: " + commandResult);
 
@@ -1260,9 +1220,6 @@ public class LoadTestBuilder extends Builder
         {
             build.setResult(Result.FAILURE);
         }
-
-        saveArtifacts(build);
-
     }
 
     private int getAvailablePort(BuildListener listener)
@@ -1301,21 +1258,24 @@ public class LoadTestBuilder extends Builder
     private void saveArtifacts(AbstractBuild<?, ?> build) throws IOException
     {
         // copy load test report to build directory
-        if (getFirstXltReportFolder(build) != null && getFirstXltReportFolder(build).exists())
+        File reportFolder = getFirstXltReportFolder(build);
+        if (reportFolder != null && reportFolder.isDirectory())
         {
-            FileUtils.copyDirectory(getFirstXltReportFolder(build), getBuildReportsFolder(build), true);
+            FileUtils.copyDirectory(reportFolder, getBuildReportFolder(build), true);
         }
 
-        // copy results to build directory
-        if (getFirstXltResultFolder(build) != null && getFirstXltResultFolder(build).exists())
+        // copy load test results to build directory
+        File resultsFolder = getFirstXltResultsFolder(build);
+        if (resultsFolder != null && resultsFolder.isDirectory())
         {
-            FileUtils.copyDirectory(getFirstXltResultFolder(build), getBuildResultsFolder(build), true);
+            FileUtils.copyDirectory(resultsFolder, getBuildResultsFolder(build), true);
         }
 
         // copy logs to build directory
-        if (getFirstXltLogFolder(build).exists())
+        File logFolder = getXltLogFolder(build);
+        if (logFolder.isDirectory())
         {
-            FileUtils.copyDirectory(getFirstXltLogFolder(build), getBuildLogsFolder(build), true);
+            FileUtils.copyDirectory(logFolder, getBuildLogsFolder(build), true);
         }
     }
 
@@ -1363,10 +1323,10 @@ public class LoadTestBuilder extends Builder
         commandLine.add("-o");
         commandLine.add(outputFolder.getAbsolutePath());
 
-        commandLine.add(getSummaryResultFolder(build.getProject()).getAbsolutePath());
+        commandLine.add(getSummaryResultsFolder(build.getProject()).getAbsolutePath());
 
         // run the report generator
-        int commandResult = executeCommand(build, getXltExecutablesFolder(build), commandLine, listener.getLogger());
+        int commandResult = executeCommand(build, getXltBinFolder(build), commandLine, listener.getLogger());
         listener.getLogger().println("Load report generator returned with exit code: " + commandResult);
         if (commandResult != 0)
         {
@@ -1377,14 +1337,14 @@ public class LoadTestBuilder extends Builder
     private void copyResults(AbstractBuild<?, ?> currentBuild, BuildListener listener) throws IOException
     {
         // recreate a fresh summary results directory
-        File summaryResultsFolder = getSummaryResultFolder(currentBuild.getProject());
+        File summaryResultsFolder = getSummaryResultsFolder(currentBuild.getProject());
 
         FileUtils.deleteQuietly(summaryResultsFolder);
         summaryResultsFolder.mkdirs();
 
         // copy config from the current build's results
         File configFolder = getBuildResultConfigFolder(currentBuild);
-        File summaryConfigFolder = getSummaryResultConfigFolder(currentBuild.getProject());
+        File summaryConfigFolder = getSummaryResultsConfigFolder(currentBuild.getProject());
 
         FileUtils.copyDirectory(configFolder, summaryConfigFolder, true);
 
@@ -1461,7 +1421,7 @@ public class LoadTestBuilder extends Builder
         int numberOfBuildsWithReports = 0;
         for (AbstractBuild<?, ?> eachBuild : builds)
         {
-            File reportDirectory = getBuildReportsFolder(eachBuild);
+            File reportDirectory = getBuildReportFolder(eachBuild);
             if (reportDirectory.isDirectory())
             {
                 commandLine.add(reportDirectory.toString());
@@ -1473,7 +1433,7 @@ public class LoadTestBuilder extends Builder
         if (numberOfBuildsWithReports >= 2)
         {
             // run trend report generator
-            int commandResult = executeCommand(build, getXltExecutablesFolder(build), commandLine, listener.getLogger());
+            int commandResult = executeCommand(build, getXltBinFolder(build), commandLine, listener.getLogger());
             listener.getLogger().println("Trend report generator returned with exit code: " + commandResult);
             if (commandResult != 0)
             {
