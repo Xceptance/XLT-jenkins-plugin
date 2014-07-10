@@ -137,8 +137,7 @@ public class LoadTestBuilder extends Builder
     {
         try
         {
-            File logFile = new File(new File(Jenkins.getInstance().getPlugin("xlt-jenkins").getWrapper().baseResourceURL.toURI()),
-                                    "xltPlugin.log");
+            File logFile = new File(new File(Jenkins.getInstance().getPlugin("xlt-jenkins").getWrapper().baseResourceURL.toURI()), "xltPlugin.log");
             LOGGER.addAppender(new FileAppender(
                                                 new PatternLayout("%d{yyyy-MMM-dd} : %d{HH:mm:ss,SSS} | [%t] %p %C.%M line:%L | %x - %m%n"),
                                                 logFile.getAbsolutePath(), true));
@@ -278,6 +277,21 @@ public class LoadTestBuilder extends Builder
         return StringUtils.split(agentControllerUrls, "\r\n\t|,; ");
     }
 
+    public String getAgentControllerSelected()
+    {
+        return agentControllerSelected;
+    }
+
+    public String getAgentControllerUrl()
+    {
+        return agentControllerUrl;
+    }
+
+    public String getAgentControllerFile()
+    {
+        return agentControllerFile;
+    }
+
     public String getTestPropertiesFile()
     {
         return testPropertiesFile;
@@ -365,7 +379,7 @@ public class LoadTestBuilder extends Builder
         List<Chart<Integer, Double>> enabledCharts = new ArrayList<Chart<Integer, Double>>();
         for (Chart<Integer, Double> eachChart : charts)
         {
-            String enabled = optPlotConfigValue(eachChart.getChartID(), CONFIG_PLOT_PARAMETER.enabled);
+            String enabled = getOptionalPlotConfigValue(eachChart.getChartID(), CONFIG_PLOT_PARAMETER.enabled);
 
             if (StringUtils.isNotBlank(enabled) && "yes".equals(enabled))
             {
@@ -386,7 +400,7 @@ public class LoadTestBuilder extends Builder
             int largestBuildCount = 0;
             for (String eachPlotID : getPlotConfigIDs())
             {
-                String buildCountValue = optPlotConfigValue(eachPlotID, CONFIG_PLOT_PARAMETER.buildCount);
+                String buildCountValue = getOptionalPlotConfigValue(eachPlotID, CONFIG_PLOT_PARAMETER.buildCount);
                 if (StringUtils.isNotBlank(buildCountValue))
                 {
                     try
@@ -566,13 +580,13 @@ public class LoadTestBuilder extends Builder
 
     private Chart<Integer, Double> createChart(String plotID) throws JSONException
     {
-        String chartTitle = optPlotConfigValue(plotID, CONFIG_PLOT_PARAMETER.title);
+        String chartTitle = getOptionalPlotConfigValue(plotID, CONFIG_PLOT_PARAMETER.title);
         if (chartTitle == null)
         {
             chartTitle = "";
         }
 
-        String buildCountValue = optPlotConfigValue(plotID, CONFIG_PLOT_PARAMETER.buildCount);
+        String buildCountValue = getOptionalPlotConfigValue(plotID, CONFIG_PLOT_PARAMETER.buildCount);
         int maxCount = Integer.MAX_VALUE;
         if (StringUtils.isNotBlank(buildCountValue))
         {
@@ -589,7 +603,7 @@ public class LoadTestBuilder extends Builder
         Chart<Integer, Double> chart = new Chart<Integer, Double>(plotID, chartTitle);
         for (String eachCriteriaID : getCriteriaConfigIDs(plotID))
         {
-            String lineName = optCriteriaConfigValue(eachCriteriaID, CONFIG_CRITERIA_PARAMETER.name);
+            String lineName = getOptionalCriteriaConfigValue(eachCriteriaID, CONFIG_CRITERIA_PARAMETER.name);
             if (lineName == null)
             {
                 lineName = "";
@@ -670,7 +684,7 @@ public class LoadTestBuilder extends Builder
         return null;
     }
 
-    private String optCriteriaConfigValue(String configName, CONFIG_CRITERIA_PARAMETER parameter)
+    private String getOptionalCriteriaConfigValue(String configName, CONFIG_CRITERIA_PARAMETER parameter)
     {
         try
         {
@@ -683,13 +697,7 @@ public class LoadTestBuilder extends Builder
         return null;
     }
 
-    private String getCriteriaPlotConfigValue(String configName, CONFIG_PLOT_PARAMETER parameter) throws JSONException
-    {
-        String plotID = getCriteriaConfigValue(configName, CONFIG_CRITERIA_PARAMETER.plotID);
-        return getPlotConfigValue(plotID, parameter);
-    }
-
-    private String optPlotConfigValue(String plotID, CONFIG_PLOT_PARAMETER parameter)
+    private String getOptionalPlotConfigValue(String plotID, CONFIG_PLOT_PARAMETER parameter)
     {
         try
         {
@@ -779,7 +787,7 @@ public class LoadTestBuilder extends Builder
 
     private File getTestReportDataFile(AbstractBuild<?, ?> build)
     {
-        return new File(build.getArtifactsDir(), builderID + "/report/" + Integer.toString(build.getNumber()) + "/testreport.xml");
+        return new File(getBuildReportFolder(build), "testreport.xml");
     }
 
     private File getXltResultsFolder(AbstractBuild<?, ?> build)
@@ -794,19 +802,7 @@ public class LoadTestBuilder extends Builder
 
     private File getFirstXltResultsFolder(AbstractBuild<?, ?> build)
     {
-        File reportFolder = getXltResultsFolder(build);
-        if (reportFolder.exists() && reportFolder.isDirectory())
-        {
-            File[] subFiles = reportFolder.listFiles();
-            for (int i = 0; i < subFiles.length; i++)
-            {
-                if (subFiles[i].isDirectory())
-                {
-                    return subFiles[i];
-                }
-            }
-        }
-        return null;
+        return getFirstSubFolder(getXltResultsFolder(build));
     }
 
     private File getXltReportsFolder(AbstractBuild<?, ?> build)
@@ -816,34 +812,26 @@ public class LoadTestBuilder extends Builder
 
     private File getFirstXltReportFolder(AbstractBuild<?, ?> build)
     {
-        File reportFolder = getXltReportsFolder(build);
-        if (reportFolder.exists() && reportFolder.isDirectory())
+        return getFirstSubFolder(getXltReportsFolder(build));
+    }
+
+    private File getFirstSubFolder(File dir)
+    {
+        if (dir != null && dir.isDirectory())
         {
-            File[] subFiles = reportFolder.listFiles();
-            for (int i = 0; i < subFiles.length; i++)
+            File[] subFiles = dir.listFiles();
+            if (subFiles != null)
             {
-                if (subFiles[i].isDirectory())
+                for (int i = 0; i < subFiles.length; i++)
                 {
-                    return subFiles[i];
+                    if (subFiles[i].isDirectory())
+                    {
+                        return subFiles[i];
+                    }
                 }
             }
         }
         return null;
-    }
-
-    public String getAgentControllerSelected()
-    {
-        return agentControllerSelected;
-    }
-
-    public String getAgentControllerUrl()
-    {
-        return agentControllerUrl;
-    }
-
-    public String getAgentControllerFile()
-    {
-        return agentControllerFile;
     }
 
     private File getBuildResultConfigFolder(AbstractBuild<?, ?> build)
@@ -878,7 +866,7 @@ public class LoadTestBuilder extends Builder
 
     private File getSummaryResultsFolder(AbstractProject<?, ?> project)
     {
-        return new File(project.getRootDir(), "summaryResult/" + builderID);
+        return new File(project.getRootDir(), "summaryResults/" + builderID);
     }
 
     private File getSummaryResultsConfigFolder(AbstractProject<?, ?> project)
@@ -923,7 +911,7 @@ public class LoadTestBuilder extends Builder
                     try
                     {
                         xPath = getCriteriaConfigValue(eachID, CONFIG_CRITERIA_PARAMETER.xPath);
-                        condition = optCriteriaConfigValue(eachID, CONFIG_CRITERIA_PARAMETER.condition);
+                        condition = getOptionalCriteriaConfigValue(eachID, CONFIG_CRITERIA_PARAMETER.condition);
                         if (StringUtils.isBlank(condition))
                         {
                             LOGGER.debug("No condition for criteria. (criteriaID: \"" + eachID + "\")");
@@ -1061,8 +1049,8 @@ public class LoadTestBuilder extends Builder
         }
         finally
         {
-            // save any build artifact created so far 
-            saveArtifacts(build);
+            // save logs
+            saveArtifact(getXltLogFolder(build), getBuildLogsFolder(build));
 
             // delete any temporary directory with local XLT
             File xltDir = getXltFolder(build);
@@ -1075,7 +1063,7 @@ public class LoadTestBuilder extends Builder
     private void configureAgentController(AbstractBuild<?, ?> build, BuildListener listener) throws IOException
     {
         listener.getLogger()
-                .println("-----------------------------------------------------------------\nStarted configuring agent controller ...\n");
+                .println("-----------------------------------------------------------------\nConfiguring agent controllers ...\n");
 
         // TODO: to be reviewed
         if (agentControllerFile == null)
@@ -1125,25 +1113,27 @@ public class LoadTestBuilder extends Builder
     private void initialCleanUp(AbstractBuild<?, ?> build, BuildListener listener) throws IOException
     {
         listener.getLogger()
-                .println("-----------------------------------------------------------------\nStarted clean up project directory ...\n");
+                .println("-----------------------------------------------------------------\nCleaning up project directory ...\n");
 
         String[] DIR = build.getProject().getRootDir().list();
 
         for (int i = 0; i < DIR.length; i++)
         {
-            if (DIR[i].matches("[0-9]*"))
+            if (DIR[i].matches("[0-9]+"))
             {
                 File file = new File(build.getProject().getRootDir() + "/" + DIR[i]);
                 FileUtils.deleteDirectory(file);
-                listener.getLogger().println("deleted directory: " + file);
+                listener.getLogger().println("Deleted directory: " + file);
             }
         }
 
-        listener.getLogger().println("Finished\n-----------------------------------------------------------------\n");
+        listener.getLogger().println("\nFinished");
     }
 
     private void copyXlt(AbstractBuild<?, ?> build, BuildListener listener) throws IOException
     {
+        listener.getLogger().println("-----------------------------------------------------------------\nCopying XLT ...\n");
+
         // the directory with the XLT template installation
         if (StringUtils.isBlank(getXltTemplate()))
         {
@@ -1152,12 +1142,13 @@ public class LoadTestBuilder extends Builder
         }
 
         File srcDir = new File(getXltTemplate());
-        listener.getLogger().println(srcDir.getAbsolutePath());
+        listener.getLogger().println("XLT template directory: " + srcDir.getAbsolutePath());
+
+        // the target directory in the project folder
+        File destDir = getXltFolder(build);
+        listener.getLogger().println("Target directory: " + destDir.getAbsolutePath());
 
         // copy XLT to a local directory
-        File destDir = getXltFolder(build);
-        listener.getLogger().println(destDir.getAbsolutePath());
-
         FileUtils.copyDirectory(srcDir, destDir, true);
 
         // make XLT start scripts executable
@@ -1166,6 +1157,8 @@ public class LoadTestBuilder extends Builder
         {
             child.setExecutable(true);
         }
+
+        listener.getLogger().println("\nFinished");
     }
 
     private void runMasterController(AbstractBuild<?, ?> build, BuildListener listener) throws Exception
@@ -1220,6 +1213,10 @@ public class LoadTestBuilder extends Builder
         {
             build.setResult(Result.FAILURE);
         }
+
+        // save load test results and report
+        saveArtifact(getFirstXltResultsFolder(build), getBuildResultsFolder(build));
+        saveArtifact(getFirstXltReportFolder(build), getBuildReportFolder(build));
     }
 
     private int getAvailablePort(BuildListener listener)
@@ -1255,27 +1252,12 @@ public class LoadTestBuilder extends Builder
         return port;
     }
 
-    private void saveArtifacts(AbstractBuild<?, ?> build) throws IOException
+    private void saveArtifact(File srcFolder, File destFolder) throws IOException
     {
-        // copy load test report to build directory
-        File reportFolder = getFirstXltReportFolder(build);
-        if (reportFolder != null && reportFolder.isDirectory())
+        if (srcFolder != null && srcFolder.isDirectory() && destFolder != null)
         {
-            FileUtils.copyDirectory(reportFolder, getBuildReportFolder(build), true);
-        }
-
-        // copy load test results to build directory
-        File resultsFolder = getFirstXltResultsFolder(build);
-        if (resultsFolder != null && resultsFolder.isDirectory())
-        {
-            FileUtils.copyDirectory(resultsFolder, getBuildResultsFolder(build), true);
-        }
-
-        // copy logs to build directory
-        File logFolder = getXltLogFolder(build);
-        if (logFolder.isDirectory())
-        {
-            FileUtils.copyDirectory(logFolder, getBuildLogsFolder(build), true);
+            // move folder to save time
+            FileUtils.moveDirectory(srcFolder, destFolder);
         }
     }
 
@@ -1794,7 +1776,7 @@ public class LoadTestBuilder extends Builder
         @Override
         public String getDisplayName()
         {
-            return "XLT Plugin";
+            return "Run a load test with XLT";
         }
     }
 }

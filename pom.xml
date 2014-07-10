@@ -10,8 +10,9 @@
 
     <groupId>com.xceptance</groupId>
     <artifactId>xlt-jenkins</artifactId>
-    <version>1.0-alpha1</version>
+    <version>1.0.0</version>
     <packaging>hpi</packaging>
+    <name>XLT Plugin</name>
 
     <!-- get every artifact through repo.jenkins-ci.org, which proxies all the artifacts that we need -->
     <repositories>
