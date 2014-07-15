@@ -1,59 +1,52 @@
 {
     "criteria": [
         {
-            "id": "requestsMax",
-            "xPath": "/testreport/summary/requests/max",
-            "condition": "[number() < 10000]",
-            "plotID": "summary",
-            "name": "max(ms)"
-        },
-        {
-            "id": "requestsMean",
-            "xPath": "/testreport/summary/requests/mean",
-            "condition": "",
-            "plotID": "summary",
-            "name": "mean(ms)"
+            "id": "transactionErrors",
+            "xPath": "/testreport/summary/transactions/errors",
+            "condition": "[number() = 0]",
+            "plotID": "transactionErrors",
+            "name": "Count"
         },
         {
             "id": "requestErrors",
             "xPath": "/testreport/summary/requests/errors",
             "condition": "[number() = 0]",
             "plotID": "requestErrors",
-            "name": "count"
+            "name": "Count"
         },
         {
-            "id": "homepageMax",
-            "xPath": "/testreport/actions/action[./name[text() = 'Homepage']]/max",
-            "condition": "[number() < 1000]",
-            "plotID": "homepage",
-            "name": "max(ms)"
+            "id": "requestsMax",
+            "xPath": "/testreport/summary/requests/max",
+            "condition": "[number() < 10000]",
+            "plotID": "rqeuestRuntimes",
+            "name": "Max"
         },
         {
-            "id": "homepageMean",
-            "xPath": "/testreport/actions/action[./name[text() = 'Homepage']]/mean",
+            "id": "requestsMean",
+            "xPath": "/testreport/summary/requests/mean",
             "condition": "",
-            "plotID": "homepage",
-            "name": "mean"
+            "plotID": "rqeuestRuntimes",
+            "name": "Mean"
         }
     ],
     "plots": [
-		{
-            "id": "summary",
-            "title": "Requests",
-            "buildCount": "10",
-            "enabled": "yes"
-        },    
         {
-            "id": "requestErrors",
-            "title": "Request Errors",
-            "buildCount": "10",
+            "id": "transactionErrors",
+            "title": "Transaction Errors",
+            "buildCount": "100",
             "enabled": "yes"
         },
         {
-            "id": "homepage",
-            "title": "Homepage",
-            "buildCount": "10",
+            "id": "requestErrors",
+            "title": "Request Errors",
+            "buildCount": "100",
             "enabled": "yes"
-        }
+        },
+        {
+            "id": "rqeuestRuntimes",
+            "title": "Request Runtimes [ms]",
+            "buildCount": "100",
+            "enabled": "yes"
+        }    
     ]
 }
