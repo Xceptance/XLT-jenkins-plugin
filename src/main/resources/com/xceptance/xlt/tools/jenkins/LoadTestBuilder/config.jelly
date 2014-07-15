@@ -1,90 +1,91 @@
-<j:jelly 
-	xmlns:j="jelly:core" 
-	xmlns:st="jelly:stapler" 
-	xmlns:d="jelly:define" 
-	xmlns:l="/lib/layout" 
-	xmlns:t="/lib/hudson" 
-	xmlns:f="/lib/form">
-	
-	<f:section title="XLT Configuration">
-		<f:entry title="Path to XLT Template" field="xltTemplate">
-	    	<f:textbox />
-	  	</f:entry>
-	</f:section>
-		
-	<f:section title="Load Test Configuration"> 
-        
-        <f:entry title="Test Configuration File" field="testPropertiesFile">
-	    	<f:textbox default="test.properties" />
-	  	</f:entry>
-    	
-    	<f:entry title="Agent Controller URL" >  
-  		</f:entry>
-  		
-  		<f:radioBlock name="agentController" value="list" title="Textlist" checked="true">
-          <f:entry field="agentControllerUrl" >
-            <f:textarea />
-          </f:entry>
-        </f:radioBlock>
-        
-        <f:radioBlock name="agentController" value="file" title="From File" checked="${instance.agentControllerSelected == 'file'}">
-          <f:entry field="agentControllerFile" >
-            <f:textbox />
-          </f:entry>
-        </f:radioBlock>
-        
-	</f:section> 	
-  	
-  	<f:section title="Report Options">
-  		<f:entry title="Create Trend Report" field="createTrendReport">   
-       		<f:checkbox field="createTrendReport" default="${descriptor.getDefaultCreateTrendReport()}" title="Create a trend report from the results of the last n builds (see below)."/>
-     	</f:entry>
-  		<f:entry title="#Builds For Trend Report" field="numberOfBuildsForTrendReport">
-			<f:textbox field="numberOfBuildsForTrendReport" default="${descriptor.getDefaultNumberOfBuildsForTrendReport()}"/>  
-  		</f:entry>
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson"
+    xmlns:f="/lib/form">
 
-  		<f:entry title="Create Summary Report" field="createSummaryReport">   
-       		<f:checkbox field="createSummaryReport" default="${descriptor.getDefaultCreateSummaryReport()}" title="Create a summary load test report from the results of the last n builds (see below)."/>
-     	</f:entry>
-  		<f:entry title="#Builds For Summary Report" field="numberOfBuildsForSummaryReport">
-			<f:textbox field="numberOfBuildsForSummaryReport" default="${descriptor.getDefaultNumberOfBuildsForSummaryReport()}"/>  
-  		</f:entry>
-	</f:section> 
+    <f:section title="XLT Configuration">
+        <f:entry title="Path to XLT Template" field="xltTemplate">
+            <f:textbox/>
+        </f:entry>
+    </f:section>
 
-  	<f:section title="Validation/Plot Configuration">
-		<f:invisibleEntry >
-			<f:textbox field="builderID" value="${it.getBuilderID()}"/>
-		</f:invisibleEntry>
-    	
-    	<f:advanced>    	
-			<f:entry title="Plot Title" field="plotTitle">
-	    		<f:textbox field="plotTitle" default="${descriptor.getDefaultPlotTitle()}"/>
-	  		</f:entry>  	
-	  	 
-			<f:entry title="Plot Width" field="plotWidth">
-	    		<f:textbox field="plotWidth" default="${descriptor.getDefaultPlotWidth()}"/>
-	  		</f:entry>  	
-	  		
-	  		<f:entry title="Plot Height" field="plotHeight">
-				<f:textbox field="plotHeight" default="${descriptor.getDefaultPlotHeight()}"/>  
-	  		</f:entry>
-	  		
-	  		<f:entry title="Stay Vertical" field="stayVertical">   
-	       		<f:checkbox field="isPlotVertical" default="${descriptor.getDefaultIsPlotVertical()}" title="Stack charts vertical at the right side panel and do not let them float."/>
-	     	</f:entry>
-	     	
-	     	<f:entry title="Time Format Pattern" field="timeFormat">
-	    		<f:textbox field="timeFormatPattern"/>
-	  		</f:entry>  
-	  		
-			<f:entry title="Show Buildnumber" field="timeFormatBuildNumber">
-	    		<f:checkbox field="showBuildNumber" default="false" title="Display the build number at the x-axis of the charts."/>
-	  		</f:entry>
-  		</f:advanced>
-	  	
-	  	<f:entry title="Configuration" field="parsers">
-			<f:textarea field="xltConfig" default="${descriptor.getDefaultXltConfig()}"/>
-		</f:entry>
-	</f:section> 
+    <f:section title="Load Test Configuration">
+        <f:entry title="Load Test Configuration File" field="testPropertiesFile">
+            <f:textbox default="test.properties"/>
+        </f:entry>
+
+        <f:entry title="Agent Controller Configuration">
+            <f:radioBlock name="agentControllerConfig" value="embedded" title="Use a single embedded agent controller"
+                checked="${instance.agentControllerConfig.type == 'embedded'}">
+            </f:radioBlock>
+
+            <f:radioBlock name="agentControllerConfig" value="list" title="Specify agent controller URLs"
+                checked="${instance.agentControllerConfig.type == 'list'}">
+                <f:entry field="urlList">
+                    <f:textarea value="${instance.agentControllerConfig.urlList}"/>
+                </f:entry>
+            </f:radioBlock>
+
+            <f:radioBlock name="agentControllerConfig" value="file" title="Specify a file with agent controller URLs"
+                checked="${instance.agentControllerConfig.type == 'file'}">
+                <f:entry field="urlFile">
+                    <f:textbox value="${instance.agentControllerConfig.urlFile}"/>
+                </f:entry>
+            </f:radioBlock>
+        </f:entry>
+    </f:section>
+
+    <f:section title="Report Options">
+        <f:entry title="Create Trend Report" field="createTrendReport">
+            <f:checkbox field="createTrendReport" default="${descriptor.getDefaultCreateTrendReport()}"
+                title="Create a trend report from the results of the last n builds (see below)."/>
+        </f:entry>
+        <f:entry title="#Builds For Trend Report" field="numberOfBuildsForTrendReport">
+            <f:textbox field="numberOfBuildsForTrendReport" default="${descriptor.getDefaultNumberOfBuildsForTrendReport()}"/>
+        </f:entry>
+
+        <f:entry title="Create Summary Report" field="createSummaryReport">
+            <f:checkbox field="createSummaryReport" default="${descriptor.getDefaultCreateSummaryReport()}"
+                title="Create a summary load test report from the results of the last n builds (see below)."/>
+        </f:entry>
+        <f:entry title="#Builds For Summary Report" field="numberOfBuildsForSummaryReport">
+            <f:textbox field="numberOfBuildsForSummaryReport" default="${descriptor.getDefaultNumberOfBuildsForSummaryReport()}"/>
+        </f:entry>
+    </f:section>
+
+    <f:section title="Validation/Plot Configuration">
+        <f:entry title="Configuration" field="parsers">
+            <f:textarea field="xltConfig" default="${descriptor.getDefaultXltConfig()}"/>
+        </f:entry>
+
+        <f:advanced>
+            <f:entry title="Plot Title" field="plotTitle">
+                <f:textbox field="plotTitle" default="${descriptor.getDefaultPlotTitle()}"/>
+            </f:entry>
+
+            <f:entry title="Plot Width" field="plotWidth">
+                <f:textbox field="plotWidth" default="${descriptor.getDefaultPlotWidth()}"/>
+            </f:entry>
+
+            <f:entry title="Plot Height" field="plotHeight">
+                <f:textbox field="plotHeight" default="${descriptor.getDefaultPlotHeight()}"/>
+            </f:entry>
+
+            <f:entry title="Stay Vertical" field="stayVertical">
+                <f:checkbox field="isPlotVertical" default="${descriptor.getDefaultIsPlotVertical()}"
+                    title="Stack charts vertical at the right side panel and do not let them float."/>
+            </f:entry>
+
+            <f:entry title="Time Format Pattern" field="timeFormat">
+                <f:textbox field="timeFormatPattern"/>
+            </f:entry>
+
+            <f:entry title="Show Buildnumber" field="timeFormatBuildNumber">
+                <f:checkbox field="showBuildNumber" default="false" title="Display the build number at the x-axis of the charts."/>
+            </f:entry>
+        </f:advanced>
+    </f:section>
+
+    <f:invisibleEntry>
+        <f:textbox field="builderID" value="${it.getBuilderID()}"/>
+    </f:invisibleEntry>
 
 </j:jelly>

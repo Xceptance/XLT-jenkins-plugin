@@ -1,6 +1,5 @@
 package com.xceptance.xlt.tools.jenkins;
 
-import hudson.Extension;
 import hudson.Launcher;
 import hudson.Launcher.ProcStarter;
 import hudson.model.Action;
@@ -8,10 +7,7 @@ import hudson.model.BuildListener;
 import hudson.model.Result;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
-import hudson.model.StringParameterValue;
-import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
-import hudson.util.FormValidation;
 import hudson.util.StreamTaskListener;
 
 import java.io.File;
@@ -22,20 +18,12 @@ import java.lang.Thread.UncaughtExceptionHandler;
 import java.net.DatagramSocket;
 import java.net.SocketException;
 import java.net.URISyntaxException;
-import java.nio.file.Files;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.UUID;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
-import javax.servlet.ServletException;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.xpath.XPathConstants;
@@ -54,7 +42,6 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.QueryParameter;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -72,13 +59,9 @@ public class LoadTestBuilder extends Builder
 {
     private final String testPropertiesFile;
 
-    private String[] agentControllerUrls;
+    private AgentControllerConfig agentControllerConfig;
 
-    private String agentControllerUrl;
-
-    private String agentControllerFile;
-
-    private String agentControllerSelected;
+    transient private String[] agentControllerUrls;
 
     private final String xltConfig;
 
@@ -137,7 +120,8 @@ public class LoadTestBuilder extends Builder
     {
         try
         {
-            File logFile = new File(new File(Jenkins.getInstance().getPlugin("xlt-jenkins").getWrapper().baseResourceURL.toURI()), "xltPlugin.log");
+            File logFile = new File(new File(Jenkins.getInstance().getPlugin("xlt-jenkins").getWrapper().baseResourceURL.toURI()),
+                                    "xltPlugin.log");
             LOGGER.addAppender(new FileAppender(
                                                 new PatternLayout("%d{yyyy-MMM-dd} : %d{HH:mm:ss,SSS} | [%t] %p %C.%M line:%L | %x - %m%n"),
                                                 logFile.getAbsolutePath(), true));
@@ -152,31 +136,12 @@ public class LoadTestBuilder extends Builder
         }
     }
 
-    public static class AgentControllerConfig extends StringParameterValue
-    {
-        String agentControllerUrl;
-
-        String agentControllerFile;
-
-        @DataBoundConstructor
-        public AgentControllerConfig(String name, String value, String agentControllerUrl, String agentControllerFile)
-        {
-            super(name, value);
-            this.agentControllerUrl = agentControllerUrl;
-            this.agentControllerFile = agentControllerFile;
-        }
-    }
-
     @DataBoundConstructor
     public LoadTestBuilder(String xltTemplate, String testPropertiesFile, String xltConfig, int plotWidth, int plotHeight,
                            String plotTitle, String builderID, boolean isPlotVertical, boolean createTrendReport,
                            int numberOfBuildsForTrendReport, boolean createSummaryReport, int numberOfBuildsForSummaryReport,
-                           AgentControllerConfig agentController, String timeFormatPattern, boolean showBuildNumber)
+                           AgentControllerConfig agentControllerConfig, String timeFormatPattern, boolean showBuildNumber)
     {
-        this.xltTemplate = xltTemplate;
-
-        agentControllerSelected = agentController.value;
-
         isSave = true;
         Thread.currentThread().setUncaughtExceptionHandler(new UncaughtExceptionHandler()
         {
@@ -186,87 +151,56 @@ public class LoadTestBuilder extends Builder
             }
         });
 
-        if (StringUtils.isBlank(testPropertiesFile))
-        {
-            testPropertiesFile = null;
-        }
-        this.testPropertiesFile = testPropertiesFile;
+        // load test configuration
+        this.xltTemplate = StringUtils.defaultIfBlank(xltTemplate, null);
+        this.testPropertiesFile = StringUtils.defaultIfBlank(testPropertiesFile, null);
+        this.agentControllerConfig = (agentControllerConfig != null) ? agentControllerConfig : new AgentControllerConfig();
 
-        this.agentControllerUrl = agentController.agentControllerUrl;
-        this.agentControllerFile = agentController.agentControllerFile;
+        // plot/value configuration
+        this.xltConfig = StringUtils.defaultIfBlank(xltConfig, getDescriptor().getDefaultXltConfig());
 
-        if (StringUtils.isBlank(xltConfig))
-        {
-            xltConfig = getDescriptor().getDefaultXltConfig();
-        }
-        this.xltConfig = xltConfig;
-
-        if (StringUtils.isNotBlank(timeFormatPattern))
-        {
-            this.timeFormatPattern = timeFormatPattern;
-        }
-        this.showBuildNumber = showBuildNumber;
-        if (plotWidth == 0)
-        {
-            plotWidth = getDescriptor().getDefaultPlotWidth();
-        }
-        this.plotWidth = plotWidth;
-
-        if (plotHeight == 0)
-        {
-            plotHeight = getDescriptor().getDefaultPlotHeight();
-        }
-        this.plotHeight = plotHeight;
-
-        if (plotTitle == null)
-        {
-            plotTitle = getDescriptor().getDefaultPlotTitle();
-        }
-        this.plotTitle = plotTitle;
-
-        if (StringUtils.isBlank(builderID))
-        {
-            builderID = UUID.randomUUID().toString();
-        }
-        this.builderID = builderID;
-
+        // advanced plot configuration
+        this.plotWidth = (plotWidth > 0) ? plotWidth : getDescriptor().getDefaultPlotWidth();
+        this.plotHeight = (plotHeight > 0) ? plotHeight : getDescriptor().getDefaultPlotHeight();
+        this.plotTitle = StringUtils.defaultIfBlank(plotTitle, getDescriptor().getDefaultPlotTitle());
         this.isPlotVertical = isPlotVertical;
+        this.timeFormatPattern = StringUtils.defaultIfBlank(timeFormatPattern, null);
+        this.showBuildNumber = showBuildNumber;
+
+        // report configuration
         this.createTrendReport = createTrendReport;
         this.createSummaryReport = createSummaryReport;
 
-        if (numberOfBuildsForTrendReport <= 0)
-        {
-            numberOfBuildsForTrendReport = getDescriptor().getDefaultNumberOfBuildsForTrendReport();
-        }
-        this.numberOfBuildsForTrendReport = numberOfBuildsForTrendReport;
+        this.numberOfBuildsForTrendReport = (numberOfBuildsForTrendReport > 0) ? numberOfBuildsForTrendReport
+                                                                              : getDescriptor().getDefaultNumberOfBuildsForTrendReport();
 
-        if (numberOfBuildsForSummaryReport <= 0)
-        {
-            numberOfBuildsForSummaryReport = getDescriptor().getDefaultNumberOfBuildsForSummaryReport();
-        }
-        this.numberOfBuildsForSummaryReport = numberOfBuildsForSummaryReport;
+        this.numberOfBuildsForSummaryReport = (numberOfBuildsForSummaryReport > 0)
+                                                                                  ? numberOfBuildsForSummaryReport
+                                                                                  : getDescriptor().getDefaultNumberOfBuildsForSummaryReport();
+
+        // misc.
+        this.builderID = StringUtils.defaultIfBlank(builderID, UUID.randomUUID().toString());
     }
 
-    public SimpleDateFormat getDateFormat()
+    private SimpleDateFormat getDateFormat()
     {
         if (dateFormat == null)
         {
             try
             {
-                dateFormat = new SimpleDateFormat(this.timeFormatPattern);
+                dateFormat = new SimpleDateFormat(timeFormatPattern);
             }
             catch (Exception ex)
             {
-                LOGGER.warn("Failed to create date format for pattern: " + this.timeFormatPattern, ex);
+                LOGGER.warn("Failed to create date format for pattern: " + timeFormatPattern, ex);
                 dateFormat = new SimpleDateFormat();
             }
         }
         return dateFormat;
     }
 
-    private String[] parseAgentControllerUrlsFromFile(String agentControllerFile, AbstractBuild<?, ?> build) throws IOException
+    private String[] parseAgentControllerUrlsFromFile(File file) throws IOException
     {
-        File file = new File(getTestSuiteConfigFolder(build) + agentControllerFile);
         String fileContent = FileUtils.readFileToString(file, "UTF-8");
 
         return parseAgentControllerUrls(fileContent);
@@ -277,19 +211,9 @@ public class LoadTestBuilder extends Builder
         return StringUtils.split(agentControllerUrls, "\r\n\t|,; ");
     }
 
-    public String getAgentControllerSelected()
+    public AgentControllerConfig getAgentControllerConfig()
     {
-        return agentControllerSelected;
-    }
-
-    public String getAgentControllerUrl()
-    {
-        return agentControllerUrl;
-    }
-
-    public String getAgentControllerFile()
-    {
-        return agentControllerFile;
+        return agentControllerConfig;
     }
 
     public String getTestPropertiesFile()
@@ -438,7 +362,7 @@ public class LoadTestBuilder extends Builder
      *            < 0 means all builds up to end
      * @return
      */
-    public List<? extends AbstractBuild<?, ?>> getBuilds(AbstractProject<?, ?> project, int startFrom, int count)
+    private List<? extends AbstractBuild<?, ?>> getBuilds(AbstractProject<?, ?> project, int startFrom, int count)
     {
         List<? extends AbstractBuild<?, ?>> allBuilds = project.getBuilds();
         int to = startFrom + count - 1;
@@ -886,7 +810,8 @@ public class LoadTestBuilder extends Builder
 
     private List<CriteriaResult> validateCriteria(AbstractBuild<?, ?> build, BuildListener listener)
     {
-        listener.getLogger().println("-----------------------------------------------------------------\nChecking success criteria ...\n");
+        listener.getLogger().println("-----------------------------------------------------------------\n"
+                                         + "Checking success criteria ...\n");
 
         List<CriteriaResult> failedAlerts = new ArrayList<CriteriaResult>();
 
@@ -1011,6 +936,12 @@ public class LoadTestBuilder extends Builder
     }
 
     @Override
+    public XltDescriptor getDescriptor()
+    {
+        return (XltDescriptor) super.getDescriptor();
+    }
+
+    @Override
     public boolean prebuild(AbstractBuild<?, ?> build, BuildListener listener)
     {
         return true;
@@ -1062,58 +993,62 @@ public class LoadTestBuilder extends Builder
 
     private void configureAgentController(AbstractBuild<?, ?> build, BuildListener listener) throws IOException
     {
-        listener.getLogger()
-                .println("-----------------------------------------------------------------\nConfiguring agent controllers ...\n");
+        listener.getLogger().println("-----------------------------------------------------------------\n"
+                                         + "Configuring agent controllers ...\n");
 
-        // TODO: to be reviewed
-        if (agentControllerFile == null)
+        if (agentControllerConfig.type.equals(AgentControllerConfig.TYPE.embedded.toString()))
         {
-            if (!agentControllerUrl.isEmpty())
-            {
-                agentControllerUrls = parseAgentControllerUrls(agentControllerUrl);
-
-                listener.getLogger().println("agent controller URLs:\n");
-                for (int i = 0; i < agentControllerUrls.length; i++)
-                {
-                    listener.getLogger().println(agentControllerUrls[i]);
-                }
-            }
-            else
-            {
-                listener.getLogger().println("Set to embedded mode");
-            }
+            agentControllerUrls = null;
+            listener.getLogger().println("Set to embedded mode");
         }
-        else if (agentControllerUrl == null)
+        else
         {
-            if (!agentControllerFile.isEmpty())
+            if (agentControllerConfig.type.equals(AgentControllerConfig.TYPE.list.toString()))
             {
-                agentControllerUrls = parseAgentControllerUrlsFromFile(agentControllerFile, build);
+                listener.getLogger().println("Read agent controller URLs from configuration:\n");
 
-                listener.getLogger().println("agent controller URLs from File: " + getTestSuiteConfigFolder(build) + agentControllerFile +
-                                                 "\n");
-                for (int i = 0; i < agentControllerUrls.length; i++)
+                if (agentControllerConfig.urlList != null)
                 {
-                    listener.getLogger().println(agentControllerUrls[i]);
+                    agentControllerUrls = parseAgentControllerUrls(agentControllerConfig.urlList);
                 }
+            }
+            else if (agentControllerConfig.type.equals(AgentControllerConfig.TYPE.file.toString()))
+            {
+                File file = new File(getTestSuiteConfigFolder(build), agentControllerConfig.urlFile);
+
+                listener.getLogger().printf("Read agent controller URLs from file %s:\n\n", file);
+
+                if (agentControllerConfig.urlFile != null)
+                {
+                    agentControllerUrls = parseAgentControllerUrlsFromFile(file);
+                }
+            }
+
+            if (agentControllerUrls == null || agentControllerUrls.length == 0)
+            {
+                throw new IllegalStateException("No agent controller URLs found.");
             }
             else
             {
-                listener.getLogger().println("Set to embedded mode");
+                for (String agentControllerUrl : agentControllerUrls)
+                {
+                    listener.getLogger().printf("- %s\n", agentControllerUrl);
+                }
             }
         }
 
         listener.getLogger().println("\nFinished");
     }
 
-    private String getTestSuiteConfigFolder(AbstractBuild<?, ?> build)
+    private File getTestSuiteConfigFolder(AbstractBuild<?, ?> build)
     {
-        return build.getModuleRoot() + "/config/";
+        return new File(build.getModuleRoot() + "/config/");
     }
 
     private void initialCleanUp(AbstractBuild<?, ?> build, BuildListener listener) throws IOException
     {
-        listener.getLogger()
-                .println("-----------------------------------------------------------------\nCleaning up project directory ...\n");
+        listener.getLogger().println("-----------------------------------------------------------------\n"
+                                         + "Cleaning up project directory ...\n");
 
         String[] DIR = build.getProject().getRootDir().list();
 
@@ -1425,358 +1360,6 @@ public class LoadTestBuilder extends Builder
         else
         {
             listener.getLogger().println("Cannot create trend report because no previous reports available!");
-        }
-    }
-
-    @Override
-    public DescriptorImpl getDescriptor()
-    {
-        return (DescriptorImpl) super.getDescriptor();
-    }
-
-    @Extension
-    public static class DescriptorImpl extends BuildStepDescriptor<Builder>
-    {
-        /**
-         * In order to load the persisted global configuration, you have to call load() in the constructor.
-         */
-        public DescriptorImpl()
-        {
-            load();
-        }
-
-        public File getXltConfigFile() throws URISyntaxException
-        {
-            return new File(new File(Jenkins.getInstance().getPlugin("xlt-jenkins").getWrapper().baseResourceURL.toURI()), "xltConfig.json");
-        }
-
-        public String getDefaultXltConfig()
-        {
-            try
-            {
-                return new String(Files.readAllBytes(getXltConfigFile().toPath()));
-            }
-            catch (URISyntaxException e)
-            {
-                LOGGER.error("", e);
-            }
-            catch (IOException e)
-            {
-                LOGGER.error("", e);
-            }
-            return null;
-        }
-
-        public int getDefaultPlotWidth()
-        {
-            return 400;
-        }
-
-        public int getDefaultPlotHeight()
-        {
-            return 250;
-        }
-
-        public String getDefaultPlotTitle()
-        {
-            return "";
-        }
-
-        public boolean getDefaultIsPlotVertical()
-        {
-            return false;
-        }
-
-        public boolean getDefaultCreateTrendReport()
-        {
-            return true;
-        }
-
-        public boolean getDefaultCreateSummaryReport()
-        {
-            return true;
-        }
-
-        public int getDefaultNumberOfBuildsForTrendReport()
-        {
-            return 50;
-        }
-
-        public int getDefaultNumberOfBuildsForSummaryReport()
-        {
-            return 50;
-        }
-
-        /**
-         * Performs on-the-fly validation of the form field 'testProperties'.
-         */
-        public FormValidation doCheckTestProperties(@QueryParameter String value) throws IOException, ServletException
-        {
-            if (value.isEmpty())
-            {
-                return FormValidation.warning("Please specify test configuration!");
-            }
-            return FormValidation.ok();
-        }
-
-        /**
-         * Performs on-the-fly validation of the form field 'machineHost'.
-         */
-        public FormValidation doCheckMachineHost(@QueryParameter String value) throws IOException, ServletException
-        {
-            if (value.isEmpty())
-                return FormValidation.ok("-embedded is enabled");
-
-            String regex = "^https://.*";
-            Pattern p = Pattern.compile(regex);
-            Matcher matcher = p.matcher(value);
-            if (!matcher.find())
-            {
-                return FormValidation.error("invalid host-url");
-            }
-
-            return FormValidation.ok();
-        }
-
-        /**
-         * Performs on-the-fly validation of the form field 'parsers'.
-         */
-        public FormValidation doCheckXltConfig(@QueryParameter String value)
-        {
-            if (StringUtils.isBlank(value))
-                return FormValidation.ok("The default config will be used for empty field.");
-
-            JSONObject validConfig;
-            try
-            {
-                validConfig = new JSONObject(value);
-            }
-            catch (JSONException e)
-            {
-                return FormValidation.error(e, "Invalid JSON");
-            }
-
-            try
-            {
-                List<String> criteriaIDs = new ArrayList<String>();
-                Map<String, String> criteriaPlotIDs = new HashMap<String, String>();
-                JSONArray validCriterias = validConfig.getJSONArray(CONFIG_SECTIONS_PARAMETER.criteria.name());
-                for (int i = 0; i < validCriterias.length(); i++)
-                {
-                    JSONObject eachCriteria = validCriterias.optJSONObject(i);
-                    String id = null;
-                    try
-                    {
-                        id = eachCriteria.getString(CONFIG_CRITERIA_PARAMETER.id.name());
-                        if (StringUtils.isBlank(id))
-                            return FormValidation.error("Criteria id is empty. (criteria index: " + i + ")");
-                        if (criteriaIDs.contains(id))
-                            return FormValidation.error("Criteria id already exists. (criteria id: " + id + ")");
-                        criteriaIDs.add(id);
-
-                        String path = eachCriteria.getString(CONFIG_CRITERIA_PARAMETER.xPath.name());
-                        if (StringUtils.isBlank(path))
-                            return FormValidation.error("Criteria xPath is empty. (criteria id: " + id + ")");
-
-                        try
-                        {
-                            XPathFactory.newInstance().newXPath().compile(path);
-                        }
-                        catch (XPathExpressionException e)
-                        {
-                            return FormValidation.error(e, "Invalid xPath. (criteria id:" + id + ")");
-                        }
-
-                        String condition = eachCriteria.getString(CONFIG_CRITERIA_PARAMETER.condition.name());
-                        if (StringUtils.isNotBlank(condition))
-                        {
-                            try
-                            {
-                                XPathFactory.newInstance().newXPath().compile(path + condition);
-                            }
-                            catch (XPathExpressionException e)
-                            {
-                                return FormValidation.error(e, "Condition does not form a valid xPath. (criteria id:" + id + ")");
-                            }
-                        }
-
-                        String criteriaPlotID = eachCriteria.getString(CONFIG_CRITERIA_PARAMETER.plotID.name());
-                        if (StringUtils.isNotBlank(criteriaPlotID))
-                        {
-                            criteriaPlotIDs.put(id, criteriaPlotID);
-                        }
-
-                        eachCriteria.getString(CONFIG_CRITERIA_PARAMETER.name.name());
-                    }
-                    catch (JSONException e)
-                    {
-                        return FormValidation.error(e, "Missing criteria JSON section. (criteria index: " + i + " " +
-                                                       (id != null ? ("criteria id: " + id) : "") + ")");
-                    }
-                }
-
-                List<String> plotIDs = new ArrayList<String>();
-                JSONArray validPlots = validConfig.getJSONArray(CONFIG_SECTIONS_PARAMETER.plots.name());
-                for (int i = 0; i < validPlots.length(); i++)
-                {
-                    JSONObject eachPlot = validPlots.getJSONObject(i);
-                    String id = null;
-                    try
-                    {
-                        eachPlot.getString(CONFIG_PLOT_PARAMETER.id.name());
-                        id = eachPlot.getString(CONFIG_PLOT_PARAMETER.id.name());
-                        if (StringUtils.isBlank(id))
-                            return FormValidation.error("Plot id is empty. (plot index: " + i + ")");
-                        if (plotIDs.contains(id))
-                            return FormValidation.error("Plot id already exists. (plot id: " + id + ")");
-                        plotIDs.add(id);
-
-                        eachPlot.getString(CONFIG_PLOT_PARAMETER.title.name());
-                        String buildCount = eachPlot.getString(CONFIG_PLOT_PARAMETER.buildCount.name());
-                        if (StringUtils.isNotBlank(buildCount))
-                        {
-                            double number = -1;
-                            try
-                            {
-                                number = Double.valueOf(buildCount);
-                            }
-                            catch (NumberFormatException e)
-                            {
-                                return FormValidation.error("Plot buildCount is not a number. (plot id: " + id + ")");
-                            }
-                            if (number < 1)
-                            {
-                                return FormValidation.error("Plot buildCount must be positive. (plot id: " + id + ")");
-                            }
-                            if (number != (int) number)
-                            {
-                                return FormValidation.error("Plot buildCount is a dezimal number. (plot id: " + id + ")");
-                            }
-                        }
-                        String plotEnabled = eachPlot.getString(CONFIG_PLOT_PARAMETER.enabled.name());
-                        if (StringUtils.isNotBlank(plotEnabled))
-                        {
-                            if (!("yes".equals(plotEnabled) || "no".equals(plotEnabled)))
-                            {
-                                return FormValidation.error("Invalid value for plot enabled. Only yes or no is allowed. (plot id: " + id +
-                                                            ")");
-                            }
-                        }
-                    }
-                    catch (JSONException e)
-                    {
-                        return FormValidation.error(e, "Missing plot JSON section. (plot index: " + i + " " +
-                                                       (id != null ? ("plot id: " + id) : "") + ")");
-                    }
-                }
-
-                for (Entry<String, String> eachEntry : criteriaPlotIDs.entrySet())
-                {
-                    if (!plotIDs.contains(eachEntry.getValue()))
-                    {
-                        return FormValidation.error("Missing plot config for plot id:" + eachEntry.getValue() + " at criteria id: " +
-                                                    eachEntry.getKey() + ".");
-                    }
-                }
-            }
-            catch (JSONException e)
-            {
-                return FormValidation.error(e, "Missing JSON section");
-            }
-
-            return FormValidation.ok();
-        }
-
-        public FormValidation doCheckPlotWidth(@QueryParameter String value)
-        {
-            if (StringUtils.isBlank(value))
-                return FormValidation.ok("The default width will be used for empty field. (" + getDefaultPlotWidth() + ")");
-
-            double number = -1;
-            try
-            {
-                number = Double.valueOf(value);
-            }
-            catch (NumberFormatException e)
-            {
-                return FormValidation.error("Please enter a valid number for width.");
-            }
-            if (number < 1)
-            {
-                return FormValidation.error("Please enter a valid positive number for width.");
-            }
-            if (number != (int) number)
-            {
-                return FormValidation.warning("Decimal number for width. Width will be " + (int) number);
-            }
-            return FormValidation.ok();
-        }
-
-        public FormValidation doCheckPlotHeight(@QueryParameter String value)
-        {
-            if (StringUtils.isBlank(value))
-                return FormValidation.ok("The default height will be used for empty field. (" + getDefaultPlotHeight() + ")");
-
-            double number = -1;
-            try
-            {
-                number = Double.valueOf(value);
-            }
-            catch (NumberFormatException e)
-            {
-                return FormValidation.error("Please enter a valid number for height.");
-            }
-            if (number < 1)
-            {
-                return FormValidation.error("Please enter a valid positive number for height.");
-            }
-            if (number != (int) number)
-            {
-                return FormValidation.warning("Decimal number for height. Height will be " + (int) number);
-            }
-            return FormValidation.ok();
-        }
-
-        public FormValidation doCheckTimeFormatPattern(@QueryParameter String value)
-        {
-            SimpleDateFormat format = new SimpleDateFormat();
-            if (StringUtils.isNotBlank(value))
-            {
-                try
-                {
-                    format = new SimpleDateFormat(value);
-                }
-                catch (Exception e)
-                {
-                    return FormValidation.error(e, "Invalid time format pattern.");
-                }
-            }
-            return FormValidation.ok("Preview: " + format.format(new Date()));
-        }
-
-        public FormValidation doCheckXltTemplate(@QueryParameter String value)
-        {
-            if (value == null || !new File(value).exists())
-            {
-                return FormValidation.error("Please enter a valid xlt location");
-            }
-            return FormValidation.ok();
-        }
-
-        @Override
-        public boolean isApplicable(Class<? extends AbstractProject> aClass)
-        {
-            // Indicates that this builder can be used with all kinds of project types
-            return true;
-        }
-
-        /**
-         * This human readable name is used in the configuration screen.
-         */
-        @Override
-        public String getDisplayName()
-        {
-            return "Run a load test with XLT";
         }
     }
 }
