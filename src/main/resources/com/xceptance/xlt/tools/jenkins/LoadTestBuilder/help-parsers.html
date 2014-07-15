@@ -94,7 +94,9 @@
 				<br>
 				<b>buildCount</b> - The number of previous builds to create the chart for. If empty then all builds will be used. 
 				<br>
-				<b>enabled</b> - Can be "yes" or "no". If set to "yes" then the chart will be visible otherwise it will be not.  				
+				<b>enabled</b> - Can be "yes" or "no". If set to "yes" then the chart will be visible otherwise it will be not.
+				<br>
+				<b>showNoValues</b> - Can be "yes" or "no". If set to "yes" then also builds without results or a valid value will be shown as data point in the charts with a value of 0. Otherwise only builds with valid values will be visible in the charts. There are many reasons why no value is available for a build. For example if the build was aborted or there was an error when creating the results or the value could not be retrieved because the xPath is not valid and so on.  								  				
 			</div>
 			<br>		
 			<b><u>Example:</u></b>
@@ -104,7 +106,8 @@
     "id": "fooBar",
     "title": "fooBarTitle",
     "buildCount": "10",
-    "enabled": "yes"
+    "enabled": "yes",
+    "showNoValues": "no"
   }  
   
 			</pre>	
@@ -158,19 +161,22 @@
             "id": "summary",
             "title": "Requests",
             "buildCount": "10",
-            "enabled": "yes"
+            "enabled": "yes",
+            "showNoValues": "yes"
         },    
         {
             "id": "requestErrors",
             "title": "Request Errors",
             "buildCount": "10",
-            "enabled": "yes"
+            "enabled": "yes",
+            "showNoValues": "no"
         },
         {
             "id": "homepage",
             "title": "Homepage",
             "buildCount": "10",
-            "enabled": "yes"
+            "enabled": "yes",
+            "showNoValues": "no"
         }
     ]
 }

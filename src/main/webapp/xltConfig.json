@@ -41,19 +41,22 @@
             "id": "summary",
             "title": "Requests",
             "buildCount": "10",
-            "enabled": "yes"
+            "enabled": "yes",
+            "showNoValues": "no"
         },    
         {
             "id": "requestErrors",
             "title": "Request Errors",
             "buildCount": "10",
-            "enabled": "yes"
+            "enabled": "yes",
+            "showNoValues": "no"
         },
         {
             "id": "homepage",
             "title": "Homepage",
             "buildCount": "10",
-            "enabled": "yes"
+            "enabled": "yes",
+            "showNoValues": "no"
         }
     ]
 }

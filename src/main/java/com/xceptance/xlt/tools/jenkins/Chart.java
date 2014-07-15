@@ -99,17 +99,17 @@ public class Chart<X, Y>
         private int maxCount;
 
         private String name;
-
-        private Chart<X, Y> chart;
         
         private int indexCounter = 0;
+        
+        private boolean showNoValues;
 
-        public ChartLine(Chart<X, Y> chart, String lineID, String name, int maxCount)
+        public ChartLine(String lineID, String name, int maxCount, boolean showNoValues)
         {
-            this.chart = chart;
             this.lineID = lineID;
             this.maxCount = maxCount;
             this.name = name;
+            this.showNoValues = showNoValues;
         }
 
         public String getLineID()
@@ -120,6 +120,11 @@ public class Chart<X, Y>
         public int getMaxCount()
         {
             return maxCount;
+        }
+        
+        public boolean getShowNoValues()
+        {
+            return showNoValues;
         }
 
         public String getDataString(String toolTipFormatter)
