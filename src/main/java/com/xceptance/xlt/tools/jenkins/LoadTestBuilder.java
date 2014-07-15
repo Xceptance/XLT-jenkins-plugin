@@ -137,7 +137,8 @@ public class LoadTestBuilder extends Builder
     {
         try
         {
-            File logFile = new File(new File(Jenkins.getInstance().getPlugin("xlt-jenkins").getWrapper().baseResourceURL.toURI()), "xltPlugin.log");
+            File logFile = new File(new File(Jenkins.getInstance().getPlugin("xlt-jenkins").getWrapper().baseResourceURL.toURI()),
+                                    "xltPlugin.log");
             LOGGER.addAppender(new FileAppender(
                                                 new PatternLayout("%d{yyyy-MMM-dd} : %d{HH:mm:ss,SSS} | [%t] %p %C.%M line:%L | %x - %m%n"),
                                                 logFile.getAbsolutePath(), true));
@@ -397,7 +398,7 @@ public class LoadTestBuilder extends Builder
 
         try
         {
-            int largestBuildCount = 0;
+            int largestBuildCount = -1;
             for (String eachPlotID : getPlotConfigIDs())
             {
                 String buildCountValue = getOptionalPlotConfigValue(eachPlotID, CONFIG_PLOT_PARAMETER.buildCount);
@@ -416,11 +417,13 @@ public class LoadTestBuilder extends Builder
                         LOGGER.error("Build count is not a number (plotID: \"" + eachPlotID + "\")", e);
                     }
                 }
+                else
+                {
+                    largestBuildCount = -1;
+                    break;
+                }
             }
-            if (largestBuildCount < 1)
-            {
-                largestBuildCount = -1;
-            }
+
             List<? extends AbstractBuild<?, ?>> builds = getBuilds(project, 0, largestBuildCount);
             addBuildsToCharts(builds);
         }
@@ -441,14 +444,10 @@ public class LoadTestBuilder extends Builder
     public List<? extends AbstractBuild<?, ?>> getBuilds(AbstractProject<?, ?> project, int startFrom, int count)
     {
         List<? extends AbstractBuild<?, ?>> allBuilds = project.getBuilds();
-        int to = startFrom + count - 1;
+        int to = Math.min(startFrom + count - 1, allBuilds.size());
         if (to < 0)
         {
-            to = 0;
-        }
-        else
-        {
-            to = Math.min(to, allBuilds.size());
+            to = allBuilds.size();
         }
 
         return allBuilds.subList(startFrom, to);
