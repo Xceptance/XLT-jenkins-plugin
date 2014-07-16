@@ -15,8 +15,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.lang.Thread.UncaughtExceptionHandler;
-import java.net.DatagramSocket;
-import java.net.SocketException;
 import java.net.URISyntaxException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -1141,8 +1139,9 @@ public class LoadTestBuilder extends Builder
         if (agentControllerUrls == null)
         {
             commandLine.add("-embedded");
-            // connect to free port
-            commandLine.add("-Dcom.xceptance.xlt.agentcontroller.port=" + Integer.toString(getAvailablePort(listener)));
+
+            // use any free port
+            commandLine.add("-Dcom.xceptance.xlt.agentcontroller.port=0");
         }
         else
         {
@@ -1176,39 +1175,6 @@ public class LoadTestBuilder extends Builder
         // save load test results and report
         saveArtifact(getFirstXltResultsFolder(build), getBuildResultsFolder(build));
         saveArtifact(getFirstXltReportFolder(build), getBuildReportFolder(build));
-    }
-
-    private int getAvailablePort(BuildListener listener)
-    {
-        // TODO adjust port range
-        int port = 1024;
-        int maxPort = 65536;
-        DatagramSocket socket;
-        boolean availablePortFound = false;
-
-        while (port < maxPort && availablePortFound == false)
-        {
-            try
-            {
-                socket = new DatagramSocket(port);
-                availablePortFound = true;
-            }
-            catch (SocketException se)
-            {
-                port++;
-            }
-        }
-
-        if (availablePortFound == true)
-        {
-            listener.getLogger().println("Available port found: " + port + "\n");
-        }
-        else
-        {
-            listener.getLogger().println("No port is available!");
-        }
-
-        return port;
     }
 
     private void saveArtifact(File srcFolder, File destFolder) throws IOException
