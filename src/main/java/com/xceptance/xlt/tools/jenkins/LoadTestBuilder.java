@@ -108,7 +108,7 @@ public class LoadTestBuilder extends Builder
 
     public enum CONFIG_PLOT_PARAMETER
     {
-        id, title, buildCount, enabled
+        id, title, buildCount, enabled, showNoValues
     };
 
     public enum CONFIG_SECTIONS_PARAMETER
@@ -321,7 +321,7 @@ public class LoadTestBuilder extends Builder
 
         try
         {
-            int largestBuildCount = 0;
+            int largestBuildCount = -1;
             for (String eachPlotID : getPlotConfigIDs())
             {
                 String buildCountValue = getOptionalPlotConfigValue(eachPlotID, CONFIG_PLOT_PARAMETER.buildCount);
@@ -340,11 +340,13 @@ public class LoadTestBuilder extends Builder
                         LOGGER.error("Build count is not a number (plotID: \"" + eachPlotID + "\")", e);
                     }
                 }
+                else
+                {
+                    largestBuildCount = -1;
+                    break;
+                }
             }
-            if (largestBuildCount < 1)
-            {
-                largestBuildCount = -1;
-            }
+
             List<? extends AbstractBuild<?, ?>> builds = getBuilds(project, 0, largestBuildCount);
             addBuildsToCharts(builds);
         }
@@ -365,14 +367,10 @@ public class LoadTestBuilder extends Builder
     private List<? extends AbstractBuild<?, ?>> getBuilds(AbstractProject<?, ?> project, int startFrom, int count)
     {
         List<? extends AbstractBuild<?, ?>> allBuilds = project.getBuilds();
-        int to = startFrom + count - 1;
+        int to = Math.min(startFrom + count - 1, allBuilds.size());
         if (to < 0)
         {
-            to = 0;
-        }
-        else
-        {
-            to = Math.min(to, allBuilds.size());
+            to = allBuilds.size();
         }
 
         return allBuilds.subList(startFrom, to);
@@ -421,39 +419,41 @@ public class LoadTestBuilder extends Builder
         {
             AbstractBuild<?, ?> eachBuild = builds.get(i);
 
-            Document dataXml = getDataDocument(eachBuild);
-            if (dataXml != null)
+            try
             {
-                try
+                for (String eachPlotID : getPlotConfigIDs())
                 {
-                    for (String eachPlotID : getPlotConfigIDs())
+                    Chart<Integer, Double> chart = getChart(eachPlotID);
+                    if (chart == null)
                     {
-                        Chart<Integer, Double> chart = getChart(eachPlotID);
-                        if (chart == null)
-                        {
-                            LOGGER.warn("No chart found for plotID: " + eachPlotID);
-                            continue;
-                        }
+                        LOGGER.warn("No chart found for plotID: " + eachPlotID);
+                        continue;
+                    }
 
-                        try
+                    try
+                    {
+                        for (String eachCriteriaID : getCriteriaConfigIDs(eachPlotID))
                         {
-                            for (String eachCriteriaID : getCriteriaConfigIDs(eachPlotID))
+                            ChartLine<Integer, Double> line = chart.getLine(eachCriteriaID);
+                            if (line == null)
                             {
-                                ChartLine<Integer, Double> line = chart.getLine(eachCriteriaID);
-                                if (line == null)
-                                {
-                                    LOGGER.warn("No line found for criteria. (criteriaID: \"" + eachCriteriaID + "\" chartID:\"" +
-                                                chart.getChartID() + "\")");
-                                    continue;
-                                }
+                                LOGGER.warn("No line found for criteria. (criteriaID: \"" + eachCriteriaID + "\" chartID:\"" +
+                                            chart.getChartID() + "\")");
+                                continue;
+                            }
 
+                            boolean valueAddedToLine = false;
+                            try
+                            {
+                                String xPath = getCriteriaConfigValue(eachCriteriaID, CONFIG_CRITERIA_PARAMETER.xPath);
                                 try
                                 {
-                                    String xPath = getCriteriaConfigValue(eachCriteriaID, CONFIG_CRITERIA_PARAMETER.xPath);
-                                    try
+                                    Document dataXml = getDataDocument(eachBuild);
+                                    if (dataXml != null)
                                     {
                                         Double number = (Double) XPathFactory.newInstance().newXPath()
                                                                              .evaluate(xPath, dataXml, XPathConstants.NUMBER);
+
                                         if (number.isNaN())
                                         {
                                             LOGGER.warn("Value is not a number. (criteria id: \"" + eachCriteriaID + "\" XPath: \"" +
@@ -462,44 +462,54 @@ public class LoadTestBuilder extends Builder
                                         }
                                         else
                                         {
-                                            ChartLineValue<Integer, Double> lineValue = new ChartLineValue<Integer, Double>(
-                                                                                                                            eachBuild.number,
-                                                                                                                            number.doubleValue());
-
-                                            lineValue.setDataObjectValue("buildNumber", "\"" + eachBuild.number + "\"");
-                                            lineValue.setDataObjectValue("showBuildNumber", "" + showBuildNumber);
-                                            lineValue.setDataObjectValue("buildTime", "\"" + getDateFormat().format(eachBuild.getTime()) +
-                                                                                      "\"");
-                                            line.addLineValue(lineValue);
+                                            addChartLineValue(line, eachBuild, number.doubleValue());
+                                            valueAddedToLine = true;
                                         }
                                     }
-                                    catch (XPathExpressionException e)
+                                    else
                                     {
-                                        LOGGER.error("Invalid XPath. (criteriaID: \"" + eachCriteriaID + "\" XPath: \"" + xPath + "\")", e);
+                                        LOGGER.warn("No test data found for build. (build: \"" + eachBuild.number + "\")");
                                     }
                                 }
-                                catch (JSONException e)
+                                catch (XPathExpressionException e)
                                 {
-                                    LOGGER.error("Failed to config section. (criteriaID: \"" + eachCriteriaID + "\")", e);
+                                    LOGGER.error("Invalid XPath. (criteriaID: \"" + eachCriteriaID + "\" XPath: \"" + xPath + "\")", e);
+                                }
+                            }
+                            catch (JSONException e)
+                            {
+                                LOGGER.error("Failed to config section. (criteriaID: \"" + eachCriteriaID + "\")", e);
+                            }
+                            finally
+                            {
+                                if (!valueAddedToLine && line.getShowNoValues())
+                                {
+                                    addChartLineValue(line, eachBuild, 0);
                                 }
                             }
                         }
-                        catch (JSONException e)
-                        {
-                            LOGGER.error("Failed to config section.", e);
-                        }
+                    }
+                    catch (JSONException e)
+                    {
+                        LOGGER.error("Failed to config section.", e);
                     }
                 }
-                catch (JSONException e)
-                {
-                    LOGGER.error("Failed to config section.", e);
-                }
             }
-            else
+            catch (JSONException e)
             {
-                LOGGER.warn("No test data found for build. (build: \"" + eachBuild.number + "\")");
+                LOGGER.error("Failed to config section.", e);
             }
         }
+    }
+
+    private void addChartLineValue(ChartLine<Integer, Double> chartLine, AbstractBuild<?, ?> build, double dataValue)
+    {
+        ChartLineValue<Integer, Double> lineValue = new ChartLineValue<Integer, Double>(build.number, dataValue);
+
+        lineValue.setDataObjectValue("buildNumber", "\"" + build.number + "\"");
+        lineValue.setDataObjectValue("showBuildNumber", "" + showBuildNumber);
+        lineValue.setDataObjectValue("buildTime", "\"" + getDateFormat().format(build.getTime()) + "\"");
+        chartLine.addLineValue(lineValue);
     }
 
     private Chart<Integer, Double> createChart(String plotID) throws JSONException
@@ -524,6 +534,20 @@ public class LoadTestBuilder extends Builder
             }
         }
 
+        boolean showNoValues = false;
+        String showNoValuesValue = getOptionalPlotConfigValue(plotID, CONFIG_PLOT_PARAMETER.showNoValues);
+        if (showNoValuesValue != null)
+        {
+            if (StringUtils.isNotBlank(showNoValuesValue) && "yes".equals(showNoValuesValue))
+            {
+                showNoValues = true;
+            }
+        }
+        else
+        {
+            LOGGER.warn("Plot config parameter \"showNoValues\" is undefined (plotID: \"" + plotID + "\")");
+        }
+
         Chart<Integer, Double> chart = new Chart<Integer, Double>(plotID, chartTitle);
         for (String eachCriteriaID : getCriteriaConfigIDs(plotID))
         {
@@ -532,7 +556,7 @@ public class LoadTestBuilder extends Builder
             {
                 lineName = "";
             }
-            ChartLine<Integer, Double> line = new ChartLine<Integer, Double>(chart, eachCriteriaID, lineName, maxCount);
+            ChartLine<Integer, Double> line = new ChartLine<Integer, Double>(eachCriteriaID, lineName, maxCount, showNoValues);
             chart.getLines().add(line);
         }
         return chart;

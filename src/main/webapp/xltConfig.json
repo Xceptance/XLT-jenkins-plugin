@@ -34,19 +34,22 @@
             "id": "transactionErrors",
             "title": "Transaction Errors",
             "buildCount": "100",
-            "enabled": "yes"
+            "enabled": "yes",
+            "showNoValues": "no"
         },
         {
             "id": "requestErrors",
             "title": "Request Errors",
             "buildCount": "100",
-            "enabled": "yes"
+            "enabled": "yes",
+            "showNoValues": "no"
         },
         {
             "id": "rqeuestRuntimes",
             "title": "Request Runtimes [ms]",
             "buildCount": "100",
-            "enabled": "yes"
-        }    
+            "enabled": "yes",
+            "showNoValues": "no"
+        }
     ]
 }

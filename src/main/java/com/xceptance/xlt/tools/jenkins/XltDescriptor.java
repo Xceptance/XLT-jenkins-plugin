@@ -259,12 +259,16 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
                         }
                     }
                     String plotEnabled = eachPlot.getString(CONFIG_PLOT_PARAMETER.enabled.name());
-                    if (StringUtils.isNotBlank(plotEnabled))
+                    if (!("yes".equals(plotEnabled) || "no".equals(plotEnabled)))
                     {
-                        if (!("yes".equals(plotEnabled) || "no".equals(plotEnabled)))
-                        {
-                            return FormValidation.error("Invalid value for plot enabled. Only yes or no is allowed. (plot id: " + id + ")");
-                        }
+                        return FormValidation.error("Invalid value for plot enabled. Only yes or no is allowed. (plot id: " + id + ")");
+                    }
+
+                    String showNoValues = eachPlot.getString(CONFIG_PLOT_PARAMETER.showNoValues.name());
+                    if (!("yes".equals(showNoValues) || "no".equals(showNoValues)))
+                    {
+                        return FormValidation.error("Invalid value for plot parameter \"showNoValues\". Only yes or no is allowed. (plot id: " +
+                                                    id + ")");
                     }
                 }
                 catch (JSONException e)

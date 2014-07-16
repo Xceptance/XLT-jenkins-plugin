@@ -1,7 +1,184 @@
-<html>
-	<body>
+<style>
+	.syntax-section{
+		border-style: solid;
+		border-width: thin;
+		border-color: #ccccff;
+		background-color: #eeeeff;
+	}
+</style>
+
+<div>
+	<div>
 		<p>
-			Some help here...
+			This configuration allows you to define the plot values and the success condition. If one success condition does not match the results then the build step will become unstable. If empty then the default configuration will be used.
 		</p>
-	</body>
-</html>
+		
+		<hr>	
+		<p>
+			The syntax of the configuration is JSON and has the following structure.
+		</p>
+		<div class="syntax-section">
+			First we have a JSONObject with a criteria and a plots field.	
+			<br>	
+			<div style="margin-left:50px">
+				<br>	
+				<b>criteria</b>  - A JSONArray that contains JSONObjects where each object represents a single criteria configuration.
+				<br>
+				<b>plots</b> - A JSONArray that contains JSONObjects where each object represents a single plot configuration.
+			</div>
+			<br>		
+			<b><u>Example:</u></b>
+			<pre>
+			
+  {
+    "criteria":[],
+    "plots":[]
+  }
+  
+			</pre>	
+		</div>
+	</div>
+	<br>
+	<div>
+		<h3>
+			Criteria Configuration
+		</h3>
+		<div class="syntax-section">
+			The criteria section is an JSONArray which contains JSONObjects	where each object represents a single criteria configuration. A criteria configuration provides information about where the criteria values can be found,the success criteria, where to plot the value and its name.
+			<br><br>
+			A criteria configuration consists of the following fields:
+			<br>	
+			<div style="margin-left:50px">
+				<br>	
+				<b>id</b>  - A unique identifier for the criteria configuration. 
+				<br>
+				<b>xPath</b> - A X-Path locator to retrieve a single value from the testreport.xml
+				<br>
+				<b>condition</b> - A X-Path expression that will be appended to the xPath to act as success validator. Can be empty if it should just plot the value. 
+				<br>
+				<b>plotID</b> - The id of the plot configuration that will plot the values retrieved by the xPath. Can be empty if this should just validate the value. 
+				<br>
+				<b>name</b> - A label for this criteria configuration. Will be used as label at the charts legend and value tool tip.
+			</div>
+			<br>		
+			<b><u>Example:</u></b>
+			<pre>
+
+  {
+    "id": "fooBarID",
+    "xPath": "/foo/bar/baz",
+    "condition": "[number() < 10000]",
+    "plotID": "fooBar",
+    "name": "fooBarName"
+  }
+  
+			</pre>	
+		</div>
+	</div>
+	<br>
+	<div>
+		<h3>
+			Plot Configuration
+		</h3>
+		<div class="syntax-section">
+			The plot section is an JSONArray which contains JSONObjects	where each object represents a single plot configuration.
+			For each plot configuration there will be a chart shown at the projects main view.
+			<br><br>
+			A plot configuration consists of the following fields:
+			<br>	
+			<div style="margin-left:50px">
+				<br>	
+				<b>id</b>  - A Unique identifier for the plot configuration and refered by a criteria configuration. 
+				<br>
+				<b>title</b> - A text that will be shown above the chart.
+				<br>
+				<b>buildCount</b> - The number of previous builds to create the chart for. If empty then all builds will be used. 
+				<br>
+				<b>enabled</b> - Can be "yes" or "no". If set to "yes" then the chart will be visible otherwise it will be not.
+				<br>
+				<b>showNoValues</b> - Can be "yes" or "no". If set to "yes" then also builds without results or a valid value will be shown as data point in the charts with a value of 0. Otherwise only builds with valid values will be visible in the charts. There are many reasons why no value is available for a build. For example if the build was aborted or there was an error when creating the results or the value could not be retrieved because the xPath is not valid and so on.  								  				
+			</div>
+			<br>		
+			<b><u>Example:</u></b>
+			<pre>
+
+  {
+    "id": "fooBar",
+    "title": "fooBarTitle",
+    "buildCount": "10",
+    "enabled": "yes",
+    "showNoValues": "no"
+  }  
+  
+			</pre>	
+		</div>
+	</div>
+	
+	
+	<hr>	
+	<h2><u>Example</u></h2>	
+	<pre>
+{
+    "criteria": [
+        {
+            "id": "requestsMax",
+            "xPath": "/testreport/summary/requests/max",
+            "condition": "[number() < 10000]",
+            "plotID": "summary",
+            "name": "max(ms)"
+        },
+        {
+            "id": "requestsMean",
+            "xPath": "/testreport/summary/requests/mean",
+            "condition": "",
+            "plotID": "summary",
+            "name": "mean(ms)"
+        },
+        {
+            "id": "requestErrors",
+            "xPath": "/testreport/summary/requests/errors",
+            "condition": "[number() = 0]",
+            "plotID": "requestErrors",
+            "name": "count"
+        },
+        {
+            "id": "homepageMax",
+            "xPath": "/testreport/actions/action[./name[text() = 'Homepage']]/max",
+            "condition": "[number() < 1000]",
+            "plotID": "homepage",
+            "name": "max(ms)"
+        },
+        {
+            "id": "homepageMean",
+            "xPath": "/testreport/actions/action[./name[text() = 'Homepage']]/mean",
+            "condition": "",
+            "plotID": "homepage",
+            "name": "mean"
+        }
+    ],
+    "plots": [
+        {
+            "id": "summary",
+            "title": "Requests",
+            "buildCount": "10",
+            "enabled": "yes",
+            "showNoValues": "yes"
+        },    
+        {
+            "id": "requestErrors",
+            "title": "Request Errors",
+            "buildCount": "10",
+            "enabled": "yes",
+            "showNoValues": "no"
+        },
+        {
+            "id": "homepage",
+            "title": "Homepage",
+            "buildCount": "10",
+            "enabled": "yes",
+            "showNoValues": "no"
+        }
+    ]
+}
+</pre>
+</div>

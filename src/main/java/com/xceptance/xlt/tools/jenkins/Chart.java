@@ -66,7 +66,7 @@ public class Chart<X, Y>
     {
         List<X> processedValues = new ArrayList<X>();
 
-        String data = "[";
+        String data = "{";
         for (ChartLine<X, Y> eachLine : lines)
         {
             Iterator<ChartLineValue<X, Y>> iterator = eachLine.getValues().iterator();
@@ -77,7 +77,7 @@ public class Chart<X, Y>
                 {
                     processedValues.add(value.xValue);
 
-                    data += "{" + value.getDataObjectValues() + "}";
+                    data += "\""+value.index+"\":{" + value.getDataObjectValues() + "}";
                     if (iterator.hasNext())
                     {
                         data += ",";
@@ -85,7 +85,7 @@ public class Chart<X, Y>
                 }
             }
         }
-        data += "]";
+        data += "}";
         return data;
     }
 
@@ -99,15 +99,17 @@ public class Chart<X, Y>
         private int maxCount;
 
         private String name;
+        
+        private int indexCounter = 0;
+        
+        private boolean showNoValues;
 
-        private Chart<X, Y> chart;
-
-        public ChartLine(Chart<X, Y> chart, String lineID, String name, int maxCount)
+        public ChartLine(String lineID, String name, int maxCount, boolean showNoValues)
         {
-            this.chart = chart;
             this.lineID = lineID;
             this.maxCount = maxCount;
             this.name = name;
+            this.showNoValues = showNoValues;
         }
 
         public String getLineID()
@@ -118,6 +120,11 @@ public class Chart<X, Y>
         public int getMaxCount()
         {
             return maxCount;
+        }
+        
+        public boolean getShowNoValues()
+        {
+            return showNoValues;
         }
 
         public String getDataString(String toolTipFormatter)
@@ -137,8 +144,11 @@ public class Chart<X, Y>
             data += "],";
 
             String mouse = "mouse:{";
-            mouse += "trackFormatter:function(o){ var xData = " + chart.getXData() + "; return (" + toolTipFormatter + ")(\"" + name +
-                     "\", o, xData);},";
+            mouse += "trackFormatter:function(o){ return (" + toolTipFormatter + ")(\"" + name +
+                "\", o, xData);},";
+
+//            mouse += "trackFormatter:function(o){ var xData = " + chart.getXData() + "; return (" + toolTipFormatter + ")(\"" + name +
+//                     "\", o, xData);},";
             mouse += "},";
 
             String label = "label:\"" + name + "\",";
@@ -162,8 +172,9 @@ public class Chart<X, Y>
             {
                 values.remove(0);
                 values.add(value);
-            }
-            value.index = values.size() - 1;
+            }            
+            value.index = indexCounter;
+            indexCounter += 1;
         }
     }
 
