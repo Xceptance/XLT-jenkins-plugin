@@ -18,7 +18,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import javax.servlet.ServletException;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 
@@ -30,7 +29,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.kohsuke.stapler.QueryParameter;
 
-import com.xceptance.xlt.tools.jenkins.LoadTestBuilder.CONFIG_CRITERIA_PARAMETER;
+import com.xceptance.xlt.tools.jenkins.LoadTestBuilder.CONFIG_VALUE_PARAMETER;
 import com.xceptance.xlt.tools.jenkins.LoadTestBuilder.CONFIG_PLOT_PARAMETER;
 import com.xceptance.xlt.tools.jenkins.LoadTestBuilder.CONFIG_SECTIONS_PARAMETER;
 
@@ -47,9 +46,20 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
         load();
     }
 
-    public File getXltConfigFile() throws URISyntaxException
+    @Override
+    public boolean isApplicable(Class<? extends AbstractProject> aClass)
     {
-        return new File(new File(Jenkins.getInstance().getPlugin("xlt-jenkins").getWrapper().baseResourceURL.toURI()), "xltConfig.json");
+        // Indicates that this builder can be used with all kinds of project types
+        return true;
+    }
+
+    /**
+     * This human readable name is used in the configuration screen.
+     */
+    @Override
+    public String getDisplayName()
+    {
+        return "Run a load test with XLT";
     }
 
     public String getDefaultXltConfig()
@@ -67,6 +77,11 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
             LoadTestBuilder.LOGGER.error("", e);
         }
         return null;
+    }
+
+    private File getXltConfigFile() throws URISyntaxException
+    {
+        return new File(new File(Jenkins.getInstance().getPlugin("xlt-jenkins").getWrapper().baseResourceURL.toURI()), "xltConfig.json");
     }
 
     public int getDefaultPlotWidth()
@@ -91,12 +106,12 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
 
     public boolean getDefaultCreateTrendReport()
     {
-        return true;
+        return false;
     }
 
     public boolean getDefaultCreateSummaryReport()
     {
-        return true;
+        return false;
     }
 
     public int getDefaultNumberOfBuildsForTrendReport()
@@ -106,20 +121,21 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
 
     public int getDefaultNumberOfBuildsForSummaryReport()
     {
-        return 50;
+        return 5;
     }
 
     /**
      * Performs on-the-fly validation of the form field 'testProperties'.
      */
-    public FormValidation doCheckTestProperties(@QueryParameter String value) throws IOException, ServletException
-    {
-        if (StringUtils.isBlank(value))
-        {
-            return FormValidation.warning("Please specify test configuration!");
-        }
-        return FormValidation.ok();
-    }
+    // public FormValidation doCheckTestPropertiesFile(@QueryParameter String value) throws IOException,
+    // ServletException
+    // {
+    // if (StringUtils.isNotBlank(value))
+    // {
+    // return FormValidation.warning("Please specify test configuration!");
+    // }
+    // return FormValidation.ok();
+    // }
 
     /**
      * Performs on-the-fly validation of the form field 'machineHost'.
@@ -163,25 +179,25 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
 
         try
         {
-            List<String> criteriaIDs = new ArrayList<String>();
-            Map<String, String> criteriaPlotIDs = new HashMap<String, String>();
-            JSONArray validCriterias = validConfig.getJSONArray(CONFIG_SECTIONS_PARAMETER.criteria.name());
-            for (int i = 0; i < validCriterias.length(); i++)
+            List<String> valueIDs = new ArrayList<String>();
+            Map<String, String> valuePlotIDs = new HashMap<String, String>();
+            JSONArray validValues = validConfig.getJSONArray(CONFIG_SECTIONS_PARAMETER.values.name());
+            for (int i = 0; i < validValues.length(); i++)
             {
-                JSONObject eachCriteria = validCriterias.optJSONObject(i);
+                JSONObject eachValue = validValues.optJSONObject(i);
                 String id = null;
                 try
                 {
-                    id = eachCriteria.getString(CONFIG_CRITERIA_PARAMETER.id.name());
+                    id = eachValue.getString(CONFIG_VALUE_PARAMETER.id.name());
                     if (StringUtils.isBlank(id))
-                        return FormValidation.error("Criteria id is empty. (criteria index: " + i + ")");
-                    if (criteriaIDs.contains(id))
-                        return FormValidation.error("Criteria id already exists. (criteria id: " + id + ")");
-                    criteriaIDs.add(id);
+                        return FormValidation.error("Value id is empty. (value index: " + i + ")");
+                    if (valueIDs.contains(id))
+                        return FormValidation.error("value id already exists. (value id: " + id + ")");
+                    valueIDs.add(id);
 
-                    String path = eachCriteria.getString(CONFIG_CRITERIA_PARAMETER.xPath.name());
+                    String path = eachValue.getString(CONFIG_VALUE_PARAMETER.xPath.name());
                     if (StringUtils.isBlank(path))
-                        return FormValidation.error("Criteria xPath is empty. (criteria id: " + id + ")");
+                        return FormValidation.error("Value xPath is empty. (value id: " + id + ")");
 
                     try
                     {
@@ -189,10 +205,10 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
                     }
                     catch (XPathExpressionException e)
                     {
-                        return FormValidation.error(e, "Invalid xPath. (criteria id:" + id + ")");
+                        return FormValidation.error(e, "Invalid xPath. (value id:" + id + ")");
                     }
 
-                    String condition = eachCriteria.getString(CONFIG_CRITERIA_PARAMETER.condition.name());
+                    String condition = eachValue.getString(CONFIG_VALUE_PARAMETER.condition.name());
                     if (StringUtils.isNotBlank(condition))
                     {
                         try
@@ -201,22 +217,22 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
                         }
                         catch (XPathExpressionException e)
                         {
-                            return FormValidation.error(e, "Condition does not form a valid xPath. (criteria id:" + id + ")");
+                            return FormValidation.error(e, "Condition does not form a valid xPath. (value id:" + id + ")");
                         }
                     }
 
-                    String criteriaPlotID = eachCriteria.getString(CONFIG_CRITERIA_PARAMETER.plotID.name());
-                    if (StringUtils.isNotBlank(criteriaPlotID))
+                    String valuePlotID = eachValue.getString(CONFIG_VALUE_PARAMETER.plotID.name());
+                    if (StringUtils.isNotBlank(valuePlotID))
                     {
-                        criteriaPlotIDs.put(id, criteriaPlotID);
+                        valuePlotIDs.put(id, valuePlotID);
                     }
 
-                    eachCriteria.getString(CONFIG_CRITERIA_PARAMETER.name.name());
+                    eachValue.getString(CONFIG_VALUE_PARAMETER.name.name());
                 }
                 catch (JSONException e)
                 {
-                    return FormValidation.error(e, "Missing criteria JSON section. (criteria index: " + i + " " +
-                                                   (id != null ? ("criteria id: " + id) : "") + ")");
+                    return FormValidation.error(e, "Missing value JSON section. (value index: " + i + " " +
+                                                   (id != null ? ("value id: " + id) : "") + ")");
                 }
             }
 
@@ -278,11 +294,11 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
                 }
             }
 
-            for (Entry<String, String> eachEntry : criteriaPlotIDs.entrySet())
+            for (Entry<String, String> eachEntry : valuePlotIDs.entrySet())
             {
                 if (!plotIDs.contains(eachEntry.getValue()))
                 {
-                    return FormValidation.error("Missing plot config for plot id:" + eachEntry.getValue() + " at criteria id: " +
+                    return FormValidation.error("Missing plot config for plot id:" + eachEntry.getValue() + " at value id: " +
                                                 eachEntry.getKey() + ".");
                 }
             }
@@ -362,15 +378,15 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
         return FormValidation.ok("Preview: " + format.format(new Date()));
     }
 
-    public FormValidation doCheckXltTemplate(@QueryParameter String value)
+    public FormValidation doCheckXltTemplateDir(@QueryParameter String value)
     {
         return doCheckDirectory(value);
     }
 
-    public FormValidation doCheckAgentControllerUrlFile(@QueryParameter String value)
-    {
-        return doCheckFile(value);
-    }
+    // public FormValidation doCheckAgentControllerUrlFile(@QueryParameter String value)
+    // {
+    // return doCheckFile(value);
+    // }
 
     // public FormValidation doCheckTestPropertiesFile(@QueryParameter String value)
     // {
@@ -379,7 +395,7 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
 
     private FormValidation doCheckFile(String value)
     {
-        if (value == null || !new File(value).isFile())
+        if (StringUtils.isBlank(value) || !new File(value).isFile())
         {
             return FormValidation.error("The specified file does not exist (yet).");
         }
@@ -388,26 +404,10 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
 
     private FormValidation doCheckDirectory(String value)
     {
-        if (value == null || !new File(value).isDirectory())
+        if (StringUtils.isBlank(value) || !new File(value).isDirectory())
         {
             return FormValidation.error("The specified directory does not exist (yet).");
         }
         return FormValidation.ok();
-    }
-
-    @Override
-    public boolean isApplicable(Class<? extends AbstractProject> aClass)
-    {
-        // Indicates that this builder can be used with all kinds of project types
-        return true;
-    }
-
-    /**
-     * This human readable name is used in the configuration screen.
-     */
-    @Override
-    public String getDisplayName()
-    {
-        return "Run a load test with XLT";
     }
 }

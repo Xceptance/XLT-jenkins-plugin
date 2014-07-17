@@ -63,7 +63,7 @@ public class LoadTestBuilder extends Builder
 
     private final String xltConfig;
 
-    private final String xltTemplate;
+    private final String xltTemplateDir;
 
     transient private JSONObject config = new JSONObject();
 
@@ -99,7 +99,7 @@ public class LoadTestBuilder extends Builder
 
     transient private XltChartAction chartAction;
 
-    public enum CONFIG_CRITERIA_PARAMETER
+    public enum CONFIG_VALUE_PARAMETER
     {
         id, xPath, condition, plotID, name
     };
@@ -111,7 +111,7 @@ public class LoadTestBuilder extends Builder
 
     public enum CONFIG_SECTIONS_PARAMETER
     {
-        criteria, plots
+        values, plots
     };
 
     static
@@ -135,7 +135,7 @@ public class LoadTestBuilder extends Builder
     }
 
     @DataBoundConstructor
-    public LoadTestBuilder(String xltTemplate, String testPropertiesFile, String xltConfig, int plotWidth, int plotHeight,
+    public LoadTestBuilder(String xltTemplateDir, String testPropertiesFile, String xltConfig, int plotWidth, int plotHeight,
                            String plotTitle, String builderID, boolean isPlotVertical, boolean createTrendReport,
                            int numberOfBuildsForTrendReport, boolean createSummaryReport, int numberOfBuildsForSummaryReport,
                            AgentControllerConfig agentControllerConfig, String timeFormatPattern, boolean showBuildNumber)
@@ -150,7 +150,7 @@ public class LoadTestBuilder extends Builder
         });
 
         // load test configuration
-        this.xltTemplate = StringUtils.defaultIfBlank(xltTemplate, null);
+        this.xltTemplateDir = StringUtils.defaultIfBlank(xltTemplateDir, null);
         this.testPropertiesFile = StringUtils.defaultIfBlank(testPropertiesFile, null);
         this.agentControllerConfig = (agentControllerConfig != null) ? agentControllerConfig : new AgentControllerConfig();
 
@@ -224,9 +224,9 @@ public class LoadTestBuilder extends Builder
         return xltConfig;
     }
 
-    public String getXltTemplate()
+    public String getXltTemplateDir()
     {
-        return xltTemplate;
+        return xltTemplateDir;
     }
 
     public String getTimeFormatPattern()
@@ -430,12 +430,12 @@ public class LoadTestBuilder extends Builder
 
                     try
                     {
-                        for (String eachCriteriaID : getCriteriaConfigIDs(eachPlotID))
+                        for (String eachValueID : getValueConfigIDs(eachPlotID))
                         {
-                            ChartLine<Integer, Double> line = chart.getLine(eachCriteriaID);
+                            ChartLine<Integer, Double> line = chart.getLine(eachValueID);
                             if (line == null)
                             {
-                                LOGGER.warn("No line found for criteria. (criteriaID: \"" + eachCriteriaID + "\" chartID:\"" +
+                                LOGGER.warn("No line found for value. (valueID: \"" + eachValueID + "\" chartID:\"" +
                                             chart.getChartID() + "\")");
                                 continue;
                             }
@@ -443,7 +443,7 @@ public class LoadTestBuilder extends Builder
                             boolean valueAddedToLine = false;
                             try
                             {
-                                String xPath = getCriteriaConfigValue(eachCriteriaID, CONFIG_CRITERIA_PARAMETER.xPath);
+                                String xPath = getvalueConfigValue(eachValueID, CONFIG_VALUE_PARAMETER.xPath);
                                 try
                                 {
                                     Document dataXml = getDataDocument(eachBuild);
@@ -454,7 +454,7 @@ public class LoadTestBuilder extends Builder
 
                                         if (number.isNaN())
                                         {
-                                            LOGGER.warn("Value is not a number. (criteria id: \"" + eachCriteriaID + "\" XPath: \"" +
+                                            LOGGER.warn("Value is not a number. (value id: \"" + eachValueID + "\" XPath: \"" +
                                                         xPath + "\"");
                                             continue;
                                         }
@@ -471,12 +471,12 @@ public class LoadTestBuilder extends Builder
                                 }
                                 catch (XPathExpressionException e)
                                 {
-                                    LOGGER.error("Invalid XPath. (criteriaID: \"" + eachCriteriaID + "\" XPath: \"" + xPath + "\")", e);
+                                    LOGGER.error("Invalid XPath. (valueID: \"" + eachValueID + "\" XPath: \"" + xPath + "\")", e);
                                 }
                             }
                             catch (JSONException e)
                             {
-                                LOGGER.error("Failed to config section. (criteriaID: \"" + eachCriteriaID + "\")", e);
+                                LOGGER.error("Failed to config section. (valueID: \"" + eachValueID + "\")", e);
                             }
                             finally
                             {
@@ -547,14 +547,14 @@ public class LoadTestBuilder extends Builder
         }
 
         Chart<Integer, Double> chart = new Chart<Integer, Double>(plotID, chartTitle);
-        for (String eachCriteriaID : getCriteriaConfigIDs(plotID))
+        for (String eachValueID : getValueConfigIDs(plotID))
         {
-            String lineName = getOptionalCriteriaConfigValue(eachCriteriaID, CONFIG_CRITERIA_PARAMETER.name);
+            String lineName = getOptionalValueConfigValue(eachValueID, CONFIG_VALUE_PARAMETER.name);
             if (lineName == null)
             {
                 lineName = "";
             }
-            ChartLine<Integer, Double> line = new ChartLine<Integer, Double>(eachCriteriaID, lineName, maxCount, showNoValues);
+            ChartLine<Integer, Double> line = new ChartLine<Integer, Double>(eachValueID, lineName, maxCount, showNoValues);
             chart.getLines().add(line);
         }
         return chart;
@@ -616,13 +616,13 @@ public class LoadTestBuilder extends Builder
         }
     }
 
-    private String getCriteriaConfigValue(String configName, CONFIG_CRITERIA_PARAMETER parameter) throws JSONException
+    private String getvalueConfigValue(String configName, CONFIG_VALUE_PARAMETER parameter) throws JSONException
     {
-        JSONArray criteriaArray = config.getJSONArray(CONFIG_SECTIONS_PARAMETER.criteria.name());
-        for (int i = 0; i < criteriaArray.length(); i++)
+        JSONArray valueArray = config.getJSONArray(CONFIG_SECTIONS_PARAMETER.values.name());
+        for (int i = 0; i < valueArray.length(); i++)
         {
-            JSONObject each = criteriaArray.getJSONObject(i);
-            if (configName.equals(each.getString(CONFIG_CRITERIA_PARAMETER.id.name())))
+            JSONObject each = valueArray.getJSONObject(i);
+            if (configName.equals(each.getString(CONFIG_VALUE_PARAMETER.id.name())))
             {
                 return each.getString(parameter.name());
             }
@@ -630,11 +630,11 @@ public class LoadTestBuilder extends Builder
         return null;
     }
 
-    private String getOptionalCriteriaConfigValue(String configName, CONFIG_CRITERIA_PARAMETER parameter)
+    private String getOptionalValueConfigValue(String configName, CONFIG_VALUE_PARAMETER parameter)
     {
         try
         {
-            return getCriteriaConfigValue(configName, parameter);
+            return getvalueConfigValue(configName, parameter);
         }
         catch (JSONException e)
         {
@@ -670,49 +670,49 @@ public class LoadTestBuilder extends Builder
         return null;
     }
 
-    private ArrayList<String> getCriteriaConfigIDs() throws JSONException
+    private ArrayList<String> getValueConfigIDs() throws JSONException
     {
-        ArrayList<String> criteriaList = new ArrayList<String>();
+        ArrayList<String> valueList = new ArrayList<String>();
 
         if (config != null)
         {
-            JSONArray criteriaSection = config.getJSONArray(CONFIG_SECTIONS_PARAMETER.criteria.name());
-            for (int i = 0; i < criteriaSection.length(); i++)
+            JSONArray valuesSection = config.getJSONArray(CONFIG_SECTIONS_PARAMETER.values.name());
+            for (int i = 0; i < valuesSection.length(); i++)
             {
-                JSONObject each = criteriaSection.getJSONObject(i);
-                criteriaList.add(each.getString(CONFIG_CRITERIA_PARAMETER.id.name()));
+                JSONObject each = valuesSection.getJSONObject(i);
+                valueList.add(each.getString(CONFIG_VALUE_PARAMETER.id.name()));
             }
         }
-        return criteriaList;
+        return valueList;
     }
 
-    private ArrayList<String> getCriteriaConfigIDs(String plotID) throws JSONException
+    private ArrayList<String> getValueConfigIDs(String plotID) throws JSONException
     {
-        ArrayList<String> criteriaList = new ArrayList<String>();
+        ArrayList<String> valueList = new ArrayList<String>();
 
-        JSONArray criteriaSection = config.getJSONArray(CONFIG_SECTIONS_PARAMETER.criteria.name());
-        for (int i = 0; i < criteriaSection.length(); i++)
+        JSONArray valuesSection = config.getJSONArray(CONFIG_SECTIONS_PARAMETER.values.name());
+        for (int i = 0; i < valuesSection.length(); i++)
         {
-            String criteriaID = null;
+            String valueID = null;
             try
             {
-                JSONObject each = criteriaSection.getJSONObject(i);
-                criteriaID = each.getString(CONFIG_CRITERIA_PARAMETER.id.name());
-                if (plotID.equals(each.getString(CONFIG_CRITERIA_PARAMETER.plotID.name())))
+                JSONObject each = valuesSection.getJSONObject(i);
+                valueID = each.getString(CONFIG_VALUE_PARAMETER.id.name());
+                if (plotID.equals(each.getString(CONFIG_VALUE_PARAMETER.plotID.name())))
                 {
-                    criteriaList.add(criteriaID);
+                    valueList.add(valueID);
                 }
             }
             catch (JSONException e)
             {
                 String message = "";
-                if (criteriaID != null)
-                    message = "criteriaID: \"" + criteriaID + "\"";
+                if (valueID != null)
+                    message = "valueID: \"" + valueID + "\"";
 
-                LOGGER.error("Failed to get plot id for criteria. (index: " + i + " " + message + ")", e);
+                LOGGER.error("Failed to get plot id for value. (index: " + i + " " + message + ")", e);
             }
         }
-        return criteriaList;
+        return valueList;
     }
 
     private ArrayList<String> getPlotConfigIDs() throws JSONException
@@ -848,7 +848,7 @@ public class LoadTestBuilder extends Builder
         {
             try
             {
-                List<String> criteriaIDs = getCriteriaConfigIDs();
+                List<String> criteriaIDs = getValueConfigIDs();
                 for (String eachID : criteriaIDs)
                 {
                     listener.getLogger().println();
@@ -857,8 +857,8 @@ public class LoadTestBuilder extends Builder
                     String condition = null;
                     try
                     {
-                        xPath = getCriteriaConfigValue(eachID, CONFIG_CRITERIA_PARAMETER.xPath);
-                        condition = getOptionalCriteriaConfigValue(eachID, CONFIG_CRITERIA_PARAMETER.condition);
+                        xPath = getvalueConfigValue(eachID, CONFIG_VALUE_PARAMETER.xPath);
+                        condition = getOptionalValueConfigValue(eachID, CONFIG_VALUE_PARAMETER.condition);
                         if (StringUtils.isBlank(condition))
                         {
                             LOGGER.debug("No condition for criteria. (criteriaID: \"" + eachID + "\")");
@@ -1092,13 +1092,13 @@ public class LoadTestBuilder extends Builder
         listener.getLogger().println("-----------------------------------------------------------------\nCopying XLT ...\n");
 
         // the directory with the XLT template installation
-        if (StringUtils.isBlank(getXltTemplate()))
+        if (StringUtils.isBlank(getXltTemplateDir()))
         {
             LOGGER.error("Path to xlt not set.");
             throw new IllegalStateException("Path to xlt not set.");
         }
 
-        File srcDir = new File(getXltTemplate());
+        File srcDir = new File(getXltTemplateDir());
         listener.getLogger().println("XLT template directory: " + srcDir.getAbsolutePath());
 
         // the target directory in the project folder

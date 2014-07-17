@@ -2,7 +2,7 @@
     xmlns:f="/lib/form">
 
     <f:section title="XLT Configuration">
-        <f:entry title="Path to XLT Template" field="xltTemplate">
+        <f:entry title="Path to XLT Template" field="xltTemplateDir">
             <f:textbox/>
         </f:entry>
     </f:section>
@@ -33,7 +33,7 @@
         </f:entry>
     </f:section>
 
-    <f:section title="Report Options">
+    <f:section title="Report Configuration">
         <f:entry title="Create Trend Report" field="createTrendReport">
             <f:checkbox field="createTrendReport" default="${descriptor.getDefaultCreateTrendReport()}"
                 title="Create a trend report from the results of the last n builds (see below)."/>

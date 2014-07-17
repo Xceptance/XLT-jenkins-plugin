@@ -1,5 +1,5 @@
 {
-    "criteria": [
+    "values": [
         {
             "id": "transactionErrors",
             "xPath": "/testreport/summary/transactions/errors",
@@ -18,14 +18,14 @@
             "id": "requestsMax",
             "xPath": "/testreport/summary/requests/max",
             "condition": "[number() < 10000]",
-            "plotID": "rqeuestRuntimes",
+            "plotID": "requestRuntimes",
             "name": "Max"
         },
         {
             "id": "requestsMean",
             "xPath": "/testreport/summary/requests/mean",
             "condition": "",
-            "plotID": "rqeuestRuntimes",
+            "plotID": "requestRuntimes",
             "name": "Mean"
         }
     ],
@@ -45,7 +45,7 @@
             "showNoValues": "no"
         },
         {
-            "id": "rqeuestRuntimes",
+            "id": "requestRuntimes",
             "title": "Request Runtimes [ms]",
             "buildCount": "100",
             "enabled": "yes",
