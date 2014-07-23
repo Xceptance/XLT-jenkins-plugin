@@ -9,7 +9,7 @@
     </parent>
 
     <groupId>com.xceptance</groupId>
-    <artifactId>xlt-jenkins</artifactId>
+    <artifactId>xlt-jenkins-plugin</artifactId>
     <version>1.0.0</version>
     <packaging>hpi</packaging>
     <name>XLT Plugin</name>

@@ -37,6 +37,11 @@ import com.xceptance.xlt.tools.jenkins.LoadTestBuilder.CONFIG_SECTIONS_PARAMETER
 public class XltDescriptor extends BuildStepDescriptor<Builder>
 {
     /**
+     * The plug-in's name, i.e. the name of the HPI file.
+     */
+    public static final String PLUGIN_NAME = "xlt-jenkins-plugin";
+
+    /**
      * In order to load the persisted global configuration, you have to call load() in the constructor.
      */
     public XltDescriptor()
@@ -81,7 +86,7 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
 
     private File getXltConfigFile() throws URISyntaxException
     {
-        return new File(new File(Jenkins.getInstance().getPlugin("xlt-jenkins").getWrapper().baseResourceURL.toURI()), "xltConfig.json");
+        return new File(new File(Jenkins.getInstance().getPlugin(PLUGIN_NAME).getWrapper().baseResourceURL.toURI()), "xltConfig.json");
     }
 
     public int getDefaultPlotWidth()

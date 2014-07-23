@@ -118,7 +118,7 @@ public class LoadTestBuilder extends Builder
     {
         try
         {
-            File logFile = new File(new File(Jenkins.getInstance().getPlugin("xlt-jenkins").getWrapper().baseResourceURL.toURI()),
+            File logFile = new File(new File(Jenkins.getInstance().getPlugin(XltDescriptor.PLUGIN_NAME).getWrapper().baseResourceURL.toURI()),
                                     "xltPlugin.log");
             LOGGER.addAppender(new FileAppender(
                                                 new PatternLayout("%d{yyyy-MMM-dd} : %d{HH:mm:ss,SSS} | [%t] %p %C.%M line:%L | %x - %m%n"),
