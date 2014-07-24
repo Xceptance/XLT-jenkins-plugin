@@ -204,7 +204,7 @@ public class LoadTestBuilder extends Builder
         return parseAgentControllerUrls(fileContent);
     }
 
-    private String[] parseAgentControllerUrls(String agentControllerUrls)
+    static String[] parseAgentControllerUrls(String agentControllerUrls)
     {
         return StringUtils.split(agentControllerUrls, "\r\n\t|,; ");
     }
