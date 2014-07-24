@@ -22,7 +22,7 @@
     </f:block>
 
     <f:entry title="Load Test Configuration File" field="testPropertiesFile">
-        <f:textbox default="test.properties"/>
+        <f:textbox/>
     </f:entry>
 
     <f:entry title="Agent Controller Configuration">
