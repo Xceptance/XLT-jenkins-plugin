@@ -17,6 +17,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
@@ -29,9 +31,9 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.kohsuke.stapler.QueryParameter;
 
-import com.xceptance.xlt.tools.jenkins.LoadTestBuilder.CONFIG_VALUE_PARAMETER;
 import com.xceptance.xlt.tools.jenkins.LoadTestBuilder.CONFIG_PLOT_PARAMETER;
 import com.xceptance.xlt.tools.jenkins.LoadTestBuilder.CONFIG_SECTIONS_PARAMETER;
+import com.xceptance.xlt.tools.jenkins.LoadTestBuilder.CONFIG_VALUE_PARAMETER;
 
 @Extension
 public class XltDescriptor extends BuildStepDescriptor<Builder>
@@ -130,39 +132,55 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
     }
 
     /**
-     * Performs on-the-fly validation of the form field 'testProperties'.
+     * Performs on-the-fly validation of the form field 'testPropertiesFile'.
      */
-    // public FormValidation doCheckTestPropertiesFile(@QueryParameter String value) throws IOException,
-    // ServletException
-    // {
-    // if (StringUtils.isNotBlank(value))
-    // {
-    // return FormValidation.warning("Please specify test configuration!");
-    // }
-    // return FormValidation.ok();
-    // }
-
-    /**
-     * Performs on-the-fly validation of the form field 'machineHost'.
-     */
-    // public FormValidation doCheckAgentControllerUrlList(@QueryParameter String value) throws IOException,
-    // ServletException
+    // public FormValidation doCheckTestPropertiesFile(@QueryParameter String value)
     // {
     // if (StringUtils.isBlank(value))
     // {
-    // return FormValidation.error("-embedded is enabled");
-    // }
-    //
-    // String regex = "^https://.*";
-    // Pattern p = Pattern.compile(regex);
-    // Matcher matcher = p.matcher(value);
-    // if (!matcher.find())
-    // {
-    // return FormValidation.error("invalid host-url");
-    // }
-    //
     // return FormValidation.ok();
     // }
+    // else
+    // {
+    // return doCheckFile(value);
+    // }
+    // }
+
+    /**
+     * Performs on-the-fly validation of the form field 'urlList'.
+     */
+    public FormValidation doCheckUrlList(@QueryParameter String value)
+    {
+        if (StringUtils.isBlank(value))
+        {
+            return FormValidation.validateRequired(value);
+        }
+
+        // create a check pattern
+        String regex = "^https://([a-z\\d\\.-]+?)(:\\d+)?$";
+        Pattern p = Pattern.compile(regex);
+
+        // test each URL
+        String[] urls = LoadTestBuilder.parseAgentControllerUrls(value);
+        for (String url : urls)
+        {
+            Matcher matcher = p.matcher(url);
+            if (!matcher.matches())
+            {
+                return FormValidation.error("Invalid agent controller URL found: " + url);
+            }
+        }
+
+        return FormValidation.ok();
+    }
+
+    /**
+     * Performs on-the-fly validation of the form field 'urlFile'.
+     */
+    public FormValidation doCheckUrlFile(@QueryParameter String value)
+    {
+        return FormValidation.validateRequired(value);
+    }
 
     /**
      * Performs on-the-fly validation of the form field 'parsers'.
@@ -387,16 +405,6 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
     {
         return doCheckDirectory(value);
     }
-
-    // public FormValidation doCheckAgentControllerUrlFile(@QueryParameter String value)
-    // {
-    // return doCheckFile(value);
-    // }
-
-    // public FormValidation doCheckTestPropertiesFile(@QueryParameter String value)
-    // {
-    // return doCheckFile(getTestPropertiesFile() + value);
-    // }
 
     private FormValidation doCheckFile(String value)
     {
