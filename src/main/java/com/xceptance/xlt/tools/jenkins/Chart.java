@@ -64,7 +64,7 @@ public class Chart<X, Y>
 
     public String getXData()
     {
-        List<X> processedValues = new ArrayList<X>();
+        List<Integer> processedValues = new ArrayList<Integer>();
 
         String data = "{";
         for (ChartLine<X, Y> eachLine : lines)
@@ -73,11 +73,11 @@ public class Chart<X, Y>
             while (iterator.hasNext())
             {
                 ChartLineValue<X, Y> value = iterator.next();
-                if (!processedValues.contains(value.xValue))
+                if (!processedValues.contains(value.index))
                 {
-                    processedValues.add(value.xValue);
+                    processedValues.add(value.index);
 
-                    data += "\""+value.index+"\":{" + value.getDataObjectValues() + "}";
+                    data += "\"" + value.index + "\":{" + value.getDataObjectValues() + "}";
                     if (iterator.hasNext())
                     {
                         data += ",";
@@ -99,9 +99,9 @@ public class Chart<X, Y>
         private int maxCount;
 
         private String name;
-        
+
         private int indexCounter = 0;
-        
+
         private boolean showNoValues;
 
         public ChartLine(String lineID, String name, int maxCount, boolean showNoValues)
@@ -121,7 +121,7 @@ public class Chart<X, Y>
         {
             return maxCount;
         }
-        
+
         public boolean getShowNoValues()
         {
             return showNoValues;
@@ -144,11 +144,11 @@ public class Chart<X, Y>
             data += "],";
 
             String mouse = "mouse:{";
-            mouse += "trackFormatter:function(o){ return (" + toolTipFormatter + ")(\"" + name +
-                "\", o, xData);},";
+            mouse += "trackFormatter:function(o){ return (" + toolTipFormatter + ")(\"" + name + "\", o, xData);},";
 
-//            mouse += "trackFormatter:function(o){ var xData = " + chart.getXData() + "; return (" + toolTipFormatter + ")(\"" + name +
-//                     "\", o, xData);},";
+            // mouse += "trackFormatter:function(o){ var xData = " + chart.getXData() + "; return (" + toolTipFormatter
+            // + ")(\"" + name +
+            // "\", o, xData);},";
             mouse += "},";
 
             String label = "label:\"" + name + "\",";
@@ -172,7 +172,7 @@ public class Chart<X, Y>
             {
                 values.remove(0);
                 values.add(value);
-            }            
+            }
             value.index = indexCounter;
             indexCounter += 1;
         }
@@ -208,8 +208,6 @@ public class Chart<X, Y>
                 data += "," + eachEntry.getKey() + ":" + eachEntry.getValue();
             }
             data = data.substring(1);
-            data += ",xValue:" + xValue;
-            data += ",yValue:" + yValue;
 
             return data;
         }

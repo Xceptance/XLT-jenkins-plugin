@@ -118,7 +118,9 @@ public class LoadTestBuilder extends Builder
     {
         try
         {
-            File logFile = new File(new File(Jenkins.getInstance().getPlugin(XltDescriptor.PLUGIN_NAME).getWrapper().baseResourceURL.toURI()),
+            File logFile = new File(
+                                    new File(
+                                             Jenkins.getInstance().getPlugin(XltDescriptor.PLUGIN_NAME).getWrapper().baseResourceURL.toURI()),
                                     "xltPlugin.log");
             LOGGER.addAppender(new FileAppender(
                                                 new PatternLayout("%d{yyyy-MMM-dd} : %d{HH:mm:ss,SSS} | [%t] %p %C.%M line:%L | %x - %m%n"),
@@ -416,6 +418,7 @@ public class LoadTestBuilder extends Builder
         for (int i = builds.size() - 1; i > -1; i--)
         {
             AbstractBuild<?, ?> eachBuild = builds.get(i);
+            Document dataXml = getDataDocument(eachBuild);
 
             try
             {
@@ -424,7 +427,7 @@ public class LoadTestBuilder extends Builder
                     Chart<Integer, Double> chart = getChart(eachPlotID);
                     if (chart == null)
                     {
-                        LOGGER.warn("No chart found for plotID: " + eachPlotID);
+                        LOGGER.warn("No chart found for plot. (build: \"" + eachBuild.number + "\" plotID: \"" + eachPlotID + "\")");
                         continue;
                     }
 
@@ -435,67 +438,64 @@ public class LoadTestBuilder extends Builder
                             ChartLine<Integer, Double> line = chart.getLine(eachValueID);
                             if (line == null)
                             {
-                                LOGGER.warn("No line found for value. (valueID: \"" + eachValueID + "\" chartID:\"" +
-                                            chart.getChartID() + "\")");
+                                LOGGER.warn("No line found for value. (build: \"" + eachBuild.number + "\" valueID: \"" + eachValueID +
+                                            "\" chartID:\"" + chart.getChartID() + "\")");
                                 continue;
                             }
 
-                            boolean valueAddedToLine = false;
-                            try
+                            boolean valueAdded = false;
+                            if (dataXml == null)
                             {
-                                String xPath = getvalueConfigValue(eachValueID, CONFIG_VALUE_PARAMETER.xPath);
+                                LOGGER.warn("No test data found for build. (build: \"" + eachBuild.number + "\")");
+                            }
+                            else
+                            {
                                 try
                                 {
-                                    Document dataXml = getDataDocument(eachBuild);
-                                    if (dataXml != null)
+                                    String xPath = getvalueConfigValue(eachValueID, CONFIG_VALUE_PARAMETER.xPath);
+                                    try
                                     {
                                         Double number = (Double) XPathFactory.newInstance().newXPath()
                                                                              .evaluate(xPath, dataXml, XPathConstants.NUMBER);
 
                                         if (number.isNaN())
                                         {
-                                            LOGGER.warn("Value is not a number. (value id: \"" + eachValueID + "\" XPath: \"" +
-                                                        xPath + "\"");
-                                            continue;
+                                            LOGGER.warn("Value is not a number. (build: \"" + eachBuild.number + "\" valueID: \"" +
+                                                        eachValueID + "\" XPath: \"" + xPath + "\"");
                                         }
                                         else
                                         {
                                             addChartLineValue(line, eachBuild, number.doubleValue());
-                                            valueAddedToLine = true;
+                                            valueAdded = true;
                                         }
                                     }
-                                    else
+                                    catch (XPathExpressionException e)
                                     {
-                                        LOGGER.warn("No test data found for build. (build: \"" + eachBuild.number + "\")");
+                                        LOGGER.error("Invalid XPath. (build: \"" + eachBuild.number + "\" valueID: \"" + eachValueID +
+                                                     "\" XPath: \"" + xPath + "\")", e);
                                     }
                                 }
-                                catch (XPathExpressionException e)
+                                catch (JSONException e)
                                 {
-                                    LOGGER.error("Invalid XPath. (valueID: \"" + eachValueID + "\" XPath: \"" + xPath + "\")", e);
+                                    LOGGER.error("Failed to get config section. (build: \"" + eachBuild.number + "\" valueID: \"" +
+                                                 eachValueID + "\")", e);
                                 }
                             }
-                            catch (JSONException e)
+                            if (valueAdded == false && line.getShowNoValues())
                             {
-                                LOGGER.error("Failed to config section. (valueID: \"" + eachValueID + "\")", e);
-                            }
-                            finally
-                            {
-                                if (!valueAddedToLine && line.getShowNoValues())
-                                {
-                                    addChartLineValue(line, eachBuild, 0);
-                                }
+                                addChartLineValue(line, eachBuild, 0);
                             }
                         }
                     }
                     catch (JSONException e)
                     {
-                        LOGGER.error("Failed to config section.", e);
+                        LOGGER.error("Failed to get config section. (build: \"" + eachBuild.number + "\")", e);
                     }
                 }
             }
             catch (JSONException e)
             {
-                LOGGER.error("Failed to config section.", e);
+                LOGGER.error("Failed to get config section. (build: \"" + eachBuild.number + "\")", e);
             }
         }
     }
