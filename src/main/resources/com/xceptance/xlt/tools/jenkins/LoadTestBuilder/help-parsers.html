@@ -4,13 +4,14 @@
 		border-width: thin;
 		border-color: #ccccff;
 		background-color: #eeeeff;
+		padding: 1em;
 	}
 </style>
 
 <div>
 	<div>
 		<p>
-			This configuration allows you to define the plot values and the success condition. If one success condition does not match the results then the build step will become unstable. If empty then the default configuration will be used.
+			This field allows you to define plot values and success conditions. If a success condition does not match the results then the build will be marked as unstable. If the field is left empty then the default configuration will be used.
 		</p>
 		
 		<hr>	
@@ -18,13 +19,13 @@
 			The syntax of the configuration is JSON and has the following structure.
 		</p>
 		<div class="syntax-section">
-			First we have a JSONObject with a criteria and a plots field.	
+			First we have a JSON object with a <code>values</code> and a <code>plots</code> field.	
 			<br>	
 			<div style="margin-left:50px">
 				<br>	
-				<b>criteria</b>  - A JSONArray that contains JSONObjects where each object represents a single criteria configuration.
+				<b>values</b>  - A JSON array that contains JSON objects where each object represents a single value configuration.
 				<br>
-				<b>plots</b> - A JSONArray that contains JSONObjects where each object represents a single plot configuration.
+				<b>plots</b> - A JSON array that contains JSON objects where each object represents a single plot configuration.
 			</div>
 			<br>		
 			<b><u>Example:</u></b>
@@ -44,21 +45,21 @@
 			Value Configuration
 		</h3>
 		<div class="syntax-section">
-			The values section is an JSONArray which contains JSONObjects	where each object represents a single value configuration. A value configuration provides information about where the criteria values can be found,the success criteria, where to plot the value and its name.
+			The <code>values</code> section is a JSON array which contains JSON objects where each object represents a single value configuration. A value configuration provides information about where the value can be found, the success condition, where to plot the value, and its name.
 			<br><br>
-			A criteria configuration consists of the following fields:
+			A value configuration consists of the following fields:
 			<br>	
 			<div style="margin-left:50px">
 				<br>	
-				<b>id</b>  - A unique identifier for the criteria configuration. 
+				<b>id</b>  - A unique identifier for the value configuration. 
 				<br>
-				<b>xPath</b> - A X-Path locator to retrieve a single value from the testreport.xml
+				<b>xPath</b> - An X-Path locator to retrieve a single value from the testreport.xml file.
 				<br>
-				<b>condition</b> - A X-Path expression that will be appended to the xPath to act as success validator. Can be empty if it should just plot the value. 
+				<b>condition</b> - An X-Path expression that will be appended to the xPath to act as success validator. Can be empty if the value is not to be checked, but plotted only. 
 				<br>
-				<b>plotID</b> - The id of the plot configuration that will plot the values retrieved by the xPath. Can be empty if this should just validate the value. 
+				<b>plotID</b> - The ID of the plot that will plot the values retrieved by the xPath. Can be empty if the value is to be checked only. 
 				<br>
-				<b>name</b> - A label for this criteria configuration. Will be used as label at the charts legend and value tool tip.
+				<b>name</b> - A label for this value configuration. Will be used as label in the chart's legend and value tool tip.
 			</div>
 			<br>		
 			<b><u>Example:</u></b>
@@ -81,22 +82,22 @@
 			Plot Configuration
 		</h3>
 		<div class="syntax-section">
-			The plot section is an JSONArray which contains JSONObjects	where each object represents a single plot configuration.
-			For each plot configuration there will be a chart shown at the projects main view.
+			The <code>plots</code> section is a JSON array which contains JSON objects where each object represents a single plot configuration.
+			For each plot configuration there will be a chart shown at the project's main page.
 			<br><br>
 			A plot configuration consists of the following fields:
 			<br>	
 			<div style="margin-left:50px">
 				<br>	
-				<b>id</b>  - A Unique identifier for the plot configuration and refered by a criteria configuration. 
+				<b>id</b>  - A unique identifier for the plot configuration. Will also be used by a value configuration to refer to this plot. 
 				<br>
 				<b>title</b> - A text that will be shown above the chart.
 				<br>
 				<b>buildCount</b> - The number of previous builds to create the chart for. If empty then all builds will be used. 
 				<br>
-				<b>enabled</b> - Can be "yes" or "no". If set to "yes" then the chart will be visible otherwise it will be not.
+				<b>enabled</b> - Can be "yes" or "no". If set to "yes" then the chart will be visible, otherwise it will be not.
 				<br>
-				<b>showNoValues</b> - Can be "yes" or "no". If set to "yes" then also builds without results or a valid value will be shown as data point in the charts with a value of 0. Otherwise only builds with valid values will be visible in the charts. There are many reasons why no value is available for a build. For example if the build was aborted or there was an error when creating the results or the value could not be retrieved because the xPath is not valid and so on.  								  				
+				<b>showNoValues</b> - Can be "yes" or "no". If set to "yes" then also builds without results or a valid value will be shown as data point in the charts with a value of 0. Otherwise only builds with valid values will be visible in the charts. There are many reasons why no value is available for a build. For example, if the build was aborted or there was an error when creating the results or the value could not be retrieved because the xPath is not valid and so on.  								  				
 			</div>
 			<br>		
 			<b><u>Example:</u></b>
