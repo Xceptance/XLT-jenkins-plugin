@@ -3,9 +3,9 @@
 		used. The pattern "' '" (Without the double quotes) can be used to hide the date/time, for example if you just want to see the
 		build number (see option "Show Build Number").</p>
 	<hr>
-	<p>Within the pattern, unquoted letters from 'A' to 'Z' and from 'a' to 'z' are interpreted as pattern letters. Text can be
-		quoted using single quotes (') to avoid interpretation. "''" represents a single quote. All other characters are not
-		interpreted; they're simply copied to the output string.</p>
+	<p>Within the date/time pattern, any letter (out of [A-Za-z]) is interpreted specially and will be replaced by the
+		date/time value it stands for. Arbitrary text can be inserted into the pattern by enclosing the text in single quotes ('). To
+		insert a single quote, use "''". Any other character is not interpreted and will be copied to the resulting string as is.</p>
 	<p>
 		For a full explanation of the pattern syntax see <a
 			href="http://docs.oracle.com/javase/7/docs/api/java/text/SimpleDateFormat.html">here</a>.
