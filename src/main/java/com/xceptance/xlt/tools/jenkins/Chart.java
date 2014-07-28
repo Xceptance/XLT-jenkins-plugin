@@ -64,11 +64,7 @@ public class Chart<X, Y>
         Iterator<ChartLine<X, Y>> iterator = lines.iterator();
         while (iterator.hasNext())
         {
-            data += iterator.next().getDataString(toolTipFormatter);
-            if (iterator.hasNext())
-            {
-                data += ",";
-            }
+            data += iterator.next().getDataString(toolTipFormatter) + ",";
         }
         data += "]";
         return data;
