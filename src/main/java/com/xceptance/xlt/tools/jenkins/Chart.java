@@ -13,6 +13,8 @@ public class Chart<X, Y>
 
     private String title;
 
+    private int xIndex = 0;
+
     private List<ChartLine<X, Y>> lines = new ArrayList<Chart.ChartLine<X, Y>>(3);
 
     public Chart(String chartID, String title)
@@ -29,6 +31,16 @@ public class Chart<X, Y>
     public String getTitle()
     {
         return title;
+    }
+
+    public void nextXIndex()
+    {
+        xIndex++;
+    }
+
+    public int getXIndex()
+    {
+        return xIndex;
     }
 
     public List<ChartLine<X, Y>> getLines()
@@ -64,7 +76,7 @@ public class Chart<X, Y>
 
     public String getXData()
     {
-        List<Integer> processedValues = new ArrayList<Integer>();
+        List<X> processedValues = new ArrayList<X>();
 
         String data = "{";
         for (ChartLine<X, Y> eachLine : lines)
@@ -73,11 +85,11 @@ public class Chart<X, Y>
             while (iterator.hasNext())
             {
                 ChartLineValue<X, Y> value = iterator.next();
-                if (!processedValues.contains(value.index))
+                if (!processedValues.contains(value.xValue))
                 {
-                    processedValues.add(value.index);
+                    processedValues.add(value.xValue);
 
-                    data += "\"" + value.index + "\":{" + value.getDataObjectValues() + "}";
+                    data += "\"" + value.xValue + "\":{" + value.getDataObjectValues() + "}";
                     if (iterator.hasNext())
                     {
                         data += ",";
@@ -99,8 +111,6 @@ public class Chart<X, Y>
         private int maxCount;
 
         private String name;
-
-        private int indexCounter = 0;
 
         private boolean showNoValues;
 
@@ -173,8 +183,6 @@ public class Chart<X, Y>
                 values.remove(0);
                 values.add(value);
             }
-            value.index = indexCounter;
-            indexCounter += 1;
         }
     }
 
@@ -184,8 +192,6 @@ public class Chart<X, Y>
         private X xValue;
 
         private Y yValue;
-
-        private int index;
 
         private Map<String, String> dataObjectValues = new HashMap<String, String>();
 
@@ -214,7 +220,7 @@ public class Chart<X, Y>
 
         public String getDataString()
         {
-            return "[" + String.valueOf(index) + "," + String.valueOf(yValue) + "]";
+            return "[" + String.valueOf(xValue) + "," + String.valueOf(yValue) + "]";
         }
     }
 }

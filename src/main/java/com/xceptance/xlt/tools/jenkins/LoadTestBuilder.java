@@ -430,6 +430,7 @@ public class LoadTestBuilder extends Builder
                         LOGGER.warn("No chart found for plot. (build: \"" + eachBuild.number + "\" plotID: \"" + eachPlotID + "\")");
                         continue;
                     }
+                    boolean addedValueToChart = false;
 
                     try
                     {
@@ -443,7 +444,7 @@ public class LoadTestBuilder extends Builder
                                 continue;
                             }
 
-                            boolean valueAdded = false;
+                            boolean addedValueToLine = false;
                             if (dataXml == null)
                             {
                                 LOGGER.warn("No test data found for build. (build: \"" + eachBuild.number + "\")");
@@ -465,8 +466,9 @@ public class LoadTestBuilder extends Builder
                                         }
                                         else
                                         {
-                                            addChartLineValue(line, eachBuild, number.doubleValue());
-                                            valueAdded = true;
+                                            addChartLineValue(line, eachBuild, chart.getXIndex(), number.doubleValue());
+                                            addedValueToLine = true;
+                                            addedValueToChart = true;
                                         }
                                     }
                                     catch (XPathExpressionException e)
@@ -481,15 +483,21 @@ public class LoadTestBuilder extends Builder
                                                  eachValueID + "\")", e);
                                 }
                             }
-                            if (valueAdded == false && line.getShowNoValues())
+                            if (addedValueToLine == false && line.getShowNoValues())
                             {
-                                addChartLineValue(line, eachBuild, 0);
+                                addChartLineValue(line, eachBuild, chart.getXIndex(), 0);
+                                addedValueToChart = true;
                             }
                         }
                     }
                     catch (JSONException e)
                     {
                         LOGGER.error("Failed to get config section. (build: \"" + eachBuild.number + "\")", e);
+                    }
+
+                    if (addedValueToChart)
+                    {
+                        chart.nextXIndex();
                     }
                 }
             }
@@ -500,9 +508,9 @@ public class LoadTestBuilder extends Builder
         }
     }
 
-    private void addChartLineValue(ChartLine<Integer, Double> chartLine, AbstractBuild<?, ?> build, double dataValue)
+    private void addChartLineValue(ChartLine<Integer, Double> chartLine, AbstractBuild<?, ?> build, int xIndex, double dataValue)
     {
-        ChartLineValue<Integer, Double> lineValue = new ChartLineValue<Integer, Double>(build.number, dataValue);
+        ChartLineValue<Integer, Double> lineValue = new ChartLineValue<Integer, Double>(xIndex, dataValue);
 
         lineValue.setDataObjectValue("buildNumber", "\"" + build.number + "\"");
         lineValue.setDataObjectValue("showBuildNumber", "" + showBuildNumber);
