@@ -85,11 +85,7 @@ public class Chart<X, Y>
                 {
                     processedValues.add(value.xValue);
 
-                    data += "\"" + value.xValue + "\":{" + value.getDataObjectValues() + "}";
-                    if (iterator.hasNext())
-                    {
-                        data += ",";
-                    }
+                    data += "\"" + value.xValue + "\":{" + value.getDataObjectValues() + "},";
                 }
             }
         }
