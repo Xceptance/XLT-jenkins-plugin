@@ -4,6 +4,8 @@ import static org.junit.Assert.*;
 
 import java.util.List;
 
+import net.sourceforge.htmlunit.corejs.javascript.Context;
+
 import org.junit.Test;
 
 import com.xceptance.xlt.tools.jenkins.Chart.ChartLine;
@@ -79,4 +81,16 @@ public class ChartLineTest
         assertEquals("Generated js data string does not match the expected data string pattern.", expectedDataStringPattern,
                      generatedDataString);
     }
+
+    @Test
+    public final void GeneratedJsDataString_DefaultInitializedChartLineWithSomeValueEntries_IsCompilableJS()
+    {
+        ChartLine<String, String> line = TestData.newDefaultInitializedChartLineWithMaxValueEntries();
+        String generatedDataString = line.getDataString("function(){ return \"My Test Formatter\"}");
+
+        Context jsContext = Context.enter();
+        jsContext.setLanguageVersion(Context.VERSION_1_0);
+        jsContext.compileString("var a = " + generatedDataString, "dataString", 0, null);
+    }
+
 }

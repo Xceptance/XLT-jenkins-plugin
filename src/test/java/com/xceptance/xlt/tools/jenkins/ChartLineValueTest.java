@@ -1,6 +1,7 @@
 package com.xceptance.xlt.tools.jenkins;
 
 import static org.junit.Assert.*;
+import net.sourceforge.htmlunit.corejs.javascript.Context;
 
 import org.junit.Test;
 
@@ -39,6 +40,16 @@ public class ChartLineValueTest
         final String expectedDataString = "[1,\"text\"]";
 
         assertEquals("Generated js data array string does not match expected data string pattern.", expectedDataString, generatedDataString);
+    }
+
+    @Test
+    public final void GeneratedJSDataString_DefaultInitializedChartLineValue_IsCompilableJS()
+    {
+        final String generatedDataString = TestData.newDefaultInitializedChartLineValue().getDataString();
+
+        Context jsContext = Context.enter();
+        jsContext.setLanguageVersion(Context.VERSION_1_0);
+        jsContext.compileString(generatedDataString, "dataString", 0, null);
     }
 
     @Test

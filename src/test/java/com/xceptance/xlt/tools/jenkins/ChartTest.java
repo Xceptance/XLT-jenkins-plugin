@@ -1,6 +1,7 @@
 package com.xceptance.xlt.tools.jenkins;
 
 import static org.junit.Assert.*;
+import net.sourceforge.htmlunit.corejs.javascript.Context;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -59,6 +60,17 @@ public class ChartTest
 
         assertEquals("Generated js data string does not match the expected data string pattern.", expectedDataStringPattern,
                      generatedJsDataString);
+    }
+
+    @Test
+    public final void GeneratedJsDataString_DefaultInitializedChartWithAsynchronousLines_IsCompilableJS()
+    {
+        Chart<String, String> chart = TestData.newDefaultInitializedChartWithAsynchronousLines();
+        String generatedJsDataString = chart.getDataString("function(){ return \"My Test Formatter\"}");
+
+        Context jsContext = Context.enter();
+        jsContext.setLanguageVersion(Context.VERSION_1_0);
+        jsContext.compileString(generatedJsDataString, "dataString", 0, null);
     }
 
     @Test
