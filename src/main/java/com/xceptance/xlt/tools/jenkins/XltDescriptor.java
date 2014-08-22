@@ -1,6 +1,7 @@
 package com.xceptance.xlt.tools.jenkins;
 
 import hudson.Extension;
+import hudson.FilePath;
 import hudson.model.AbstractProject;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
@@ -73,7 +74,7 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
     {
         try
         {
-            return new String(Files.readAllBytes(getXltConfigFile().toPath()));
+            return getXltConfigFile().readToString();
         }
         catch (URISyntaxException e)
         {
@@ -86,9 +87,9 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
         return null;
     }
 
-    private File getXltConfigFile() throws URISyntaxException
+    private FilePath getXltConfigFile() throws URISyntaxException
     {
-        return new File(new File(Jenkins.getInstance().getPlugin(PLUGIN_NAME).getWrapper().baseResourceURL.toURI()), "xltConfig.json");
+        return new FilePath(new File(new File(Jenkins.getInstance().getPlugin(PLUGIN_NAME).getWrapper().baseResourceURL.toURI()), "xltConfig.json"));
     }
 
     public int getDefaultPlotWidth()
@@ -401,23 +402,14 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
         return FormValidation.ok("Preview: " + format.format(new Date()));
     }
 
-    public FormValidation doCheckXltTemplateDir(@QueryParameter String value)
+    public FormValidation doCheckXltTemplateDir(@QueryParameter String value) throws IOException, InterruptedException
     {
         return doCheckDirectory(value);
     }
 
-    private FormValidation doCheckFile(String value)
+    private FormValidation doCheckDirectory(String value) throws IOException, InterruptedException
     {
-        if (StringUtils.isBlank(value) || !new File(value).isFile())
-        {
-            return FormValidation.error("The specified file does not exist (yet).");
-        }
-        return FormValidation.ok();
-    }
-
-    private FormValidation doCheckDirectory(String value)
-    {
-        if (StringUtils.isBlank(value) || !new File(value).isDirectory())
+        if (StringUtils.isBlank(value) || !new FilePath(new File(value)).isDirectory())
         {
             return FormValidation.error("The specified directory does not exist (yet).");
         }

@@ -11,6 +11,7 @@ import javax.servlet.ServletException;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
 
+import hudson.FilePath;
 import hudson.model.Action;
 import hudson.model.AbstractBuild;
 
@@ -82,8 +83,8 @@ public class XltRecorderAction implements Action
         return String.valueOf(build.number);
     }
 
-    public void doReport(StaplerRequest request, StaplerResponse response) throws MalformedURLException, ServletException, IOException
+    public void doReport(StaplerRequest request, StaplerResponse response) throws MalformedURLException, ServletException, IOException, InterruptedException
     {
-        response.serveFile(request, new File(new File(build.getArtifactsDir().getAbsolutePath()), request.getRestOfPath()).toURI().toURL());
+        response.serveFile(request, new FilePath(new File(new File(build.getArtifactsDir().getAbsolutePath()), request.getRestOfPath())).toURI().toURL());
     }
 }

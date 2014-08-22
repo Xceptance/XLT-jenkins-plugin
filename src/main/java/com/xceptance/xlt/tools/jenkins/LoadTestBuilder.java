@@ -1,5 +1,7 @@
 package com.xceptance.xlt.tools.jenkins;
 
+import hudson.FilePath;
+import hudson.FilePath.FileCallable;
 import hudson.Launcher;
 import hudson.Launcher.ProcStarter;
 import hudson.model.Action;
@@ -7,6 +9,7 @@ import hudson.model.BuildListener;
 import hudson.model.Result;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
+import hudson.remoting.VirtualChannel;
 import hudson.tasks.Builder;
 import hudson.util.StreamTaskListener;
 
@@ -30,7 +33,6 @@ import javax.xml.xpath.XPathFactory;
 
 import jenkins.model.Jenkins;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.SystemUtils;
 import org.apache.log4j.FileAppender;
@@ -199,9 +201,9 @@ public class LoadTestBuilder extends Builder
         return dateFormat;
     }
 
-    private String[] parseAgentControllerUrlsFromFile(File file) throws IOException
+    private String[] parseAgentControllerUrlsFromFile(FilePath file) throws IOException
     {
-        String fileContent = FileUtils.readFileToString(file, "UTF-8");
+        String fileContent = file.readToString();
 
         return parseAgentControllerUrls(fileContent);
     }
@@ -313,7 +315,7 @@ public class LoadTestBuilder extends Builder
         return enabledCharts;
     }
 
-    private void loadCharts(AbstractProject<?, ?> project)
+    private void loadCharts(AbstractProject<?, ?> project) throws IOException, InterruptedException
     {
         List<? extends AbstractBuild<?, ?>> allBuilds = project.getBuilds();
         if (allBuilds.isEmpty())
@@ -376,14 +378,14 @@ public class LoadTestBuilder extends Builder
         return allBuilds.subList(startFrom, to);
     }
 
-    private Document getDataDocument(AbstractBuild<?, ?> build)
+    private Document getDataDocument(AbstractBuild<?, ?> build) throws IOException, InterruptedException
     {
-        File testDataFile = getTestReportDataFile(build);
+        FilePath testDataFile = getTestReportDataFile(build);
         if (testDataFile.exists())
         {
             try
             {
-                return DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(testDataFile);
+                return DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(testDataFile.getRemote());
             }
             catch (SAXException e)
             {
@@ -400,20 +402,20 @@ public class LoadTestBuilder extends Builder
         }
         else
         {
-            LOGGER.warn("No test data found for build. (build: \"" + build.number + "\" searchLocation: \"" +
-                        testDataFile.getAbsolutePath() + "\")");
+            LOGGER.warn("No test data found for build. (build: \"" + build.number + "\" searchLocation: \"" + testDataFile.getRemote() +
+                        "\")");
         }
         return null;
     }
 
-    private void addBuildToCharts(AbstractBuild<?, ?> build)
+    private void addBuildToCharts(AbstractBuild<?, ?> build) throws IOException, InterruptedException
     {
         List<AbstractBuild<?, ?>> builds = new ArrayList<AbstractBuild<?, ?>>();
         builds.add(build);
         addBuildsToCharts(builds);
     }
 
-    private void addBuildsToCharts(List<? extends AbstractBuild<?, ?>> builds)
+    private void addBuildsToCharts(List<? extends AbstractBuild<?, ?>> builds) throws IOException, InterruptedException
     {
         for (int i = builds.size() - 1; i > -1; i--)
         {
@@ -602,7 +604,18 @@ public class LoadTestBuilder extends Builder
             {
                 LOGGER.error("Failed to initialize charts", e);
             }
-            loadCharts(project);
+            try
+            {
+                loadCharts(project);
+            }
+            catch (IOException e)
+            {
+                LOGGER.error("Failed to load charts", e);
+            }
+            catch (InterruptedException e)
+            {
+                LOGGER.error("Failed to load charts", e);
+            }
 
             chartAction = new XltChartAction(project, getEnabledCharts(), plotWidth, plotHeight, plotTitle, builderID, isPlotVertical,
                                              createTrendReport, createSummaryReport);
@@ -739,106 +752,123 @@ public class LoadTestBuilder extends Builder
         return plotIDs;
     }
 
-    private File getTestReportDataFile(AbstractBuild<?, ?> build)
+    private FilePath getTestReportDataFile(AbstractBuild<?, ?> build)
     {
-        return new File(getBuildReportFolder(build), "testreport.xml");
+        return new FilePath(getBuildReportFolder(build), "testreport.xml");
     }
 
-    private File getXltResultsFolder(AbstractBuild<?, ?> build)
+    private FilePath getXltResultsFolder(AbstractBuild<?, ?> build)
     {
-        return new File(getXltFolder(build), "results");
+        return new FilePath(getXltFolder(build), "results");
     }
 
-    private File getXltLogFolder(AbstractBuild<?, ?> build)
+    private FilePath getXltLogFolder(AbstractBuild<?, ?> build)
     {
-        return new File(getXltFolder(build), "log");
+        return new FilePath(getXltFolder(build), "log");
     }
 
-    private File getFirstXltResultsFolder(AbstractBuild<?, ?> build)
+    private FilePath getFirstXltResultsFolder(AbstractBuild<?, ?> build)
     {
         return getFirstSubFolder(getXltResultsFolder(build));
     }
 
-    private File getXltReportsFolder(AbstractBuild<?, ?> build)
+    private FilePath getXltReportsFolder(AbstractBuild<?, ?> build)
     {
-        return new File(getXltFolder(build), "reports");
+        return new FilePath(getXltFolder(build), "reports");
     }
 
-    private File getFirstXltReportFolder(AbstractBuild<?, ?> build)
+    private FilePath getFirstXltReportFolder(AbstractBuild<?, ?> build)
     {
         return getFirstSubFolder(getXltReportsFolder(build));
     }
 
-    private File getFirstSubFolder(File dir)
+    private FilePath getFirstSubFolder(FilePath dir)
     {
-        if (dir != null && dir.isDirectory())
+        try
         {
-            File[] subFiles = dir.listFiles();
-            if (subFiles != null)
+            if (dir != null && dir.isDirectory())
             {
-                for (int i = 0; i < subFiles.length; i++)
+                List<FilePath> subFiles = dir.list();
+                if (subFiles != null)
                 {
-                    if (subFiles[i].isDirectory())
+                    for (FilePath subFile : subFiles)
                     {
-                        return subFiles[i];
+                        if (subFile.isDirectory())
+                        {
+                            return subFile;
+                        }
                     }
                 }
             }
         }
+        catch (IOException e)
+        {
+            LOGGER.error("", e);
+        }
+        catch (InterruptedException e)
+        {
+            LOGGER.error("", e);
+        }
         return null;
     }
 
-    private File getBuildResultConfigFolder(AbstractBuild<?, ?> build)
+    private FilePath getBuildResultConfigFolder(AbstractBuild<?, ?> build)
     {
-        return new File(getBuildResultsFolder(build), "config");
+        return new FilePath(getBuildResultsFolder(build), "config");
     }
 
-    private File getBuildLogsFolder(AbstractBuild<?, ?> build)
+    private FilePath getBuildLogsFolder(AbstractBuild<?, ?> build)
     {
-        return new File(build.getArtifactsDir(), builderID + "/log");
+        return new FilePath(new FilePath(build.getArtifactsDir()), builderID + "/log");
     }
 
-    private File getBuildReportFolder(AbstractBuild<?, ?> build)
+    private FilePath getBuildReportFolder(AbstractBuild<?, ?> build)
     {
-        return new File(build.getArtifactsDir(), builderID + "/report/" + Integer.toString(build.getNumber()));
+        return new FilePath(new FilePath(build.getArtifactsDir()), builderID + "/report/" + Integer.toString(build.getNumber()));
     }
 
-    private File getBuildResultsFolder(AbstractBuild<?, ?> build)
+    private FilePath getBuildResultsFolder(AbstractBuild<?, ?> build)
     {
-        return new File(build.getArtifactsDir(), builderID + "/results");
+        return new FilePath(new FilePath(build.getArtifactsDir()), builderID + "/results");
     }
 
-    private File getTrendReportFolder(AbstractProject<?, ?> project)
+    private FilePath getTrendReportFolder(AbstractProject<?, ?> project)
     {
-        return new File(project.getRootDir(), "trendreport/" + builderID);
+        return new FilePath(new FilePath(project.getRootDir()), "trendreport/" + builderID);
     }
 
-    private File getSummaryReportFolder(AbstractProject<?, ?> project)
+    private FilePath getSummaryReportFolder(AbstractProject<?, ?> project)
     {
-        return new File(project.getRootDir(), "summaryReport/" + builderID);
+        return new FilePath(new File(project.getRootDir(), "summaryReport/" + builderID));
     }
 
-    private File getSummaryResultsFolder(AbstractProject<?, ?> project)
+    private FilePath getSummaryResultsFolder(AbstractProject<?, ?> project)
     {
-        return new File(project.getRootDir(), "summaryResults/" + builderID);
+        return new FilePath(new File(project.getRootDir(), "summaryResults/" + builderID));
     }
 
-    private File getSummaryResultsConfigFolder(AbstractProject<?, ?> project)
+    private FilePath getSummaryResultsConfigFolder(AbstractProject<?, ?> project)
     {
-        return new File(getSummaryResultsFolder(project), "config");
+        return new FilePath(getSummaryResultsFolder(project), "config");
     }
 
-    private File getXltFolder(AbstractBuild<?, ?> build)
+    private FilePath getXltFolder(AbstractBuild<?, ?> build)
     {
-        return new File(build.getProject().getRootDir(), Integer.toString(build.getNumber()));
+        return new FilePath(build.getWorkspace(), Integer.toString(build.getNumber()));
     }
 
-    private File getXltBinFolder(AbstractBuild<?, ?> build)
+    private FilePath getXltBinFolder(AbstractBuild<?, ?> build)
     {
-        return new File(getXltFolder(build), "bin");
+        return new FilePath(getXltFolder(build), "bin");
+    }
+    
+    private FilePath getXltBinFolderOnMaster()
+    {
+        return new FilePath(new File(new File(getXltTemplateDir()), "bin"));
     }
 
     private List<CriteriaResult> validateCriteria(AbstractBuild<?, ?> build, BuildListener listener)
+        throws IOException, InterruptedException
     {
         listener.getLogger().println("-----------------------------------------------------------------\n"
                                          + "Checking success criteria ...\n");
@@ -944,7 +974,7 @@ public class LoadTestBuilder extends Builder
         return failedAlerts;
     }
 
-    private void postTestExecution(AbstractBuild<?, ?> build, BuildListener listener)
+    private void postTestExecution(AbstractBuild<?, ?> build, BuildListener listener) throws IOException, InterruptedException
     {
         addBuildToCharts(build);
         List<CriteriaResult> failedAlerts = validateCriteria(build, listener);
@@ -1014,8 +1044,8 @@ public class LoadTestBuilder extends Builder
             saveArtifact(getXltLogFolder(build), getBuildLogsFolder(build));
 
             // delete any temporary directory with local XLT
-            File xltDir = getXltFolder(build);
-            FileUtils.deleteQuietly(xltDir);
+            FilePath xltDir = getXltFolder(build);
+            xltDir.deleteRecursive();
         }
 
         return true;
@@ -1044,7 +1074,7 @@ public class LoadTestBuilder extends Builder
             }
             else if (agentControllerConfig.type.equals(AgentControllerConfig.TYPE.file.toString()))
             {
-                File file = new File(getTestSuiteConfigFolder(build), agentControllerConfig.urlFile);
+                FilePath file = new FilePath(getTestSuiteConfigFolder(build), agentControllerConfig.urlFile);
 
                 listener.getLogger().printf("Read agent controller URLs from file %s:\n\n", file);
 
@@ -1070,12 +1100,12 @@ public class LoadTestBuilder extends Builder
         listener.getLogger().println("\nFinished");
     }
 
-    private File getTestSuiteConfigFolder(AbstractBuild<?, ?> build)
+    private FilePath getTestSuiteConfigFolder(AbstractBuild<?, ?> build)
     {
-        return new File(build.getModuleRoot() + "/config/");
+        return new FilePath(build.getModuleRoot(), "/config/");
     }
 
-    private void initialCleanUp(AbstractBuild<?, ?> build, BuildListener listener) throws IOException
+    private void initialCleanUp(AbstractBuild<?, ?> build, BuildListener listener) throws IOException, InterruptedException
     {
         listener.getLogger().println("-----------------------------------------------------------------\n"
                                          + "Cleaning up project directory ...\n");
@@ -1086,8 +1116,8 @@ public class LoadTestBuilder extends Builder
         {
             if (DIR[i].matches("[0-9]+"))
             {
-                File file = new File(build.getProject().getRootDir() + "/" + DIR[i]);
-                FileUtils.deleteDirectory(file);
+                FilePath file = new FilePath(new FilePath(build.getProject().getRootDir()), "/" + DIR[i]);
+                file.deleteRecursive();
                 listener.getLogger().println("Deleted directory: " + file);
             }
         }
@@ -1095,7 +1125,7 @@ public class LoadTestBuilder extends Builder
         listener.getLogger().println("\nFinished");
     }
 
-    private void copyXlt(AbstractBuild<?, ?> build, BuildListener listener) throws IOException
+    private void copyXlt(AbstractBuild<?, ?> build, BuildListener listener) throws IOException, InterruptedException
     {
         listener.getLogger().println("-----------------------------------------------------------------\nCopying XLT ...\n");
 
@@ -1106,21 +1136,22 @@ public class LoadTestBuilder extends Builder
             throw new IllegalStateException("Path to xlt not set.");
         }
 
-        File srcDir = new File(getXltTemplateDir());
-        listener.getLogger().println("XLT template directory: " + srcDir.getAbsolutePath());
+        FilePath srcDir = new FilePath(new File(getXltTemplateDir()));
+        listener.getLogger().println("XLT template directory: " + srcDir.getRemote());
 
         // the target directory in the project folder
-        File destDir = getXltFolder(build);
-        listener.getLogger().println("Target directory: " + destDir.getAbsolutePath());
+        FilePath destDir = getXltFolder(build);
+        listener.getLogger().println("Target directory: " + destDir.getRemote());
 
         // copy XLT to a local directory
-        FileUtils.copyDirectory(srcDir, destDir, true);
+        srcDir.copyRecursiveTo(destDir);
 
         // make XLT start scripts executable
-        File workingDirectory = getXltBinFolder(build);
-        for (File child : workingDirectory.listFiles())
+        FilePath workingDirectory = getXltBinFolder(build);
+
+        for (FilePath child : workingDirectory.list())
         {
-            child.setExecutable(true);
+            child.chmod(0777);
         }
 
         listener.getLogger().println("\nFinished");
@@ -1171,8 +1202,8 @@ public class LoadTestBuilder extends Builder
         commandLine.add("-Dcom.xceptance.xlt.mastercontroller.testSuitePath=" + build.getModuleRoot().getRemote());
 
         // run the master controller
-        File workingDirectory = getXltBinFolder(build);
-        int commandResult = executeCommand(build, workingDirectory, commandLine, listener.getLogger());
+        FilePath workingDirectory = getXltBinFolder(build);
+        int commandResult = executeCommand(build.getBuiltOn(), workingDirectory, commandLine, listener.getLogger());
         listener.getLogger().println("Master controller returned with exit code: " + commandResult);
 
         if (commandResult != 0)
@@ -1185,19 +1216,19 @@ public class LoadTestBuilder extends Builder
         saveArtifact(getFirstXltReportFolder(build), getBuildReportFolder(build));
     }
 
-    private void saveArtifact(File srcFolder, File destFolder) throws IOException
+    private void saveArtifact(FilePath srcFolder, FilePath destFolder) throws IOException, InterruptedException
     {
         if (srcFolder != null && srcFolder.isDirectory() && destFolder != null)
         {
             // move folder to save time
-            FileUtils.moveDirectory(srcFolder, destFolder);
+            srcFolder.copyRecursiveTo(destFolder);
+            srcFolder.deleteRecursive();
         }
     }
-
-    private int executeCommand(AbstractBuild<?, ?> build, File workingDirectory, List<String> commandLine, PrintStream logger)
+    
+    private int executeCommand(hudson.model.Node buildNode, FilePath workingDirectory, List<String> commandLine, PrintStream logger)
         throws IOException, InterruptedException
     {
-        hudson.model.Node buildNode = build.getBuiltOn();
         StreamTaskListener streamListener = new StreamTaskListener((OutputStream) logger);
 
         Launcher launcher = buildNode.createLauncher(streamListener);
@@ -1234,14 +1265,13 @@ public class LoadTestBuilder extends Builder
             commandLine.add("./create_report.sh");
         }
 
-        File outputFolder = getSummaryReportFolder(build.getProject());
+        FilePath outputFolder = getSummaryReportFolder(build.getProject());
         commandLine.add("-o");
-        commandLine.add(outputFolder.getAbsolutePath());
+        commandLine.add(outputFolder.getRemote());
 
-        commandLine.add(getSummaryResultsFolder(build.getProject()).getAbsolutePath());
-
-        // run the report generator
-        int commandResult = executeCommand(build, getXltBinFolder(build), commandLine, listener.getLogger());
+        commandLine.add(getSummaryResultsFolder(build.getProject()).getRemote());
+        // run the report generator on the master
+        int commandResult = executeCommand(Jenkins.getInstance(), getXltBinFolderOnMaster(), commandLine, listener.getLogger());
         listener.getLogger().println("Load report generator returned with exit code: " + commandResult);
         if (commandResult != 0)
         {
@@ -1249,19 +1279,19 @@ public class LoadTestBuilder extends Builder
         }
     }
 
-    private void copyResults(AbstractBuild<?, ?> currentBuild, BuildListener listener) throws IOException
+    private void copyResults(AbstractBuild<?, ?> currentBuild, BuildListener listener) throws InterruptedException, IOException
     {
         // recreate a fresh summary results directory
-        File summaryResultsFolder = getSummaryResultsFolder(currentBuild.getProject());
+        FilePath summaryResultsFolder = getSummaryResultsFolder(currentBuild.getProject());
 
-        FileUtils.deleteQuietly(summaryResultsFolder);
+        summaryResultsFolder.deleteRecursive();
         summaryResultsFolder.mkdirs();
 
         // copy config from the current build's results
-        File configFolder = getBuildResultConfigFolder(currentBuild);
-        File summaryConfigFolder = getSummaryResultsConfigFolder(currentBuild.getProject());
+        FilePath configFolder = getBuildResultConfigFolder(currentBuild);
+        FilePath summaryConfigFolder = getSummaryResultsConfigFolder(currentBuild.getProject());
 
-        FileUtils.copyDirectory(configFolder, summaryConfigFolder, true);
+        configFolder.copyRecursiveTo(summaryConfigFolder);
 
         // copy timer data from the last n builds
         List<AbstractBuild<?, ?>> builds = (List<AbstractBuild<?, ?>>) currentBuild.getPreviousBuildsOverThreshold(numberOfBuildsForSummaryReport - 1,
@@ -1270,7 +1300,7 @@ public class LoadTestBuilder extends Builder
 
         for (AbstractBuild<?, ?> build : builds)
         {
-            File resultsFolder = getBuildResultsFolder(build);
+            FilePath resultsFolder = getBuildResultsFolder(build);
             if (resultsFolder.isDirectory())
             {
                 copyResults(summaryResultsFolder, resultsFolder, build.getNumber());
@@ -1278,27 +1308,27 @@ public class LoadTestBuilder extends Builder
         }
     }
 
-    private void copyResults(File targetDir, File srcDir, int buildNumber) throws IOException
+    private void copyResults(FilePath targetDir, FilePath srcDir, int buildNumber) throws IOException, InterruptedException
     {
-        File[] files = srcDir.listFiles();
+        List<FilePath> files = srcDir.list();
         if (files != null)
         {
-            for (File file : files)
+            for (FilePath file : files)
             {
                 if (file.isDirectory())
                 {
-                    copyResults(new File(targetDir, file.getName()), file, buildNumber);
+                    copyResults(new FilePath(targetDir, file.getName()), file, buildNumber);
                 }
                 else if (file.getName().startsWith("timers.csv"))
                 {
                     // regular timer files
-                    File renamedResultsFile = new File(targetDir, file.getName() + "." + buildNumber);
-                    FileUtils.copyFile(file, renamedResultsFile);
+                    FilePath renamedResultsFile = new FilePath(targetDir, file.getName() + "." + buildNumber);
+                    file.copyTo(renamedResultsFile);
                 }
                 else if (file.getName().endsWith(".csv"))
                 {
                     // WebDriver timer files
-                    FileUtils.copyFileToDirectory(file, targetDir);
+                    file.copyTo(targetDir);
                 }
             }
         }
@@ -1321,9 +1351,9 @@ public class LoadTestBuilder extends Builder
             commandLine.add("./create_trend_report.sh");
         }
 
-        File trendReportDest = getTrendReportFolder(build.getProject());
+        FilePath trendReportDest = getTrendReportFolder(build.getProject());
         commandLine.add("-o");
-        commandLine.add(trendReportDest.toString());
+        commandLine.add(trendReportDest.getRemote());
 
         // get some previous builds that were either UNSTABLE or SUCCESS
         List<AbstractBuild<?, ?>> builds = new ArrayList<AbstractBuild<?, ?>>(
@@ -1336,10 +1366,10 @@ public class LoadTestBuilder extends Builder
         int numberOfBuildsWithReports = 0;
         for (AbstractBuild<?, ?> eachBuild : builds)
         {
-            File reportDirectory = getBuildReportFolder(eachBuild);
+            FilePath reportDirectory = getBuildReportFolder(eachBuild);
             if (reportDirectory.isDirectory())
             {
-                commandLine.add(reportDirectory.toString());
+                commandLine.add(reportDirectory.getRemote());
                 numberOfBuildsWithReports++;
             }
         }
@@ -1347,8 +1377,8 @@ public class LoadTestBuilder extends Builder
         // check whether we have enough builds with reports to create a trend report
         if (numberOfBuildsWithReports >= 2)
         {
-            // run trend report generator
-            int commandResult = executeCommand(build, getXltBinFolder(build), commandLine, listener.getLogger());
+            // run trend report generator on master
+            int commandResult = executeCommand(Jenkins.getInstance(), getXltBinFolderOnMaster(), commandLine, listener.getLogger());
             listener.getLogger().println("Trend report generator returned with exit code: " + commandResult);
             if (commandResult != 0)
             {
