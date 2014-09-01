@@ -1,7 +1,6 @@
 package com.xceptance.xlt.tools.jenkins;
 
 import hudson.FilePath;
-import hudson.FilePath.FileCallable;
 import hudson.Launcher;
 import hudson.Launcher.ProcStarter;
 import hudson.model.Action;
@@ -9,7 +8,6 @@ import hudson.model.BuildListener;
 import hudson.model.Result;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
-import hudson.remoting.VirtualChannel;
 import hudson.tasks.Builder;
 import hudson.util.StreamTaskListener;
 
@@ -33,6 +31,7 @@ import javax.xml.xpath.XPathFactory;
 
 import jenkins.model.Jenkins;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.SystemUtils;
 import org.apache.log4j.FileAppender;
@@ -861,7 +860,7 @@ public class LoadTestBuilder extends Builder
     {
         return new FilePath(getXltFolder(build), "bin");
     }
-    
+
     private FilePath getXltBinFolderOnMaster()
     {
         return new FilePath(new File(new File(getXltTemplateDir()), "bin"));
@@ -1225,7 +1224,7 @@ public class LoadTestBuilder extends Builder
             srcFolder.deleteRecursive();
         }
     }
-    
+
     private int executeCommand(hudson.model.Node buildNode, FilePath workingDirectory, List<String> commandLine, PrintStream logger)
         throws IOException, InterruptedException
     {
@@ -1322,13 +1321,15 @@ public class LoadTestBuilder extends Builder
                 else if (file.getName().startsWith("timers.csv"))
                 {
                     // regular timer files
-                    FilePath renamedResultsFile = new FilePath(targetDir, file.getName() + "." + buildNumber);
-                    file.copyTo(renamedResultsFile);
+                    // use File instead of FilePath to prevent error on Windows systems
+                    // in this case using File is ok, because copying results is done on master
+                    File renamedResultsFile = new File(targetDir.getRemote(), file.getName() + "." + buildNumber);
+                    FileUtils.copyFile(new File(file.getRemote()), renamedResultsFile);
                 }
                 else if (file.getName().endsWith(".csv"))
                 {
                     // WebDriver timer files
-                    file.copyTo(targetDir);
+                    FileUtils.copyFileToDirectory(new File(file.getRemote()), new File(targetDir.getRemote()));
                 }
             }
         }
