@@ -43,6 +43,30 @@
                 <f:textbox value="${instance.agentControllerConfig.urlFile}"/>
             </f:entry>
         </f:radioBlock>
+        
+        <f:radioBlock name="agentControllerConfig" value="ec2" title="Specify and configure agent machines in Amazon's EC2"
+            checked="${instance.agentControllerConfig.type == 'ec2'}">
+            <!-- select region -->
+            <f:entry field="region" title="Region">
+				<f:select />
+			</f:entry>
+			<!-- specify AMI ID -->
+			<f:entry field="amiId" title="AMI ID">
+                <f:textbox field="amiId" default="${descriptor.getDefaultAmiId()}"/>
+            </f:entry>
+            <!-- select machine type -->
+            <f:entry field="ec2Type" title="Machine type">
+				<f:select />
+			</f:entry>
+			<!-- specify count of machines -->
+			<f:entry field="countMachines" title="Count of machines">
+                <f:textbox field="countMachines"/>
+            </f:entry>
+            <!-- specify a tag name -->
+			<f:entry field="tagName" title="Tag name">
+                <f:textbox field="tagName"/>
+            </f:entry>
+        </f:radioBlock>
     </f:entry>
 
     <!-- ===================================================================== -->
