@@ -100,6 +100,8 @@ public class LoadTestBuilder extends Builder
 
     transient private XltChartAction chartAction;
 
+    private boolean usedEc2Machine;
+
     public enum CONFIG_VALUE_PARAMETER
     {
         id, xPath, condition, plotID, name
@@ -1017,6 +1019,11 @@ public class LoadTestBuilder extends Builder
             runMasterController(build, listener);
             postTestExecution(build, listener);
 
+            if (usedEc2Machine)
+            {
+                terminateEc2Machine(build, listener);
+            }
+
             if (createSummaryReport)
             {
                 createSummaryReport(build, listener);
@@ -1050,7 +1057,7 @@ public class LoadTestBuilder extends Builder
         return true;
     }
 
-    private void configureAgentController(AbstractBuild<?, ?> build, BuildListener listener) throws IOException
+    private void configureAgentController(AbstractBuild<?, ?> build, BuildListener listener) throws Exception
     {
         listener.getLogger().println("-----------------------------------------------------------------\n"
                                          + "Configuring agent controllers ...\n");
@@ -1082,6 +1089,11 @@ public class LoadTestBuilder extends Builder
                     agentControllerUrls = parseAgentControllerUrlsFromFile(file);
                 }
             }
+            // run Amazon's EC2 machine
+            else if (agentControllerConfig.type.equals(AgentControllerConfig.TYPE.ec2.toString()))
+            {
+                startEc2Machine(build, listener);
+            }
 
             if (agentControllerUrls == null || agentControllerUrls.length == 0)
             {
@@ -1097,6 +1109,81 @@ public class LoadTestBuilder extends Builder
         }
 
         listener.getLogger().println("\nFinished");
+    }
+
+    private void startEc2Machine(AbstractBuild<?, ?> build, BuildListener listener) throws Exception
+    {
+        this.usedEc2Machine = true;
+
+        listener.getLogger()
+                .println("-----------------------------------------------------------------\nStarting agent controller with EC2 admin tool ...\n");
+
+        // build the EC2 admin command line
+        List<String> commandLine = new ArrayList<String>();
+
+        if (SystemUtils.IS_OS_WINDOWS)
+        {
+            commandLine.add("cmd.exe");
+            commandLine.add("/c");
+            commandLine.add("ec2_admin.cmd");
+        }
+        else
+        {
+            commandLine.add("./ec2_admin.sh");
+        }
+        commandLine.add("run");
+        commandLine.add(agentControllerConfig.region);
+        commandLine.add(agentControllerConfig.amiId);
+        commandLine.add(agentControllerConfig.ec2Type);
+        commandLine.add(agentControllerConfig.countMachines);
+        commandLine.add(agentControllerConfig.tagName);
+
+        // run the EC2 admin tool
+        FilePath workingDirectory = getXltBinFolder(build);
+        int commandResult = executeCommand(build.getBuiltOn(), workingDirectory, commandLine, listener.getLogger());
+        listener.getLogger().println("EC2 admin tool returned with exit code: " + commandResult);
+
+        if (commandResult != 0)
+        {
+            build.setResult(Result.FAILURE);
+        }
+        // open the file that contains the agent controller URLs
+        FilePath file = new FilePath(workingDirectory, "acUrls.txt");
+        listener.getLogger().printf("Read agent controller URLs from file %s:\n\n", file);
+        agentControllerUrls = parseAgentControllerUrlsFromFile(file);
+    }
+
+    private void terminateEc2Machine(AbstractBuild<?, ?> build, BuildListener listener) throws Exception
+    {
+        listener.getLogger()
+                .println("-----------------------------------------------------------------\nTerminating agent controller with EC2 admin tool ...\n");
+
+        // build the EC2 admin command line
+        List<String> commandLine = new ArrayList<String>();
+
+        if (SystemUtils.IS_OS_WINDOWS)
+        {
+            commandLine.add("cmd.exe");
+            commandLine.add("/c");
+            commandLine.add("ec2_admin.cmd");
+        }
+        else
+        {
+            commandLine.add("./ec2_admin.sh");
+        }
+        commandLine.add("terminate");
+        commandLine.add(agentControllerConfig.region);
+        commandLine.add(agentControllerConfig.tagName);
+
+        // run the EC2 admin tool
+        FilePath workingDirectory = getXltBinFolder(build);
+        int commandResult = executeCommand(build.getBuiltOn(), workingDirectory, commandLine, listener.getLogger());
+        listener.getLogger().println("EC2 admin tool returned with exit code: " + commandResult);
+
+        if (commandResult != 0)
+        {
+            build.setResult(Result.FAILURE);
+        }
     }
 
     private FilePath getTestSuiteConfigFolder(AbstractBuild<?, ?> build)
