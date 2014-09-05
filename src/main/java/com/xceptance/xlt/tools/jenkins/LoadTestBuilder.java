@@ -1132,11 +1132,11 @@ public class LoadTestBuilder extends Builder
             commandLine.add("./ec2_admin.sh");
         }
         commandLine.add("run");
-        commandLine.add(agentControllerConfig.region);
-        commandLine.add(agentControllerConfig.amiId);
-        commandLine.add(agentControllerConfig.ec2Type);
-        commandLine.add(agentControllerConfig.countMachines);
-        commandLine.add(agentControllerConfig.tagName);
+        commandLine.add(agentControllerConfig.getRegion());
+        commandLine.add(agentControllerConfig.getAmiId());
+        commandLine.add(agentControllerConfig.getEc2Type());
+        commandLine.add(agentControllerConfig.getCountMachines());
+        commandLine.add(agentControllerConfig.getTagName());
 
         // run the EC2 admin tool
         FilePath workingDirectory = getXltBinFolder(build);
@@ -1148,7 +1148,7 @@ public class LoadTestBuilder extends Builder
             build.setResult(Result.FAILURE);
         }
         // open the file that contains the agent controller URLs
-        FilePath file = new FilePath(workingDirectory, "acUrls.txt");
+        FilePath file = new FilePath(getXltFolder(build), "acUrls.txt");
         listener.getLogger().printf("Read agent controller URLs from file %s:\n\n", file);
         agentControllerUrls = parseAgentControllerUrlsFromFile(file);
     }
@@ -1172,8 +1172,8 @@ public class LoadTestBuilder extends Builder
             commandLine.add("./ec2_admin.sh");
         }
         commandLine.add("terminate");
-        commandLine.add(agentControllerConfig.region);
-        commandLine.add(agentControllerConfig.tagName);
+        commandLine.add(agentControllerConfig.getRegion());
+        commandLine.add(agentControllerConfig.getTagName());
 
         // run the EC2 admin tool
         FilePath workingDirectory = getXltBinFolder(build);

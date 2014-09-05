@@ -65,15 +65,15 @@ public class AgentControllerConfig
 
     public final String urlList;
 
-    public final String region;
+    private final String region;
 
-    public final String amiId;
+    private final String amiId;
 
-    public final String ec2Type;
+    private final String ec2Type;
 
-    public final String countMachines;
+    private final String countMachines;
 
-    public final String tagName;
+    private final String tagName;
 
     public AgentControllerConfig()
     {
@@ -92,6 +92,31 @@ public class AgentControllerConfig
         this.ec2Type = ec2Type;
         this.countMachines = countMachines;
         this.tagName = tagName;
+    }
+
+    public String getRegion()
+    {
+        return this.region;
+    }
+
+    public String getAmiId()
+    {
+        return this.amiId;
+    }
+
+    public String getEc2Type()
+    {
+        return this.ec2Type;
+    }
+
+    public String getCountMachines()
+    {
+        return this.countMachines;
+    }
+
+    public String getTagName()
+    {
+        return this.tagName;
     }
 
     /**
