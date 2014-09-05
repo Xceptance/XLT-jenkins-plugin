@@ -48,23 +48,23 @@
             checked="${instance.agentControllerConfig.type == 'ec2'}">
             <!-- select region -->
             <f:entry field="region" title="Region">
-				<f:select />
+				<f:select default="${instance.agentControllerConfig.region}"/>
 			</f:entry>
 			<!-- specify AMI ID -->
 			<f:entry field="amiId" title="AMI ID">
-                <f:textbox field="amiId" default="${descriptor.getDefaultAmiId()}"/>
+                <f:textbox field="amiId" value="${instance.agentControllerConfig.amiId}"/>
             </f:entry>
             <!-- select machine type -->
             <f:entry field="ec2Type" title="Machine type">
-				<f:select />
+				<f:select default="${instance.agentControllerConfig.ec2Type}"/>
 			</f:entry>
 			<!-- specify count of machines -->
 			<f:entry field="countMachines" title="Count of machines">
-                <f:textbox field="countMachines"/>
+                <f:textbox field="countMachines" value="${instance.agentControllerConfig.countMachines}"/>
             </f:entry>
             <!-- specify a tag name -->
 			<f:entry field="tagName" title="Tag name">
-                <f:textbox field="tagName"/>
+                <f:textbox field="tagName" value="${instance.agentControllerConfig.tagName}"/>
             </f:entry>
         </f:radioBlock>
     </f:entry>
