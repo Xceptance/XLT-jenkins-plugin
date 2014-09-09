@@ -6,11 +6,11 @@ import hudson.model.AbstractProject;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
 import hudson.util.FormValidation;
+import hudson.util.ListBoxModel;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
-import java.nio.file.Files;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -89,7 +89,8 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
 
     private FilePath getXltConfigFile() throws URISyntaxException
     {
-        return new FilePath(new File(new File(Jenkins.getInstance().getPlugin(PLUGIN_NAME).getWrapper().baseResourceURL.toURI()), "xltConfig.json"));
+        return new FilePath(new File(new File(Jenkins.getInstance().getPlugin(PLUGIN_NAME).getWrapper().baseResourceURL.toURI()),
+                                     "xltConfig.json"));
     }
 
     public int getDefaultPlotWidth()
@@ -414,5 +415,76 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
             return FormValidation.error("The specified directory does not exist (yet).");
         }
         return FormValidation.ok();
+    }
+
+    /**
+     * Fills the region select box.
+     * 
+     * @return A {@link ListBoxModel} with the available regions.
+     */
+    public ListBoxModel doFillRegionItems()
+    {
+        ListBoxModel items = new ListBoxModel();
+        for (String region : AgentControllerConfig.getAllRegions().keySet())
+        {
+            items.add(region + ": " + AgentControllerConfig.getAllRegions().get(region), region);
+        }
+        return items;
+    }
+
+    /**
+     * Fills the machine type select box.
+     * 
+     * @return A {@link ListBoxModel} with the available machine types.
+     */
+    public ListBoxModel doFillEc2TypeItems()
+    {
+        ListBoxModel items = new ListBoxModel();
+        for (String type : AgentControllerConfig.getAllTypes().keySet())
+        {
+            items.add(type + ": " + AgentControllerConfig.getAllTypes().get(type), type);
+        }
+        return items;
+    }
+
+    /**
+     * Performs on-the-fly validation of the form field 'amiId'.
+     */
+    public FormValidation doCheckAmiId(@QueryParameter String value)
+    {
+        return FormValidation.validateRequired(value);
+    }
+
+    /**
+     * Performs on-the-fly validation of the form field 'countMachines'.
+     */
+    public FormValidation doCheckCountMachines(@QueryParameter String value)
+    {
+        if (StringUtils.isBlank(value))
+        {
+            return FormValidation.validateRequired(value);
+        }
+        int count = -1;
+        try
+        {
+            count = Integer.parseInt(value);
+        }
+        catch (NumberFormatException e)
+        {
+            return FormValidation.error("Please enter a valid count of machines.");
+        }
+        if (count < 1)
+        {
+            return FormValidation.error("Please enter a valid positive count of machines.");
+        }
+        return FormValidation.ok();
+    }
+
+    /**
+     * Performs on-the-fly validation of the form field 'tagName'.
+     */
+    public FormValidation doCheckTagName(@QueryParameter String value)
+    {
+        return FormValidation.validateRequired(value);
     }
 }
