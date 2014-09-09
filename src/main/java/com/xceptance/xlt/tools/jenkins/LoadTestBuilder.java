@@ -1046,6 +1046,19 @@ public class LoadTestBuilder extends Builder
         }
         finally
         {
+            // terminate Amazon's EC2 instances
+            if (usedEc2Machine)
+            {
+                try
+                {
+                    terminateEc2Machine(build, listener);
+                }
+                catch (Exception e)
+                {
+                    listener.getLogger().println("Could not terminate Amazon EC2 instances!");
+                    LOGGER.error("Could not terminate Amazon EC2 instances!", e);
+                }
+            }
             // save logs
             saveArtifact(getXltLogFolder(build), getBuildLogsFolder(build));
 
@@ -1183,6 +1196,11 @@ public class LoadTestBuilder extends Builder
         if (commandResult != 0)
         {
             build.setResult(Result.FAILURE);
+        }
+        // all EC2 instances are terminated
+        else
+        {
+            usedEc2Machine = false;
         }
     }
 
