@@ -868,6 +868,11 @@ public class LoadTestBuilder extends Builder
         return new FilePath(new File(new File(getXltTemplateDir()), "bin"));
     }
 
+    private FilePath getXltConfigFolder(AbstractBuild<?, ?> build)
+    {
+        return new FilePath(getXltFolder(build), "config");
+    }
+
     private List<CriteriaResult> validateCriteria(AbstractBuild<?, ?> build, BuildListener listener)
         throws IOException, InterruptedException
     {
@@ -1161,7 +1166,7 @@ public class LoadTestBuilder extends Builder
             build.setResult(Result.FAILURE);
         }
         // open the file that contains the agent controller URLs
-        FilePath file = new FilePath(getXltFolder(build), "acUrls.txt");
+        FilePath file = new FilePath(getXltConfigFolder(build), "acUrls.txt");
         listener.getLogger().printf("Read agent controller URLs from file %s:\n\n", file);
         agentControllerUrls = parseAgentControllerUrlsFromFile(file);
     }
