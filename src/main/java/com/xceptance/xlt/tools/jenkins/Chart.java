@@ -166,14 +166,10 @@ public class Chart<X, Y>
 
         public void addLineValue(ChartLineValue<X, Y> value)
         {
-            if (values.size() < maxCount)
-            {
-                values.add(value);
-            }
-            else
-            {
+            values.add(value);
+            if (!values.isEmpty() && values.size() > maxCount)            
+            {    
                 values.remove(0);
-                values.add(value);
             }
         }
     }
