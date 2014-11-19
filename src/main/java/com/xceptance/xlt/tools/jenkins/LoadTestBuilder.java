@@ -189,13 +189,20 @@ public class LoadTestBuilder extends Builder
     {
         if (dateFormat == null)
         {
-            try
+            if (timeFormatPattern != null)
             {
-                dateFormat = new SimpleDateFormat(timeFormatPattern);
+                try
+                {
+                    dateFormat = new SimpleDateFormat(timeFormatPattern);
+                }
+                catch (Exception ex)
+                {
+                    LOGGER.warn("Failed to create date format for pattern: " + timeFormatPattern, ex);
+                }
             }
-            catch (Exception ex)
+
+            if (dateFormat == null)
             {
-                LOGGER.warn("Failed to create date format for pattern: " + timeFormatPattern, ex);
                 dateFormat = new SimpleDateFormat();
             }
         }
