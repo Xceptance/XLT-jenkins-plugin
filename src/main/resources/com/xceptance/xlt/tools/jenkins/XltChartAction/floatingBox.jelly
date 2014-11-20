@@ -64,9 +64,10 @@
 							</center>
 						    <script type="text/javascript">
 							(function(){
-								var xData = ${eachChart.getXData()};					
+								var xData = ${eachChart.getXData()};		
+								var xDataCount = 0;	for (eachKey in xData){ if (xData.hasOwnProperty(eachKey)){ xDataCount++; }}		
 								var data = ${eachChart.getDataString('function(lineName, o, xData){ try{ var data = xData[""+parseInt(o.x)]; return "&lt;div align=\"left\" &gt;" + lineName +": "+o.y+"&lt;br&gt;Build: "+data.buildNumber + "&lt;br&gt;" + "Date: " + data.buildTime + "&lt;/div&gt;" }catch(e){ return "Unexpected" }}')};						
-						        var container = document.getElementById('${plotContainerID}');
+						        var container = document.getElementById('${plotContainerID}');						         
 						        var config = { 
 						        	yaxis:{ 
 						        		min:0,
@@ -81,7 +82,7 @@
 										min:null,
 										max:null,
 										tickDecimals:0,
-										tickFormatter:function(o){ try{ var data = xData[""+o]; var message = ''; if(data.showBuildNumber){ message += '#'+data.buildNumber + " "; }; message += data.buildTime; return message }catch(e){ return "Unexpected" }},
+										tickFormatter:function(o){ if(xDataCount === 1){var index = parseInt(o); if(index &lt;xDataCount-1 || index &gt;xDataCount-1){ return ""; }} try{ var data = xData[""+o]; if(data === undefined){ return "No Value";} var message = ''; if(data.showBuildNumber){ message += '#'+data.buildNumber + " "; }; message += data.buildTime; return message }catch(e){ return "Unexpected" }},
 										margin:false,
 									},
 									selection: {
@@ -93,7 +94,7 @@
 							        	show:true,
 							        },
 							        points:{
-							        	show:false,
+							        	show:(xDataCount === 1 ? true : false),
 							        },
 							        grid:{
 							        	verticalLines: false,
