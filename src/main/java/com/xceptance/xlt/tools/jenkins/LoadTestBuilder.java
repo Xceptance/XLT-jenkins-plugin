@@ -893,7 +893,6 @@ public class LoadTestBuilder extends Builder
         {
             CriteriaResult criteriaResult = CriteriaResult.error("No test data found.");
             failedAlerts.add(criteriaResult);
-            listener.getLogger().println(criteriaResult.getLogMessage());
         }
         else
         {
@@ -902,8 +901,7 @@ public class LoadTestBuilder extends Builder
                 List<String> criteriaIDs = getValueConfigIDs();
                 for (String eachID : criteriaIDs)
                 {
-                    listener.getLogger().println();
-                    listener.getLogger().println("Start processing. Criteria:\"" + eachID + "\"");
+                    listener.getLogger().println(eachID);
                     String xPath = null;
                     String condition = null;
                     try
@@ -919,8 +917,7 @@ public class LoadTestBuilder extends Builder
                         {
                             CriteriaResult criteriaResult = CriteriaResult.error("No xPath for Criteria");
                             criteriaResult.setCriteriaID(eachID);
-                            failedAlerts.add(criteriaResult);
-                            listener.getLogger().println(criteriaResult.getLogMessage());
+                            failedAlerts.add(criteriaResult);                            
                             continue;
                         }
                         String conditionPath = xPath + condition;
@@ -931,25 +928,21 @@ public class LoadTestBuilder extends Builder
                             CriteriaResult criteriaResult = CriteriaResult.error("No result for XPath");
                             criteriaResult.setCriteriaID(eachID);
                             criteriaResult.setXPath(xPath);
-                            failedAlerts.add(criteriaResult);
-                            listener.getLogger().println(criteriaResult.getLogMessage());
+                            failedAlerts.add(criteriaResult);                            
                             continue;
                         }
 
                         // test the condition
-                        listener.getLogger().println("Test condition. Criteria: \"" + eachID + "\"\t Path: \"" + xPath +
-                                                         "\t Condition: \"" + condition + "\"");
                         Node result = (Node) XPathFactory.newInstance().newXPath().evaluate(conditionPath, dataXml, XPathConstants.NODE);
                         if (result == null)
                         {
                             String value = XPathFactory.newInstance().newXPath().evaluate(xPath, dataXml);
-                            CriteriaResult criteriaResult = CriteriaResult.failed("Condition failed");
+                            CriteriaResult criteriaResult = CriteriaResult.failed("Condition");
                             criteriaResult.setCriteriaID(eachID);
                             criteriaResult.setValue(value);
                             criteriaResult.setCondition(condition);
                             criteriaResult.setXPath(xPath);
-                            failedAlerts.add(criteriaResult);
-                            listener.getLogger().println(criteriaResult.getLogMessage());
+                            failedAlerts.add(criteriaResult);                            
                             continue;
                         }
                     }
@@ -959,8 +952,7 @@ public class LoadTestBuilder extends Builder
                         criteriaResult.setCriteriaID(eachID);
                         criteriaResult.setExceptionMessage(e.getMessage());
                         criteriaResult.setCauseMessage(e.getCause() != null ? e.getCause().getMessage() : null);
-                        failedAlerts.add(criteriaResult);
-                        listener.getLogger().println(criteriaResult.getLogMessage());
+                        failedAlerts.add(criteriaResult);                        
                     }
                     catch (XPathExpressionException e)
                     {
@@ -970,8 +962,7 @@ public class LoadTestBuilder extends Builder
                         criteriaResult.setXPath(xPath);
                         criteriaResult.setExceptionMessage(e.getMessage());
                         criteriaResult.setCauseMessage(e.getCause() != null ? e.getCause().getMessage() : null);
-                        failedAlerts.add(criteriaResult);
-                        listener.getLogger().println(criteriaResult.getLogMessage());
+                        failedAlerts.add(criteriaResult);                        
                     }
                 }
             }
@@ -980,8 +971,7 @@ public class LoadTestBuilder extends Builder
                 CriteriaResult criteriaResult = CriteriaResult.error("Failed to start process criteria.");
                 criteriaResult.setExceptionMessage(e.getMessage());
                 criteriaResult.setCauseMessage(e.getCause() != null ? e.getCause().getMessage() : null);
-                failedAlerts.add(criteriaResult);
-                listener.getLogger().println(criteriaResult.getLogMessage());
+                failedAlerts.add(criteriaResult);                
             }
         }
         return failedAlerts;
@@ -995,13 +985,13 @@ public class LoadTestBuilder extends Builder
         if (!failedAlerts.isEmpty())
         {
             listener.getLogger().println();
-            listener.getLogger().println("Set state to UNSTABLE by alerts.");
-            build.setResult(Result.UNSTABLE);
             for (CriteriaResult eachAlert : failedAlerts)
-            {
+            {                
                 listener.getLogger().println(eachAlert.getLogMessage());
             }
             listener.getLogger().println();
+            listener.getLogger().println("Set state to UNSTABLE");
+            build.setResult(Result.UNSTABLE);
         }
 
         XltRecorderAction printReportAction = new XltRecorderAction(build, failedAlerts, builderID);
