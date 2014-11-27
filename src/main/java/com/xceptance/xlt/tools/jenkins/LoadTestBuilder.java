@@ -5,9 +5,12 @@ import hudson.Launcher;
 import hudson.Launcher.ProcStarter;
 import hudson.model.Action;
 import hudson.model.BuildListener;
+import hudson.model.ParameterValue;
 import hudson.model.Result;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
+import hudson.model.BooleanParameterValue;
+import hudson.model.ParametersAction;
 import hudson.tasks.Builder;
 import hudson.util.StreamTaskListener;
 
@@ -115,6 +118,11 @@ public class LoadTestBuilder extends Builder
     public enum CONFIG_SECTIONS_PARAMETER
     {
         values, plots
+    };
+
+    public enum ENVIRONMENT_KEYS
+    {
+        XLT_BUILD_ERROR, XLT_CONDITION_CRITICAL, XLT_CONDITION_FAILED
     };
 
     static
@@ -992,6 +1000,12 @@ public class LoadTestBuilder extends Builder
             listener.getLogger().println();
             listener.getLogger().println("Set state to UNSTABLE");
             build.setResult(Result.UNSTABLE);
+            setEnvironmentXLT_CONDITION_FAILED(build, true);
+            
+            //check if this should be marked as critical
+            getBuilds(build.getProject(),0, 3);
+            
+            new org.apache.commons.collections.buffer.CircularFifoBuffer(3);
         }
 
         XltRecorderAction printReportAction = new XltRecorderAction(build, failedAlerts, builderID);
@@ -1010,9 +1024,38 @@ public class LoadTestBuilder extends Builder
         return true;
     }
 
+    public void setEnvironmentVariable(AbstractBuild<?, ?> build, ParameterValue variable)
+    {
+        build.addAction(new ParametersAction(variable));
+    }
+
+    public void setEnvironmentXLT_BUILD_ERROR(AbstractBuild<?, ?> build, boolean isError)
+    {
+        setEnvironmentVariable(build, new BooleanParameterValue(ENVIRONMENT_KEYS.XLT_BUILD_ERROR.name(), isError));
+    }
+
+    public void setEnvironmentXLT_CONDITION_FAILED(AbstractBuild<?, ?> build, boolean isFailed)
+    {
+        setEnvironmentVariable(build, new BooleanParameterValue(ENVIRONMENT_KEYS.XLT_CONDITION_FAILED.name(), isFailed));
+    }
+
+    public void setEnvironmentXLT_CONDITION_CRITICAL(AbstractBuild<?, ?> build, boolean isCritical)
+    {
+        setEnvironmentVariable(build, new BooleanParameterValue(ENVIRONMENT_KEYS.XLT_CONDITION_CRITICAL.name(), isCritical));
+    }
+
+    public void initializeEnvironment(AbstractBuild<?, ?> build)
+    {
+        setEnvironmentXLT_BUILD_ERROR(build, false);
+        setEnvironmentXLT_CONDITION_FAILED(build, false);
+        setEnvironmentXLT_CONDITION_CRITICAL(build, false);
+    }
+
     @Override
     public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws IOException, InterruptedException
     {
+        initializeEnvironment(build);
+
         try
         {
             initialCleanUp(build, listener);
