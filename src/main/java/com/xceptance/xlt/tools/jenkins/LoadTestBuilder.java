@@ -104,7 +104,11 @@ public class LoadTestBuilder extends Builder
     transient private XltChartAction chartAction;
 
     private boolean usedEc2Machine;
-
+    
+    private int criticalConditionCount;
+    
+    private int criticalConditionBuildCount;
+    
     public enum CONFIG_VALUE_PARAMETER
     {
         id, xPath, condition, plotID, name
@@ -151,7 +155,7 @@ public class LoadTestBuilder extends Builder
     public LoadTestBuilder(String xltTemplateDir, String testPropertiesFile, String xltConfig, int plotWidth, int plotHeight,
                            String plotTitle, String builderID, boolean isPlotVertical, boolean createTrendReport,
                            int numberOfBuildsForTrendReport, boolean createSummaryReport, int numberOfBuildsForSummaryReport,
-                           AgentControllerConfig agentControllerConfig, String timeFormatPattern, boolean showBuildNumber)
+                           AgentControllerConfig agentControllerConfig, String timeFormatPattern, boolean showBuildNumber, int criticalConditionCount, int criticalConditionBuildCount)
     {
         isSave = true;
         Thread.currentThread().setUncaughtExceptionHandler(new UncaughtExceptionHandler()
@@ -177,6 +181,8 @@ public class LoadTestBuilder extends Builder
         this.isPlotVertical = isPlotVertical;
         this.timeFormatPattern = StringUtils.defaultIfBlank(timeFormatPattern, null);
         this.showBuildNumber = showBuildNumber;
+        this.criticalConditionCount = criticalConditionCount;
+        this.criticalConditionBuildCount = criticalConditionBuildCount;
 
         // report configuration
         this.createTrendReport = createTrendReport;
@@ -1001,11 +1007,6 @@ public class LoadTestBuilder extends Builder
             listener.getLogger().println("Set state to UNSTABLE");
             build.setResult(Result.UNSTABLE);
             setEnvironmentXLT_CONDITION_FAILED(build, true);
-            
-            //check if this should be marked as critical
-            getBuilds(build.getProject(),0, 3);
-            
-            new org.apache.commons.collections.buffer.CircularFifoBuffer(3);
         }
 
         XltRecorderAction printReportAction = new XltRecorderAction(build, failedAlerts, builderID);
