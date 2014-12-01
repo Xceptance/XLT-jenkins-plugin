@@ -70,4 +70,9 @@
         </repository>
     </distributionManagement>
 
+    <url>https://www.xceptance.net/xlt/</url>
+    <organization>
+    	<url>https://www.xceptance.net/</url>
+    	<name>Xceptance</name>
+    </organization>
 </project>
