@@ -75,13 +75,13 @@
         <div class="xlt-subsection">Report Configuration</div>
     </f:block>
 
-	<f:optionalBlock field="createTrendReport" default="${descriptor.getDefaultCreateTrendReport()}" title="Create a trend report from the results of the last n builds (see below).">
+	<f:optionalBlock field="createTrendReport" inline="true" default="${descriptor.getDefaultCreateTrendReport()}" title="Create a trend report from the results of the last n builds (see below).">
 	    <f:entry title="#Builds For Trend Report" field="numberOfBuildsForTrendReport">
         	<f:textbox field="numberOfBuildsForTrendReport" default="${descriptor.getDefaultNumberOfBuildsForTrendReport()}"/>
     	</f:entry>
     </f:optionalBlock>
 
-	<f:optionalBlock field="createSummaryReport" default="${descriptor.getDefaultCreateSummaryReport()}" title="Create a summary load test report from the results of the last n builds (see below).">
+	<f:optionalBlock field="createSummaryReport" inline="true" default="${descriptor.getDefaultCreateSummaryReport()}" title="Create a summary load test report from the results of the last n builds (see below).">
 	    <f:entry title="#Builds For Summary Report" field="numberOfBuildsForSummaryReport">
         	<f:textbox field="numberOfBuildsForSummaryReport" default="${descriptor.getDefaultNumberOfBuildsForSummaryReport()}"/>
     	</f:entry>
