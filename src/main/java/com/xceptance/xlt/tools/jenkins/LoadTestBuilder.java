@@ -9,8 +9,8 @@ import hudson.model.ParameterValue;
 import hudson.model.Result;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
-import hudson.model.BooleanParameterValue;
 import hudson.model.ParametersAction;
+import hudson.model.StringParameterValue;
 import hudson.tasks.Builder;
 import hudson.util.StreamTaskListener;
 
@@ -23,7 +23,9 @@ import java.net.URISyntaxException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Hashtable;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -104,11 +106,15 @@ public class LoadTestBuilder extends Builder
     transient private XltChartAction chartAction;
 
     private boolean usedEc2Machine;
-    
-    private int criticalConditionCount;
-    
-    private int criticalConditionBuildCount;
-    
+
+    private int markCriticalConditionCount;
+
+    private int markCriticalBuildCount;
+
+    private boolean markCriticalEnabled;
+
+    private transient Map<ENVIRONMENT_KEYS, ParameterValue> buildParameterMap;
+
     public enum CONFIG_VALUE_PARAMETER
     {
         id, xPath, condition, plotID, name
@@ -126,7 +132,7 @@ public class LoadTestBuilder extends Builder
 
     public enum ENVIRONMENT_KEYS
     {
-        XLT_BUILD_ERROR, XLT_CONDITION_CRITICAL, XLT_CONDITION_FAILED
+        XLT_RUN_FAILED, XLT_CONDITION_CRITICAL, XLT_CONDITION_FAILED, XLT_CONDITION_ERROR
     };
 
     static
@@ -155,7 +161,8 @@ public class LoadTestBuilder extends Builder
     public LoadTestBuilder(String xltTemplateDir, String testPropertiesFile, String xltConfig, int plotWidth, int plotHeight,
                            String plotTitle, String builderID, boolean isPlotVertical, boolean createTrendReport,
                            int numberOfBuildsForTrendReport, boolean createSummaryReport, int numberOfBuildsForSummaryReport,
-                           AgentControllerConfig agentControllerConfig, String timeFormatPattern, boolean showBuildNumber, int criticalConditionCount, int criticalConditionBuildCount)
+                           AgentControllerConfig agentControllerConfig, String timeFormatPattern, boolean showBuildNumber,
+                           int markCriticalConditionCount, int markCriticalBuildCount, boolean markCriticalEnabled)
     {
         isSave = true;
         Thread.currentThread().setUncaughtExceptionHandler(new UncaughtExceptionHandler()
@@ -181,8 +188,13 @@ public class LoadTestBuilder extends Builder
         this.isPlotVertical = isPlotVertical;
         this.timeFormatPattern = StringUtils.defaultIfBlank(timeFormatPattern, null);
         this.showBuildNumber = showBuildNumber;
-        this.criticalConditionCount = criticalConditionCount;
-        this.criticalConditionBuildCount = criticalConditionBuildCount;
+
+        // criteria configuration
+        this.markCriticalEnabled = markCriticalEnabled;
+        this.markCriticalConditionCount = markCriticalConditionCount;
+        this.markCriticalBuildCount = (markCriticalConditionCount > 0 && markCriticalConditionCount > markCriticalBuildCount)
+                                                                                                                             ? markCriticalConditionCount
+                                                                                                                             : markCriticalBuildCount;
 
         // report configuration
         this.createTrendReport = createTrendReport;
@@ -238,6 +250,21 @@ public class LoadTestBuilder extends Builder
     public AgentControllerConfig getAgentControllerConfig()
     {
         return agentControllerConfig;
+    }
+
+    public boolean getMarkCriticalEnabled()
+    {
+        return this.markCriticalEnabled;
+    }
+
+    public int getMarkCriticalConditionCount()
+    {
+        return markCriticalConditionCount;
+    }
+
+    public int getMarkCriticalBuildCount()
+    {
+        return markCriticalBuildCount;
     }
 
     public String getTestPropertiesFile()
@@ -391,10 +418,11 @@ public class LoadTestBuilder extends Builder
     private List<? extends AbstractBuild<?, ?>> getBuilds(AbstractProject<?, ?> project, int startFrom, int count)
     {
         List<? extends AbstractBuild<?, ?>> allBuilds = project.getBuilds();
-        int to = Math.min(startFrom + count - 1, allBuilds.size());
-        if (to < 0)
+        int maxBuilds = allBuilds.size();
+        int to = Math.min(startFrom + count, maxBuilds);
+        if (to < 0 || to > maxBuilds)
         {
-            to = allBuilds.size();
+            to = maxBuilds;
         }
 
         return allBuilds.subList(startFrom, to);
@@ -931,7 +959,7 @@ public class LoadTestBuilder extends Builder
                         {
                             CriteriaResult criteriaResult = CriteriaResult.error("No xPath for Criteria");
                             criteriaResult.setCriteriaID(eachID);
-                            failedAlerts.add(criteriaResult);                            
+                            failedAlerts.add(criteriaResult);
                             continue;
                         }
                         String conditionPath = xPath + condition;
@@ -942,7 +970,7 @@ public class LoadTestBuilder extends Builder
                             CriteriaResult criteriaResult = CriteriaResult.error("No result for XPath");
                             criteriaResult.setCriteriaID(eachID);
                             criteriaResult.setXPath(xPath);
-                            failedAlerts.add(criteriaResult);                            
+                            failedAlerts.add(criteriaResult);
                             continue;
                         }
 
@@ -956,7 +984,7 @@ public class LoadTestBuilder extends Builder
                             criteriaResult.setValue(value);
                             criteriaResult.setCondition(condition);
                             criteriaResult.setXPath(xPath);
-                            failedAlerts.add(criteriaResult);                            
+                            failedAlerts.add(criteriaResult);
                             continue;
                         }
                     }
@@ -966,7 +994,7 @@ public class LoadTestBuilder extends Builder
                         criteriaResult.setCriteriaID(eachID);
                         criteriaResult.setExceptionMessage(e.getMessage());
                         criteriaResult.setCauseMessage(e.getCause() != null ? e.getCause().getMessage() : null);
-                        failedAlerts.add(criteriaResult);                        
+                        failedAlerts.add(criteriaResult);
                     }
                     catch (XPathExpressionException e)
                     {
@@ -976,7 +1004,7 @@ public class LoadTestBuilder extends Builder
                         criteriaResult.setXPath(xPath);
                         criteriaResult.setExceptionMessage(e.getMessage());
                         criteriaResult.setCauseMessage(e.getCause() != null ? e.getCause().getMessage() : null);
-                        failedAlerts.add(criteriaResult);                        
+                        failedAlerts.add(criteriaResult);
                     }
                 }
             }
@@ -985,7 +1013,7 @@ public class LoadTestBuilder extends Builder
                 CriteriaResult criteriaResult = CriteriaResult.error("Failed to start process criteria.");
                 criteriaResult.setExceptionMessage(e.getMessage());
                 criteriaResult.setCauseMessage(e.getCause() != null ? e.getCause().getMessage() : null);
-                failedAlerts.add(criteriaResult);                
+                failedAlerts.add(criteriaResult);
             }
         }
         return failedAlerts;
@@ -1000,17 +1028,58 @@ public class LoadTestBuilder extends Builder
         {
             listener.getLogger().println();
             for (CriteriaResult eachAlert : failedAlerts)
-            {                
+            {
                 listener.getLogger().println(eachAlert.getLogMessage());
             }
             listener.getLogger().println();
             listener.getLogger().println("Set state to UNSTABLE");
             build.setResult(Result.UNSTABLE);
-            setEnvironmentXLT_CONDITION_FAILED(build, true);
         }
 
-        XltRecorderAction printReportAction = new XltRecorderAction(build, failedAlerts, builderID);
-        build.getActions().add(printReportAction);
+        XltRecorderAction recorderAction = new XltRecorderAction(build, failedAlerts, builderID);
+        build.getActions().add(recorderAction);
+
+        if (!recorderAction.getAlerts().isEmpty())
+        {
+            if (!recorderAction.getFailedAlerts().isEmpty())
+            {
+                setBuildParameterXLT_CONDITION_FAILED(true);
+                checkForCritical(build);
+            }
+
+            if (!recorderAction.getErrorAlerts().isEmpty())
+            {
+                setBuildParameterXLT_CONDITION_ERROR(true);
+            }
+        }
+    }
+
+    private void checkForCritical(AbstractBuild<?, ?> currentBuild)
+    {
+        if (markCriticalEnabled &&
+            (markCriticalBuildCount > 0 && markCriticalConditionCount > 0 && markCriticalBuildCount >= markCriticalConditionCount))
+        {
+            List<AbstractBuild<?, ?>> builds = new ArrayList<AbstractBuild<?, ?>>();
+            builds.addAll(getBuilds(currentBuild.getProject(), 0, markCriticalBuildCount));
+
+            int failedCriteriaBuilds = 0;
+            for (AbstractBuild<?, ?> eachBuild : builds)
+            {
+                XltRecorderAction recorderAction = eachBuild.getAction(XltRecorderAction.class);
+                if (recorderAction != null)
+                {
+                    if (!recorderAction.getFailedAlerts().isEmpty())
+                    {
+                        failedCriteriaBuilds++;
+                        if (failedCriteriaBuilds == markCriticalConditionCount)
+                        {
+                            setBuildParameterXLT_CONDITION_CRITICAL(true);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
     }
 
     @Override
@@ -1025,38 +1094,69 @@ public class LoadTestBuilder extends Builder
         return true;
     }
 
-    public void setEnvironmentVariable(AbstractBuild<?, ?> build, ParameterValue variable)
+    public String getResourcePath(String fileName)
     {
-        build.addAction(new ParametersAction(variable));
+        return "/plugin/" + Jenkins.getInstance().getPlugin(XltDescriptor.PLUGIN_NAME).getWrapper().getShortName() + "/" + fileName;
     }
 
-    public void setEnvironmentXLT_BUILD_ERROR(AbstractBuild<?, ?> build, boolean isError)
+    private void publishBuildParameters(AbstractBuild<?, ?> build)
     {
-        setEnvironmentVariable(build, new BooleanParameterValue(ENVIRONMENT_KEYS.XLT_BUILD_ERROR.name(), isError));
+        build.addAction(new ParametersAction(new ArrayList<ParameterValue>(buildParameterMap.values()))
+        {
+            @Override
+            public String getDisplayName()
+            {
+                return "XLT Parameters";
+            }
+
+            @Override
+            public String getIconFileName()
+            {
+                return getResourcePath("logo_24_24.png");
+            }
+        });
     }
 
-    public void setEnvironmentXLT_CONDITION_FAILED(AbstractBuild<?, ?> build, boolean isFailed)
+    private void setBuildParameter(ENVIRONMENT_KEYS parameter, String value)
     {
-        setEnvironmentVariable(build, new BooleanParameterValue(ENVIRONMENT_KEYS.XLT_CONDITION_FAILED.name(), isFailed));
+        buildParameterMap.put(parameter, new StringParameterValue(parameter.name(), value));
     }
 
-    public void setEnvironmentXLT_CONDITION_CRITICAL(AbstractBuild<?, ?> build, boolean isCritical)
+    private void setBuildParameterXLT_RUN_FAILED(boolean value)
     {
-        setEnvironmentVariable(build, new BooleanParameterValue(ENVIRONMENT_KEYS.XLT_CONDITION_CRITICAL.name(), isCritical));
+        setBuildParameter(ENVIRONMENT_KEYS.XLT_RUN_FAILED, Boolean.toString(value));
     }
 
-    public void initializeEnvironment(AbstractBuild<?, ?> build)
+    private void setBuildParameterXLT_CONDITION_FAILED(boolean value)
     {
-        setEnvironmentXLT_BUILD_ERROR(build, false);
-        setEnvironmentXLT_CONDITION_FAILED(build, false);
-        setEnvironmentXLT_CONDITION_CRITICAL(build, false);
+        setBuildParameter(ENVIRONMENT_KEYS.XLT_CONDITION_FAILED, Boolean.toString(value));
+    }
+
+    private void setBuildParameterXLT_CONDITION_ERROR(boolean value)
+    {
+        setBuildParameter(ENVIRONMENT_KEYS.XLT_CONDITION_ERROR, Boolean.toString(value));
+    }
+
+    private void setBuildParameterXLT_CONDITION_CRITICAL(boolean value)
+    {
+        setBuildParameter(ENVIRONMENT_KEYS.XLT_CONDITION_CRITICAL, Boolean.toString(value));
+    }
+
+    private void initializeBuildParameter()
+    {
+        buildParameterMap = new Hashtable<ENVIRONMENT_KEYS, ParameterValue>();
+        setBuildParameterXLT_RUN_FAILED(false);
+        setBuildParameterXLT_CONDITION_FAILED(false);
+        setBuildParameterXLT_CONDITION_ERROR(false);
+        setBuildParameterXLT_CONDITION_CRITICAL(false);
     }
 
     @Override
     public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws IOException, InterruptedException
     {
-        initializeEnvironment(build);
+        initializeBuildParameter();
 
+        boolean sucess = false;
         try
         {
             initialCleanUp(build, listener);
@@ -1079,10 +1179,11 @@ public class LoadTestBuilder extends Builder
             {
                 createTrendReport(build, listener);
             }
+            sucess = true;
         }
         catch (InterruptedException e)
         {
-            build.setResult(Result.ABORTED);
+            build.setResult(build.getExecutor().abortResult());
         }
         catch (Exception e)
         {
@@ -1111,6 +1212,12 @@ public class LoadTestBuilder extends Builder
             // delete any temporary directory with local XLT
             FilePath xltDir = getXltFolder(build);
             xltDir.deleteRecursive();
+
+            if (!sucess)
+            {
+                setBuildParameterXLT_RUN_FAILED(true);
+            }
+            publishBuildParameters(build);
         }
 
         return true;
@@ -1444,8 +1551,9 @@ public class LoadTestBuilder extends Builder
         configFolder.copyRecursiveTo(summaryConfigFolder);
 
         // copy timer data from the last n builds
-        List<AbstractBuild<?, ?>> builds = (List<AbstractBuild<?, ?>>) currentBuild.getPreviousBuildsOverThreshold(numberOfBuildsForSummaryReport - 1,
-                                                                                                                   Result.UNSTABLE);
+        List<AbstractBuild<?, ?>> builds = new ArrayList<AbstractBuild<?, ?>>(
+                                                                              currentBuild.getPreviousBuildsOverThreshold(numberOfBuildsForSummaryReport - 1,
+                                                                                                                          Result.UNSTABLE));
         builds.add(0, currentBuild);
 
         for (AbstractBuild<?, ?> build : builds)

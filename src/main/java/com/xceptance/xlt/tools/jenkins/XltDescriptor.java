@@ -487,4 +487,61 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
     {
         return FormValidation.validateRequired(value);
     }
+
+    /**
+     * Performs on-the-fly validation of the form field 'markCriticalConditionCount'.
+     */
+    public FormValidation doCheckMarkCriticalConditionCount(@QueryParameter String value)
+    {
+        if (StringUtils.isBlank(value))
+            return FormValidation.ok();
+
+        double number = -1;
+        try
+        {
+            number = Double.valueOf(value);
+        }
+        catch (NumberFormatException e)
+        {
+            return FormValidation.error("Please enter a valid positive number.");
+        }
+        if (number < 0)
+        {
+            return FormValidation.error("Please enter a valid number greater or equal 0.");
+        }
+        if (number != (int) number)
+        {
+            return FormValidation.error("Please enter a valid number greater or equal 0. Decimal number is not allowed.");
+        }
+        return FormValidation.ok();
+    }
+
+    /**
+     * Performs on-the-fly validation of the form field 'markCriticalBuildCount'.
+     */
+    public FormValidation doCheckMarkCriticalBuildCount(@QueryParameter String value)
+    {
+        if (StringUtils.isBlank(value))
+            return FormValidation.ok();
+
+        double number = -1;
+        try
+        {
+            number = Double.valueOf(value);
+        }
+        catch (NumberFormatException e)
+        {
+            return FormValidation.error("Please enter a valid number.");
+        }
+        if (number < 0)
+        {
+            return FormValidation.error("Please enter a valid number greater or equal 0.");
+        }
+        if (number != (int) number)
+        {
+            return FormValidation.error("Please enter a valid number greater or equal 0. Decimal number is not allowed.");
+        }
+        return FormValidation.ok();
+    }
+
 }

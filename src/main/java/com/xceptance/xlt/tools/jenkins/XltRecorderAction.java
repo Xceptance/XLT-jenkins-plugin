@@ -52,6 +52,11 @@ public class XltRecorderAction implements Action
         return builderID;
     }
 
+    public List<CriteriaResult> getAlerts()
+    {
+        return failedAlerts;
+    }
+
     public List<CriteriaResult> getFailedAlerts()
     {
         List<CriteriaResult> failed = new ArrayList<CriteriaResult>();
@@ -83,8 +88,11 @@ public class XltRecorderAction implements Action
         return String.valueOf(build.number);
     }
 
-    public void doReport(StaplerRequest request, StaplerResponse response) throws MalformedURLException, ServletException, IOException, InterruptedException
+    public void doReport(StaplerRequest request, StaplerResponse response)
+        throws MalformedURLException, ServletException, IOException, InterruptedException
     {
-        response.serveFile(request, new FilePath(new File(new File(build.getArtifactsDir().getAbsolutePath()), request.getRestOfPath())).toURI().toURL());
+        response.serveFile(request,
+                           new FilePath(new File(new File(build.getArtifactsDir().getAbsolutePath()), request.getRestOfPath())).toURI()
+                                                                                                                               .toURL());
     }
 }
