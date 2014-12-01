@@ -27,7 +27,7 @@
 
     <f:entry title="Agent Controller Configuration">
         <f:radioBlock name="agentControllerConfig" value="embedded" title="Use a single embedded agent controller"
-            checked="${instance.agentControllerConfig.type == 'embedded'}">
+            checked="${instance.agentControllerConfig == null || instance.agentControllerConfig.type == 'embedded'}">
         </f:radioBlock>
 
         <f:radioBlock name="agentControllerConfig" value="list" title="Specify agent controller URLs"
