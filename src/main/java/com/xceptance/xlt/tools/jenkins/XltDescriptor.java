@@ -427,7 +427,7 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
         ListBoxModel items = new ListBoxModel();
         for (String region : AgentControllerConfig.getAllRegions().keySet())
         {
-            items.add(region + ": " + AgentControllerConfig.getAllRegions().get(region), region);
+            items.add(region + " - " + AgentControllerConfig.getAllRegions().get(region), region);
         }
         return items;
     }
@@ -442,7 +442,7 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
         ListBoxModel items = new ListBoxModel();
         for (String type : AgentControllerConfig.getAllTypes().keySet())
         {
-            items.add(type + ": " + AgentControllerConfig.getAllTypes().get(type), type);
+            items.add(type + " - " + AgentControllerConfig.getAllTypes().get(type), type);
         }
         return items;
     }

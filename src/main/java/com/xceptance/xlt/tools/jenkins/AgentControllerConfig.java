@@ -1,7 +1,8 @@
 package com.xceptance.xlt.tools.jenkins;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.TreeMap;
 
 import org.kohsuke.stapler.DataBoundConstructor;
 
@@ -17,23 +18,24 @@ public class AgentControllerConfig
     /**
      * The user-friendly region names, keyed by region name.
      */
-    private static final Map<String, String> FRIENDLY_REGION_NAMES = new HashMap<String, String>();
+    private static final Map<String, String> FRIENDLY_REGION_NAMES = new TreeMap<String, String>();
     static
     {
-        FRIENDLY_REGION_NAMES.put("ap-northeast-1", "Asia Pacific  - Tokyo           ");
-        FRIENDLY_REGION_NAMES.put("ap-southeast-1", "Asia Pacific  - Singapore       ");
-        FRIENDLY_REGION_NAMES.put("ap-southeast-2", "Asia Pacific  - Sydney          ");
-        FRIENDLY_REGION_NAMES.put("eu-west-1", "EU            - Ireland         ");
-        FRIENDLY_REGION_NAMES.put("sa-east-1", "South America - Sao Paulo       ");
-        FRIENDLY_REGION_NAMES.put("us-east-1", "US East       - North Virginia  ");
-        FRIENDLY_REGION_NAMES.put("us-west-1", "US West       - North California");
-        FRIENDLY_REGION_NAMES.put("us-west-2", "US West       - Oregon          ");
+        FRIENDLY_REGION_NAMES.put("ap-northeast-1", "Asia Pacific - Tokyo");
+        FRIENDLY_REGION_NAMES.put("ap-southeast-1", "Asia Pacific - Singapore");
+        FRIENDLY_REGION_NAMES.put("ap-southeast-2", "Asia Pacific - Sydney");
+        FRIENDLY_REGION_NAMES.put("eu-central-1", "EU - Frankfurt");
+        FRIENDLY_REGION_NAMES.put("eu-west-1", "EU - Ireland");
+        FRIENDLY_REGION_NAMES.put("sa-east-1", "South America - Sao Paulo");
+        FRIENDLY_REGION_NAMES.put("us-east-1", "US East - North Virginia");
+        FRIENDLY_REGION_NAMES.put("us-west-1", "US West - North California");
+        FRIENDLY_REGION_NAMES.put("us-west-2", "US West - Oregon");
     };
 
     /**
      * The default AMI IDs, keyed by region name.
      */
-    private static final Map<String, String> DEFAULT_AMI_IDS = new HashMap<String, String>();
+    private static final Map<String, String> DEFAULT_AMI_IDS = new TreeMap<String, String>();
     static
     {
         DEFAULT_AMI_IDS.put("eu-west-1", "ami-a0d20cd7");
@@ -46,7 +48,7 @@ public class AgentControllerConfig
     /**
      * The descriptions of the instance types suitable for load tests, keyed by instance type.
      */
-    private static final Map<String, String> INSTANCE_TYPES = new HashMap<String, String>();
+    private static final Map<String, String> INSTANCE_TYPES = new LinkedHashMap<String, String>();
     static
     {
         INSTANCE_TYPES.put(InstanceType.C3Large.toString(), " 2 cores,   7.0 compute units,  3.75 GB RAM, 64 bit, $0.11...0.14/h");
