@@ -83,6 +83,11 @@ public class XltChartAction implements Action
     {
         return charts;
     }
+    
+    public void setCharts(List<Chart<Integer, Double>> charts)
+    {
+        this.charts = charts;
+    }
 
     public int getPlotWidth()
     {

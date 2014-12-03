@@ -5,6 +5,7 @@ import hudson.Launcher;
 import hudson.Launcher.ProcStarter;
 import hudson.model.Action;
 import hudson.model.BuildListener;
+import hudson.model.InvisibleAction;
 import hudson.model.ParameterValue;
 import hudson.model.Result;
 import hudson.model.AbstractBuild;
@@ -22,6 +23,7 @@ import java.lang.Thread.UncaughtExceptionHandler;
 import java.net.URISyntaxException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Hashtable;
 import java.util.List;
@@ -211,6 +213,14 @@ public class LoadTestBuilder extends Builder
         this.builderID = StringUtils.defaultIfBlank(builderID, UUID.randomUUID().toString());
     }
 
+    public class XLTBuilderAction extends InvisibleAction
+    {
+        public LoadTestBuilder getLoadTestBuilder()
+        {
+            return LoadTestBuilder.this;
+        }
+    }
+
     private SimpleDateFormat getDateFormat()
     {
         if (dateFormat == null)
@@ -364,7 +374,7 @@ public class LoadTestBuilder extends Builder
         return enabledCharts;
     }
 
-    private void loadCharts(AbstractProject<?, ?> project) throws IOException, InterruptedException
+    private void loadCharts(AbstractProject<?, ?> project, AbstractBuild<?, ?>... excludeBuilds)
     {
         List<? extends AbstractBuild<?, ?>> allBuilds = project.getBuilds();
         if (allBuilds.isEmpty())
@@ -399,6 +409,8 @@ public class LoadTestBuilder extends Builder
             }
 
             List<? extends AbstractBuild<?, ?>> builds = getBuilds(project, 0, largestBuildCount);
+            builds.removeAll(Arrays.asList(excludeBuilds));
+
             addBuildsToCharts(builds);
         }
         catch (JSONException e)
@@ -458,19 +470,28 @@ public class LoadTestBuilder extends Builder
         return null;
     }
 
-    private void addBuildToCharts(AbstractBuild<?, ?> build) throws IOException, InterruptedException
+    public void addBuildToCharts(AbstractBuild<?, ?> build)
     {
         List<AbstractBuild<?, ?>> builds = new ArrayList<AbstractBuild<?, ?>>();
         builds.add(build);
         addBuildsToCharts(builds);
     }
 
-    private void addBuildsToCharts(List<? extends AbstractBuild<?, ?>> builds) throws IOException, InterruptedException
+    private void addBuildsToCharts(List<? extends AbstractBuild<?, ?>> builds)
     {
         for (int i = builds.size() - 1; i > -1; i--)
         {
             AbstractBuild<?, ?> eachBuild = builds.get(i);
-            Document dataXml = getDataDocument(eachBuild);
+            Document dataXml = null;
+            try
+            {
+                dataXml = getDataDocument(eachBuild);
+            }
+            catch (Exception e)
+            {
+                LOGGER.error("Failed to read test data xml", e);
+                return;
+            }
 
             try
             {
@@ -643,36 +664,50 @@ public class LoadTestBuilder extends Builder
         {
             isSave = false;
 
-            charts = new ArrayList<Chart<Integer, Double>>();
             updateConfig();
 
-            try
-            {
-                initializeCharts();
-            }
-            catch (JSONException e)
-            {
-                LOGGER.error("Failed to initialize charts", e);
-            }
-            try
-            {
-                loadCharts(project);
-            }
-            catch (IOException e)
-            {
-                LOGGER.error("Failed to load charts", e);
-            }
-            catch (InterruptedException e)
-            {
-                LOGGER.error("Failed to load charts", e);
-            }
+            reloadCharts(project);
 
             chartAction = new XltChartAction(project, getEnabledCharts(), plotWidth, plotHeight, plotTitle, builderID, isPlotVertical,
                                              createTrendReport, createSummaryReport);
         }
         actions.add(chartAction);
+        actions.add(new XLTBuilderAction());
 
         return actions;
+    }
+
+    private void reloadCharts(AbstractProject<?, ?> project, AbstractBuild<?, ?>... exludeBuilds)
+    {
+        if (charts == null)
+        {
+            charts = new ArrayList<Chart<Integer, Double>>();
+        }
+        else
+        {
+            charts.clear();
+        }
+
+        try
+        {
+            initializeCharts();
+        }
+        catch (JSONException e)
+        {
+            LOGGER.error("Failed to initialize charts", e);
+        }
+
+        loadCharts(project, exludeBuilds);
+
+        if (chartAction != null)
+        {
+            chartAction.setCharts(getEnabledCharts());
+        }
+    }
+
+    public void removeBuildFromCharts(AbstractProject<?, ?> project, AbstractBuild<?, ?> build)
+    {
+        reloadCharts(project, build);
     }
 
     private void updateConfig()
@@ -1019,9 +1054,8 @@ public class LoadTestBuilder extends Builder
         return failedAlerts;
     }
 
-    private void postTestExecution(AbstractBuild<?, ?> build, BuildListener listener) throws IOException, InterruptedException
+    private void validateCriterias(AbstractBuild<?, ?> build, BuildListener listener) throws IOException, InterruptedException
     {
-        addBuildToCharts(build);
         List<CriteriaResult> failedAlerts = validateCriteria(build, listener);
 
         if (!failedAlerts.isEmpty())
@@ -1099,7 +1133,7 @@ public class LoadTestBuilder extends Builder
         return "/plugin/" + Jenkins.getInstance().getPlugin(XltDescriptor.PLUGIN_NAME).getWrapper().getShortName() + "/" + fileName;
     }
 
-    private void publishBuildParameters(AbstractBuild<?, ?> build)
+    public void publishBuildParameters(AbstractBuild<?, ?> build)
     {
         build.addAction(new ParametersAction(new ArrayList<ParameterValue>(buildParameterMap.values()))
         {
@@ -1142,7 +1176,7 @@ public class LoadTestBuilder extends Builder
         setBuildParameter(ENVIRONMENT_KEYS.XLT_CONDITION_CRITICAL, Boolean.toString(value));
     }
 
-    private void initializeBuildParameter()
+    public void initializeBuildParameter()
     {
         buildParameterMap = new Hashtable<ENVIRONMENT_KEYS, ParameterValue>();
         setBuildParameterXLT_RUN_FAILED(false);
@@ -1154,8 +1188,6 @@ public class LoadTestBuilder extends Builder
     @Override
     public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws IOException, InterruptedException
     {
-        initializeBuildParameter();
-
         boolean sucess = false;
         try
         {
@@ -1163,7 +1195,7 @@ public class LoadTestBuilder extends Builder
             copyXlt(build, listener);
             configureAgentController(build, listener);
             runMasterController(build, listener);
-            postTestExecution(build, listener);
+            validateCriterias(build, listener);
 
             if (usedEc2Machine)
             {
@@ -1217,7 +1249,6 @@ public class LoadTestBuilder extends Builder
             {
                 setBuildParameterXLT_RUN_FAILED(true);
             }
-            publishBuildParameters(build);
         }
 
         return true;
