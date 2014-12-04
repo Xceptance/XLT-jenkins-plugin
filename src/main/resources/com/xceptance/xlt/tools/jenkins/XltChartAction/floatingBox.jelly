@@ -1,6 +1,7 @@
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
 		<j:set var="width" value="${from.getPlotWidth()}"/>
 		<j:set var="height" value="${from.getPlotHeight()}"/>
+		<j:set var="builderID" value="${from.getBuilderID()}"/>
 		
 		<j:set var="imgDivStyle" value="display:inline-block;"/>
 		<j:if test="${from.isPlotVertical()}">
@@ -8,13 +9,13 @@
 		</j:if>		
 		
 		<style>
-			.flotr-grid-label-y{
+			div[chart-id='${builderID}'] .flotr-grid-label-y{
 				text-align:left !important;
 				left:auto !important;
 				right:${width+5}px !important;				
 			}	
 			
-			.flotr-grid-label-x{
+			div[chart-id='${builderID}'] .flotr-grid-label-x{
 				/*direction: rtl;*/
 				text-align: left !important;
     			transform: translate(50%, 0%) rotate(25deg);
@@ -31,7 +32,7 @@
 			}
 		</style>
 				
-		<div align="left" style="margin:10px;">					
+		<div align="left" style="margin:10px;" chart-id="${builderID}">					
 			<br/>
 			<div align="left">
 				<div align="right"><b>${from.getTitle()}</b></div><hr/>			
@@ -55,7 +56,7 @@
 					<script type="text/javascript" src="${resURL}/plugin/xlt-jenkins-plugin/flotr2.min.js"></script>
 					<j:forEach var="eachChart" items="${from.getCharts()}" varStatus="loopStat">
 						
-						<j:set var="plotContainerID" value="$plotContainer-${eachChart.getChartID()}-${from.getBuilderID()}" />
+						<j:set var="plotContainerID" value="$plotContainer-${eachChart.getChartID()}-${builderID}" />
 	
 						<div style="${imgDivStyle}width:${width+100}px;height:${height+100}px;margin:0 0 50px 0;}">
 							<center>
