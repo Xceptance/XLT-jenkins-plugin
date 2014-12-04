@@ -46,8 +46,8 @@
         </dependency>
         <dependency>
             <groupId>com.amazonaws</groupId>
-            <artifactId>aws-java-sdk</artifactId>
-            <version>1.7.5</version>
+            <artifactId>aws-java-sdk-ec2</artifactId>
+            <version>1.9.8</version>
             <exclusions>
                 <exclusion>
                     <groupId>org.apache.httpcomponents</groupId>
