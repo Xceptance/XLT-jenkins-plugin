@@ -1,5 +1,10 @@
 package com.xceptance.xlt.tools.jenkins;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import com.xceptance.xlt.tools.jenkins.LoadTestBuilder.XLTBuilderAction;
+
 import hudson.Extension;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
@@ -9,49 +14,46 @@ import hudson.model.listeners.RunListener;
 @Extension
 public class XltRunListener extends RunListener<AbstractBuild<?, ?>>
 {
-    private LoadTestBuilder getLoadTestBuilder(AbstractBuild<?, ?> r)
+    private List<LoadTestBuilder> getLoadTestBuilder(AbstractBuild<?, ?> r)
     {
         AbstractProject<?, ?> project = r.getProject();
-        LoadTestBuilder.XLTBuilderAction xltAction = project.getAction(LoadTestBuilder.XLTBuilderAction.class);
-        if (xltAction != null)
+        List<XLTBuilderAction> xltActions = project.getActions(LoadTestBuilder.XLTBuilderAction.class);
+        List<LoadTestBuilder> builders = new ArrayList<LoadTestBuilder>();
+        for (XLTBuilderAction eachAction : xltActions)
         {
-            return xltAction.getLoadTestBuilder();
+            builders.add(eachAction.getLoadTestBuilder());
         }
-        return null;
+        return builders;
     }
 
     @Override
     public void onDeleted(AbstractBuild<?, ?> r)
     {
-        System.out.println("onDeleted");
-        LoadTestBuilder builder = getLoadTestBuilder(r);
-        if (builder != null)
+        List<LoadTestBuilder> builders = getLoadTestBuilder(r);
+        for (LoadTestBuilder eachBuilder : builders)
         {
-            builder.removeBuildFromCharts(r.getProject(), r);
+            eachBuilder.removeBuildFromCharts(r.getProject(), r);
         }
     }
 
     @Override
     public void onStarted(AbstractBuild<?, ?> r, TaskListener listener)
     {
-        System.out.println("onStarted");
-        LoadTestBuilder builder = getLoadTestBuilder(r);
-        if (builder != null)
+        List<LoadTestBuilder> builders = getLoadTestBuilder(r);
+        for (LoadTestBuilder eachBuilder : builders)
         {
-            builder.initializeBuildParameter();
+            eachBuilder.initializeBuildParameter();
         }
     }
 
     @Override
     public void onCompleted(AbstractBuild<?, ?> r, TaskListener listener)
     {
-        System.out.println("onCompleted");
-
-        LoadTestBuilder builder = getLoadTestBuilder(r);
-        if (builder != null)
+        List<LoadTestBuilder> builders = getLoadTestBuilder(r);
+        for (LoadTestBuilder eachBuilder : builders)
         {
-            builder.addBuildToCharts(r);
-            builder.publishBuildParameters(r);
+            eachBuilder.addBuildToCharts(r);
+            eachBuilder.publishBuildParameters(r);
         }
     }
 }
