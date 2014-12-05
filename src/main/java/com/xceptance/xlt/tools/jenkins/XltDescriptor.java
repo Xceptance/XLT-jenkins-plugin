@@ -70,6 +70,22 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
         return "Run a load test with XLT";
     }
 
+    public String getErrorMessage(Throwable throwable)
+    {
+        if (throwable.getMessage() != null)
+        {
+            return throwable.getMessage();
+        }
+        else if (throwable.getCause() != null)
+        {
+            return getErrorMessage(throwable.getCause());
+        }
+        else
+        {
+            return "";
+        }
+    }
+
     public String getDefaultXltConfig()
     {
         try
@@ -199,7 +215,7 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
         }
         catch (JSONException e)
         {
-            return FormValidation.error(e, "Invalid JSON");
+            return FormValidation.error("Invalid JSON (" + getErrorMessage(e) + ")");
         }
 
         try
@@ -230,7 +246,7 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
                     }
                     catch (XPathExpressionException e)
                     {
-                        return FormValidation.error(e, "Invalid xPath. (value id:" + id + ")");
+                        return FormValidation.error("Invalid xPath. (value id:" + id + ") - " + getErrorMessage(e));
                     }
 
                     String condition = eachValue.getString(CONFIG_VALUE_PARAMETER.condition.name());
@@ -242,7 +258,8 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
                         }
                         catch (XPathExpressionException e)
                         {
-                            return FormValidation.error(e, "Condition does not form a valid xPath. (value id:" + id + ")");
+                            return FormValidation.error("Condition does not form a valid xPath. (value id:" + id + ") - " +
+                                                        getErrorMessage(e));
                         }
                     }
 
@@ -256,8 +273,8 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
                 }
                 catch (JSONException e)
                 {
-                    return FormValidation.error(e, "Missing value JSON section. (value index: " + i + " " +
-                                                   (id != null ? ("value id: " + id) : "") + ")");
+                    return FormValidation.error("Missing value JSON section. (value index: " + i + " " +
+                                                (id != null ? ("value id: " + id) : "") + ") - " + getErrorMessage(e));
                 }
             }
 
@@ -314,8 +331,8 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
                 }
                 catch (JSONException e)
                 {
-                    return FormValidation.error(e, "Missing plot JSON section. (plot index: " + i + " " +
-                                                   (id != null ? ("plot id: " + id) : "") + ")");
+                    return FormValidation.error("Missing plot JSON section. (plot index: " + i + " " +
+                                                (id != null ? ("plot id: " + id) : "") + ") - " + getErrorMessage(e));
                 }
             }
 
@@ -330,7 +347,7 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
         }
         catch (JSONException e)
         {
-            return FormValidation.error(e, "Missing JSON section");
+            return FormValidation.error("Missing JSON section (" + getErrorMessage(e) + ")");
         }
 
         return FormValidation.ok();
@@ -397,7 +414,7 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
             }
             catch (Exception e)
             {
-                return FormValidation.error(e, "Invalid time format pattern.");
+                return FormValidation.error("Invalid time format pattern (" + getErrorMessage(e) + ")");
             }
         }
         return FormValidation.ok("Preview: " + format.format(new Date()));
