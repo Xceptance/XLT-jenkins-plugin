@@ -1,5 +1,6 @@
 package com.xceptance.xlt.tools.jenkins;
 
+import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.model.AbstractProject;
@@ -427,11 +428,45 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
 
     private FormValidation doCheckDirectory(String value) throws IOException, InterruptedException
     {
-        if (StringUtils.isBlank(value) || !new FilePath(new File(value)).isDirectory())
+        if (StringUtils.isBlank(value))
         {
             return FormValidation.error("The specified directory does not exist (yet).");
         }
-        return FormValidation.ok();
+
+        FilePath path = resolvePath(value);
+        if (!path.isDirectory())
+        {
+            return FormValidation.error("The specified directory does not exist (yet). - " + path.getRemote());
+        }
+
+        return FormValidation.ok("(" + path.getRemote() + ")");
+    }
+
+    public static String environmentResolve(String value)
+    {
+        if (value == null)
+            return null;
+
+        EnvVars vars = new EnvVars(System.getenv());
+
+        return vars.expand(value);
+    }
+
+    public static FilePath resolvePath(String path)
+    {
+        String dir = environmentResolve(path);
+        if (StringUtils.isBlank(dir))
+        {
+            return null;
+        }
+
+        File file = new File(path);
+        FilePath filePath = new FilePath(file);
+        if (!file.isAbsolute())
+        {
+            filePath = new FilePath(Jenkins.getInstance().getRootPath(), dir);
+        }
+        return filePath;
     }
 
     /**
@@ -560,5 +595,4 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
         }
         return FormValidation.ok();
     }
-
 }

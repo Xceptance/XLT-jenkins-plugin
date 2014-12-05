@@ -942,6 +942,11 @@ public class LoadTestBuilder extends Builder
         return new FilePath(build.getWorkspace(), Integer.toString(build.getNumber()));
     }
 
+    private FilePath getXltTemplateFilePath()
+    {
+        return XltDescriptor.resolvePath(getXltTemplateDir());
+    }
+
     private FilePath getXltBinFolder(AbstractBuild<?, ?> build)
     {
         return new FilePath(getXltFolder(build), "bin");
@@ -949,7 +954,7 @@ public class LoadTestBuilder extends Builder
 
     private FilePath getXltBinFolderOnMaster()
     {
-        return new FilePath(new File(new File(getXltTemplateDir()), "bin"));
+        return new FilePath(getXltTemplateFilePath(), "bin");
     }
 
     private FilePath getXltConfigFolder(AbstractBuild<?, ?> build)
@@ -1424,7 +1429,7 @@ public class LoadTestBuilder extends Builder
             throw new IllegalStateException("Path to xlt not set.");
         }
 
-        FilePath srcDir = new FilePath(new File(getXltTemplateDir()));
+        FilePath srcDir = getXltTemplateFilePath();
         listener.getLogger().println("XLT template directory: " + srcDir.getRemote());
 
         // the target directory in the project folder
