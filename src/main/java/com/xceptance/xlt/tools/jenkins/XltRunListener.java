@@ -53,7 +53,6 @@ public class XltRunListener extends RunListener<AbstractBuild<?, ?>>
         for (LoadTestBuilder eachBuilder : builders)
         {
             eachBuilder.addBuildToCharts(r);
-            eachBuilder.publishBuildParameters(r);
         }
     }
 }

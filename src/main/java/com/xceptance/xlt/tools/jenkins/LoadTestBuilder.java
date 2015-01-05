@@ -1254,8 +1254,8 @@ public class LoadTestBuilder extends Builder
             {
                 setBuildParameterXLT_RUN_FAILED(true);
             }
+            publishBuildParameters(build);
         }
-
         return true;
     }
 
