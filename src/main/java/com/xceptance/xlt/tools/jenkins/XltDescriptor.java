@@ -3,6 +3,7 @@ package com.xceptance.xlt.tools.jenkins;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
+import hudson.Util;
 import hudson.model.AbstractProject;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
@@ -447,9 +448,7 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
         if (value == null)
             return null;
 
-        EnvVars vars = new EnvVars(System.getenv());
-
-        return vars.expand(value);
+        return Util.replaceMacro(value, System.getenv());
     }
 
     public static FilePath resolvePath(String path)
