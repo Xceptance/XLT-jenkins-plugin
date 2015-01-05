@@ -167,8 +167,8 @@ public class Chart<X, Y>
         public void addLineValue(ChartLineValue<X, Y> value)
         {
             values.add(value);
-            if (!values.isEmpty() && values.size() > maxCount)            
-            {    
+            if (!values.isEmpty() && values.size() > maxCount)
+            {
                 values.remove(0);
             }
         }
@@ -197,11 +197,14 @@ public class Chart<X, Y>
         public String getDataObjectValues()
         {
             String data = "";
-            for (Entry<String, String> eachEntry : dataObjectValues.entrySet())
+            if (!dataObjectValues.isEmpty())
             {
-                data += "," + eachEntry.getKey() + ":" + eachEntry.getValue();
+                for (Entry<String, String> eachEntry : dataObjectValues.entrySet())
+                {
+                    data += "," + eachEntry.getKey() + ":" + eachEntry.getValue();
+                }
+                data = data.substring(1);
             }
-            data = data.substring(1);
 
             return data;
         }
