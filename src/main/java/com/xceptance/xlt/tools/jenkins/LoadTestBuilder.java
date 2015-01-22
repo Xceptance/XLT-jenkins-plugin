@@ -1194,6 +1194,7 @@ public class LoadTestBuilder extends Builder
     public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws IOException, InterruptedException
     {
         boolean sucess = false;
+        boolean terminatedEC2Instances = false;
         try
         {
             initialCleanUp(build, listener);
@@ -1206,7 +1207,7 @@ public class LoadTestBuilder extends Builder
 
                 if (isEC2UsageEnabled())
                 {
-                    terminateEc2Machine(build, listener);
+                    terminatedEC2Instances = terminateEc2Machine(build, listener);
                 }
 
                 if (createSummaryReport)
@@ -1233,7 +1234,7 @@ public class LoadTestBuilder extends Builder
         }
         finally
         {
-            postTestCleanup(build, listener);
+            postTestCleanup(build, listener, terminatedEC2Instances);
 
             if (!sucess)
             {
@@ -1244,16 +1245,19 @@ public class LoadTestBuilder extends Builder
         return true;
     }
 
-    private void postTestCleanup(AbstractBuild<?, ?> build, BuildListener listener)
+    private void postTestCleanup(AbstractBuild<?, ?> build, BuildListener listener, boolean terminatedEC2Instances)
     {
         listener.getLogger().println("\n\n-----------------------------------------------------------------\nCleanup ...\n");
 
         // terminate Amazon's EC2 instances
-        if (isEC2UsageEnabled())
+        if (isEC2UsageEnabled() && !terminatedEC2Instances)
         {
             try
             {
-                terminateEc2Machine(build, listener);
+                if (!terminateEc2Machine(build, listener))
+                {
+                    throw new Exception("EC2 instances termination failed");
+                }
             }
             catch (Exception e)
             {
@@ -1418,7 +1422,7 @@ public class LoadTestBuilder extends Builder
         return urls.toArray(new String[urls.size()]);
     }
 
-    private void terminateEc2Machine(AbstractBuild<?, ?> build, BuildListener listener) throws Exception
+    private boolean terminateEc2Machine(AbstractBuild<?, ?> build, BuildListener listener) throws Exception
     {
         listener.getLogger()
                 .println("-----------------------------------------------------------------\nTerminating agent controller with EC2 admin tool ...\n");
@@ -1448,7 +1452,9 @@ public class LoadTestBuilder extends Builder
         if (commandResult != 0)
         {
             build.setResult(Result.FAILURE);
+            return false;
         }
+        return true;
     }
 
     private FilePath getTestSuiteConfigFolder(AbstractBuild<?, ?> build)
