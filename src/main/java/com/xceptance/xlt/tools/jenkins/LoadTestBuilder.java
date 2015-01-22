@@ -16,6 +16,7 @@ import hudson.tasks.Builder;
 import hudson.util.StreamTaskListener;
 
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
@@ -29,6 +30,7 @@ import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.UUID;
 
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -1306,7 +1308,7 @@ public class LoadTestBuilder extends Builder
             if (agentControllerConfig.type.equals(AgentControllerConfig.TYPE.list.toString()))
             {
                 listener.getLogger().println("Read agent controller URLs from configuration:\n");
-                agentControllerUrls = expandAgentControllerUrls(parseAgentControllerUrls(agentControllerConfig.urlList));
+                agentControllerUrls = parseAgentControllerUrls(agentControllerConfig.urlList);
             }
             else if (agentControllerConfig.type.equals(AgentControllerConfig.TYPE.file.toString()))
             {
@@ -1316,7 +1318,7 @@ public class LoadTestBuilder extends Builder
 
                 if (agentControllerConfig.urlFile != null)
                 {
-                    agentControllerUrls = expandAgentControllerUrls(parseAgentControllerUrlsFromFile(file));
+                    agentControllerUrls = parseAgentControllerUrlsFromFile(file);
                 }
             }
             // run Amazon's EC2 machine
@@ -1347,7 +1349,7 @@ public class LoadTestBuilder extends Builder
         String[] expandedUrls = new String[agentControllerUrls.length];
         for (int i = 0; i < agentControllerUrls.length; i++)
         {
-            expandedUrls[i] = "com.xceptance.xlt.mastercontroller.agentcontrollers.ac" + i + ".url = " + agentControllerUrls[i];
+            expandedUrls[i] = "com.xceptance.xlt.mastercontroller.agentcontrollers.ac" + i + ".url=" + agentControllerUrls[i];
         }
         return expandedUrls;
     }
@@ -1395,18 +1397,25 @@ public class LoadTestBuilder extends Builder
 
         // read the lines from agent controller file
         List<?> lines = FileUtils.readLines(new File(acUrlFile.toURI()));
-
-        // remove empty lines
-        Iterator<?> lineIterator = lines.iterator();
-        while (lineIterator.hasNext())
+        List<String> urls = new ArrayList<String>(lines.size());
+        for (Object eachLine : lines)
         {
-            if (StringUtils.isBlank((String) lineIterator.next()))
+            String line = (String) eachLine;
+            if (StringUtils.isNotBlank(line))
             {
-                lineIterator.remove();
+                int start = line.indexOf('=') + 1;
+                if (start > 0 && start < line.length() - 1)
+                {
+                    String url = line.substring(start);
+                    if (StringUtils.isNotBlank(line))
+                    {
+                        urls.add(url.trim());
+                    }
+                }
             }
         }
 
-        return lines.toArray(new String[lines.size()]);
+        return urls.toArray(new String[urls.size()]);
     }
 
     private void terminateEc2Machine(AbstractBuild<?, ?> build, BuildListener listener) throws Exception
@@ -1499,8 +1508,7 @@ public class LoadTestBuilder extends Builder
         listener.getLogger().println("\nFinished");
     }
 
-    private boolean runMasterController(AbstractBuild<?, ?> build, BuildListener listener, String[] agentControllerProperties)
-        throws Exception
+    private boolean runMasterController(AbstractBuild<?, ?> build, BuildListener listener, String[] agentControllerUrls) throws Exception
     {
         listener.getLogger().println("-----------------------------------------------------------------\nRunning master controller ...\n");
 
@@ -1527,6 +1535,7 @@ public class LoadTestBuilder extends Builder
         }
         else
         {
+            String[] agentControllerProperties = expandAgentControllerUrls(agentControllerUrls);
             for (int i = 0; i < agentControllerProperties.length; i++)
             {
                 commandLine.add("-D" + agentControllerProperties[i]);
