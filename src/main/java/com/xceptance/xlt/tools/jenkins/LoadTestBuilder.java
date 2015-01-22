@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Hashtable;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -39,6 +40,7 @@ import javax.xml.xpath.XPathFactory;
 import jenkins.model.Jenkins;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.SystemUtils;
 import org.apache.log4j.FileAppender;
@@ -66,8 +68,6 @@ public class LoadTestBuilder extends Builder
     private final String testPropertiesFile;
 
     private AgentControllerConfig agentControllerConfig;
-
-    transient private String[] agentControllerUrls;
 
     private final String xltConfig;
 
@@ -1198,8 +1198,10 @@ public class LoadTestBuilder extends Builder
         {
             initialCleanUp(build, listener);
             copyXlt(build, listener);
-            configureAgentController(build, listener);
-            runMasterController(build, listener);
+
+            String[] agentControllerProperties = configureAgentController(build, listener);
+            runMasterController(build, listener, agentControllerProperties);
+
             validateCriterias(build, listener);
 
             if (usedEc2Machine)
@@ -1259,14 +1261,14 @@ public class LoadTestBuilder extends Builder
         return true;
     }
 
-    private void configureAgentController(AbstractBuild<?, ?> build, BuildListener listener) throws Exception
+    private String[] configureAgentController(AbstractBuild<?, ?> build, BuildListener listener) throws Exception
     {
         listener.getLogger().println("-----------------------------------------------------------------\n"
                                          + "Configuring agent controllers ...\n");
 
+        String[] agentControllerUrls = new String[0];
         if (agentControllerConfig.type.equals(AgentControllerConfig.TYPE.embedded.toString()))
         {
-            agentControllerUrls = null;
             listener.getLogger().println("Set to embedded mode");
         }
         else
@@ -1274,11 +1276,7 @@ public class LoadTestBuilder extends Builder
             if (agentControllerConfig.type.equals(AgentControllerConfig.TYPE.list.toString()))
             {
                 listener.getLogger().println("Read agent controller URLs from configuration:\n");
-
-                if (agentControllerConfig.urlList != null)
-                {
-                    agentControllerUrls = parseAgentControllerUrls(agentControllerConfig.urlList);
-                }
+                agentControllerUrls = expandAgentControllerUrls(parseAgentControllerUrls(agentControllerConfig.urlList));
             }
             else if (agentControllerConfig.type.equals(AgentControllerConfig.TYPE.file.toString()))
             {
@@ -1288,16 +1286,16 @@ public class LoadTestBuilder extends Builder
 
                 if (agentControllerConfig.urlFile != null)
                 {
-                    agentControllerUrls = parseAgentControllerUrlsFromFile(file);
+                    agentControllerUrls = expandAgentControllerUrls(parseAgentControllerUrlsFromFile(file));
                 }
             }
             // run Amazon's EC2 machine
             else if (agentControllerConfig.type.equals(AgentControllerConfig.TYPE.ec2.toString()))
             {
-                startEc2Machine(build, listener);
+                agentControllerUrls = startEc2Machine(build, listener);
             }
 
-            if (agentControllerUrls == null || agentControllerUrls.length == 0)
+            if (ArrayUtils.isEmpty(agentControllerUrls))
             {
                 throw new IllegalStateException("No agent controller URLs found.");
             }
@@ -1305,15 +1303,26 @@ public class LoadTestBuilder extends Builder
             {
                 for (String agentControllerUrl : agentControllerUrls)
                 {
-                    listener.getLogger().printf("- %s\n", agentControllerUrl);
+                    listener.getLogger().println(agentControllerUrl);
                 }
             }
         }
 
         listener.getLogger().println("\nFinished");
+        return agentControllerUrls;
     }
 
-    private void startEc2Machine(AbstractBuild<?, ?> build, BuildListener listener) throws Exception
+    private String[] expandAgentControllerUrls(String[] agentControllerUrls)
+    {
+        String[] expandedUrls = new String[agentControllerUrls.length];
+        for (int i = 0; i < agentControllerUrls.length; i++)
+        {
+            expandedUrls[i] = "com.xceptance.xlt.mastercontroller.agentcontrollers.ac" + i + ".url = " + agentControllerUrls[i];
+        }
+        return expandedUrls;
+    }
+
+    private String[] startEc2Machine(AbstractBuild<?, ?> build, BuildListener listener) throws Exception
     {
         this.usedEc2Machine = true;
 
@@ -1340,6 +1349,10 @@ public class LoadTestBuilder extends Builder
         commandLine.add(agentControllerConfig.getCountMachines());
         commandLine.add(agentControllerConfig.getTagName());
 
+        FilePath acUrlFile = new FilePath(getXltConfigFolder(build), "acUrls.properties");
+        commandLine.add("-o");
+        commandLine.add(acUrlFile.absolutize().getRemote());
+
         // run the EC2 admin tool
         FilePath workingDirectory = getXltBinFolder(build);
         int commandResult = executeCommand(build.getBuiltOn(), workingDirectory, commandLine, listener.getLogger());
@@ -1350,9 +1363,22 @@ public class LoadTestBuilder extends Builder
             build.setResult(Result.FAILURE);
         }
         // open the file that contains the agent controller URLs
-        FilePath file = new FilePath(getXltConfigFolder(build), "acUrls.txt");
-        listener.getLogger().printf("Read agent controller URLs from file %s:\n\n", file);
-        agentControllerUrls = parseAgentControllerUrlsFromFile(file);
+        listener.getLogger().printf("\nRead agent controller URLs from file %s:\n\n", acUrlFile);
+
+        // read the lines from agent controller file
+        List<?> lines = FileUtils.readLines(new File(acUrlFile.toURI()));
+
+        // remove empty lines
+        Iterator<?> lineIterator = lines.iterator();
+        while (lineIterator.hasNext())
+        {
+            if (StringUtils.isBlank((String) lineIterator.next()))
+            {
+                lineIterator.remove();
+            }
+        }
+
+        return lines.toArray(new String[lines.size()]);
     }
 
     private void terminateEc2Machine(AbstractBuild<?, ?> build, BuildListener listener) throws Exception
@@ -1450,7 +1476,8 @@ public class LoadTestBuilder extends Builder
         listener.getLogger().println("\nFinished");
     }
 
-    private void runMasterController(AbstractBuild<?, ?> build, BuildListener listener) throws Exception
+    private void runMasterController(AbstractBuild<?, ?> build, BuildListener listener, String[] agentControllerProperties)
+        throws Exception
     {
         listener.getLogger().println("-----------------------------------------------------------------\nRunning master controller ...\n");
 
@@ -1468,7 +1495,7 @@ public class LoadTestBuilder extends Builder
             commandLine.add("./mastercontroller.sh");
         }
 
-        if (agentControllerUrls == null)
+        if (agentControllerConfig.type.equals(AgentControllerConfig.TYPE.embedded.toString()))
         {
             commandLine.add("-embedded");
 
@@ -1477,9 +1504,9 @@ public class LoadTestBuilder extends Builder
         }
         else
         {
-            for (int i = 1; i <= agentControllerUrls.length; i++)
+            for (int i = 0; i < agentControllerProperties.length; i++)
             {
-                commandLine.add("-Dcom.xceptance.xlt.mastercontroller.agentcontrollers.ac" + i + ".url=" + agentControllerUrls[i - 1]);
+                commandLine.add("-D" + agentControllerProperties[i]);
             }
         }
 
