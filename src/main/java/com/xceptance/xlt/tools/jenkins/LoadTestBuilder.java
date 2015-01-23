@@ -16,7 +16,6 @@ import hudson.tasks.Builder;
 import hudson.util.StreamTaskListener;
 
 import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
@@ -27,10 +26,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Hashtable;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.UUID;
 
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -1191,36 +1188,29 @@ public class LoadTestBuilder extends Builder
     }
 
     @Override
-    public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws IOException, InterruptedException
+    public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener)
     {
-        boolean sucess = false;
-        boolean terminatedEC2Instances = false;
         try
         {
             initialCleanUp(build, listener);
+        }
+        catch (Exception e)
+        {
+            listener.getLogger().println("Cleanup failed: " + e);
+            LOGGER.error("Cleanup failed: ", e);
+        }
+
+        boolean artifactsSaved = false;
+        try
+        {
             copyXlt(build, listener);
 
             String[] agentControllerProperties = configureAgentController(build, listener);
-            if (runMasterController(build, listener, agentControllerProperties))
-            {
-                validateCriterias(build, listener);
+            runMasterController(build, listener, agentControllerProperties);
+            saveArtifacts(build, listener);
+            artifactsSaved = true;
 
-                if (isEC2UsageEnabled())
-                {
-                    terminatedEC2Instances = terminateEc2Machine(build, listener);
-                }
-
-                if (createSummaryReport)
-                {
-                    createSummaryReport(build, listener);
-                }
-
-                if (createTrendReport)
-                {
-                    createTrendReport(build, listener);
-                }
-                sucess = true;
-            }
+            validateCriterias(build, listener);
         }
         catch (InterruptedException e)
         {
@@ -1234,9 +1224,9 @@ public class LoadTestBuilder extends Builder
         }
         finally
         {
-            postTestCleanup(build, listener, terminatedEC2Instances);
+            performPostTestSteps(build, listener, artifactsSaved);
 
-            if (!sucess)
+            if (build.getResult() == Result.FAILURE)
             {
                 setBuildParameterXLT_RUN_FAILED(true);
             }
@@ -1245,27 +1235,50 @@ public class LoadTestBuilder extends Builder
         return true;
     }
 
-    private void postTestCleanup(AbstractBuild<?, ?> build, BuildListener listener, boolean terminatedEC2Instances)
+    private void performPostTestSteps(AbstractBuild<?, ?> build, BuildListener listener, boolean artifactsSaved)
     {
-        listener.getLogger().println("\n\n-----------------------------------------------------------------\nCleanup ...\n");
-
         // terminate Amazon's EC2 instances
-        if (isEC2UsageEnabled() && !terminatedEC2Instances)
+        if (isEC2UsageEnabled())
         {
             try
             {
-                if (!terminateEc2Machine(build, listener))
-                {
-                    throw new Exception("EC2 instances termination failed");
-                }
+                terminateEc2Machine(build, listener);
             }
             catch (Exception e)
             {
-                listener.getLogger().println("Could not terminate Amazon EC2 instances!");
+                listener.getLogger().println("Could not terminate Amazon EC2 instances! " + e);
                 LOGGER.error("Could not terminate Amazon EC2 instances!", e);
+                build.setResult(Result.FAILURE);
             }
         }
 
+        if (createSummaryReport && artifactsSaved)
+        {
+            try
+            {
+                createSummaryReport(build, listener);
+            }
+            catch (Exception e)
+            {
+                listener.getLogger().println("Summary report failed. " + e);
+                LOGGER.error("Summary report failed", e);
+            }
+        }
+
+        if (createTrendReport && artifactsSaved)
+        {
+            try
+            {
+                createTrendReport(build, listener);
+            }
+            catch (Exception e)
+            {
+                listener.getLogger().println("Trend report failed. " + e);
+                LOGGER.error("Trend report failed", e);
+            }
+        }
+
+        listener.getLogger().println("\n\n-----------------------------------------------------------------\nArchive logs ...\n");
         // save logs
         try
         {
@@ -1277,11 +1290,15 @@ public class LoadTestBuilder extends Builder
             LOGGER.error("Failed to archive xlt logs", e);
         }
 
+        listener.getLogger().println("\n\n-----------------------------------------------------------------\nCleanup ...\n");
         // delete any temporary directory with local XLT
         FilePath xltDir = getXltFolder(build);
         try
         {
-            FileUtils.forceDelete(new File(xltDir.toURI()));
+            if (xltDir.exists())
+            {
+                FileUtils.forceDelete(new File(xltDir.toURI()));
+            }
         }
         catch (Exception e)
         {
@@ -1394,7 +1411,7 @@ public class LoadTestBuilder extends Builder
 
         if (commandResult != 0)
         {
-            build.setResult(Result.FAILURE);
+            throw new Exception("Failed to start instances. EC2 admin tool returned with exit code: " + commandResult);
         }
         // open the file that contains the agent controller URLs
         listener.getLogger().printf("\nRead agent controller URLs from file %s:\n\n", acUrlFile);
@@ -1422,7 +1439,7 @@ public class LoadTestBuilder extends Builder
         return urls.toArray(new String[urls.size()]);
     }
 
-    private boolean terminateEc2Machine(AbstractBuild<?, ?> build, BuildListener listener) throws Exception
+    private void terminateEc2Machine(AbstractBuild<?, ?> build, BuildListener listener) throws Exception
     {
         listener.getLogger()
                 .println("-----------------------------------------------------------------\nTerminating agent controller with EC2 admin tool ...\n");
@@ -1451,10 +1468,8 @@ public class LoadTestBuilder extends Builder
 
         if (commandResult != 0)
         {
-            build.setResult(Result.FAILURE);
-            return false;
+            throw new Exception("Failed to terminate instances. EC2 admin tool returned with exit code: " + commandResult);
         }
-        return true;
     }
 
     private FilePath getTestSuiteConfigFolder(AbstractBuild<?, ?> build)
@@ -1467,34 +1482,46 @@ public class LoadTestBuilder extends Builder
         listener.getLogger().println("-----------------------------------------------------------------\n"
                                          + "Cleaning up project directory ...\n");
 
-        String[] DIR = build.getProject().getRootDir().list();
+        List<FilePath> DIR = build.getWorkspace().list();
 
-        for (int i = 0; i < DIR.length; i++)
+        for (FilePath eachFilePath : DIR)
         {
-            if (DIR[i].matches("[0-9]+"))
+            if (eachFilePath.getBaseName().matches("[0-9]+"))
             {
-                FilePath file = new FilePath(new FilePath(build.getProject().getRootDir()), "/" + DIR[i]);
-                file.deleteRecursive();
-                listener.getLogger().println("Deleted directory: " + file);
+                eachFilePath.deleteRecursive();
+                listener.getLogger().println("Deleted directory: " + eachFilePath.getRemote());
             }
         }
 
         listener.getLogger().println("\nFinished");
     }
 
-    private void copyXlt(AbstractBuild<?, ?> build, BuildListener listener) throws IOException, InterruptedException
+    private void copyXlt(AbstractBuild<?, ?> build, BuildListener listener) throws Exception
     {
         listener.getLogger().println("-----------------------------------------------------------------\nCopying XLT ...\n");
 
         // the directory with the XLT template installation
         if (StringUtils.isBlank(getXltTemplateDir()))
         {
-            LOGGER.error("Path to xlt not set.");
-            throw new IllegalStateException("Path to xlt not set.");
+            throw new Exception("Path to xlt not set");
         }
 
         FilePath srcDir = getXltTemplateFilePath();
         listener.getLogger().println("XLT template directory: " + srcDir.getRemote());
+
+        if (!srcDir.exists())
+        {
+            throw new Exception("The directory does not exists: " + srcDir.getRemote());
+        }
+        else if (!srcDir.isDirectory())
+        {
+            throw new Exception("The path does not point to a directory: " + srcDir.getRemote());
+        }
+        else if (!new FilePath(new FilePath(srcDir, "bin"), "mastercontroller.sh").exists() ||
+                 !new FilePath(new FilePath(srcDir, "bin"), "mastercontroller.cmd").exists())
+        {
+            throw new Exception("No \"mastercontroller\" script found for path: " + new FilePath(srcDir, "bin").getRemote());
+        }
 
         // the target directory in the project folder
         FilePath destDir = getXltFolder(build);
@@ -1514,7 +1541,7 @@ public class LoadTestBuilder extends Builder
         listener.getLogger().println("\nFinished");
     }
 
-    private boolean runMasterController(AbstractBuild<?, ?> build, BuildListener listener, String[] agentControllerUrls) throws Exception
+    private void runMasterController(AbstractBuild<?, ?> build, BuildListener listener, String[] agentControllerUrls) throws Exception
     {
         listener.getLogger().println("-----------------------------------------------------------------\nRunning master controller ...\n");
 
@@ -1566,15 +1593,17 @@ public class LoadTestBuilder extends Builder
 
         if (commandResult != 0)
         {
-            build.setResult(Result.FAILURE);
-            LOGGER.error("Master controller returned with exit code: " + commandResult);
-            return false;
+            throw new Exception("Master controller returned with exit code: " + commandResult);
         }
+    }
 
+    private void saveArtifacts(AbstractBuild<?, ?> build, BuildListener listener) throws IOException, InterruptedException
+    {
+        listener.getLogger()
+                .println("\n\n-----------------------------------------------------------------\nArchive results and report...\n");
         // save load test results and report
         saveArtifact(getFirstXltResultsFolder(build), getBuildResultsFolder(build));
         saveArtifact(getFirstXltReportFolder(build), getBuildReportFolder(build));
-        return true;
     }
 
     private void saveArtifact(FilePath srcFolder, FilePath destFolder) throws IOException, InterruptedException
