@@ -128,7 +128,7 @@
 	            <f:textbox field="markCriticalConditionCount"/>
 	        </f:entry>
 	        
-	        <f:entry title="Considered Builds" field="markCriticalBuildCount">
+	        <f:entry title="#Builds for Critical Check" field="markCriticalBuildCount">
 	        	<f:textbox field="markCriticalBuildCount"/>
 			</f:entry> 		       	
 		</f:optionalBlock>
