@@ -56,6 +56,9 @@ import org.xml.sax.SAXException;
 
 import com.xceptance.xlt.tools.jenkins.Chart.ChartLine;
 import com.xceptance.xlt.tools.jenkins.Chart.ChartLineValue;
+import com.xceptance.xlt.tools.jenkins.config.option.MarkCriticalOption;
+import com.xceptance.xlt.tools.jenkins.config.option.SummaryReportOption;
+import com.xceptance.xlt.tools.jenkins.config.option.TrendReportOption;
 
 /**
  * Readout the configuration of XLT in Jenkins, perform load testing and plot build results on project page.
@@ -90,11 +93,15 @@ public class LoadTestBuilder extends Builder
 
     private final boolean isPlotVertical;
 
+    private TrendReportOption trendReportOption;
+
     private final boolean createTrendReport;
 
-    private final boolean createSummaryReport;
-
     private final int numberOfBuildsForTrendReport;
+
+    private SummaryReportOption summaryReportOption;
+
+    private final boolean createSummaryReport;
 
     private final int numberOfBuildsForSummaryReport;
 
@@ -106,11 +113,13 @@ public class LoadTestBuilder extends Builder
 
     transient private XltChartAction chartAction;
 
+    private MarkCriticalOption markCriticalOption;
+
+    private boolean markCriticalEnabled;
+
     private int markCriticalConditionCount;
 
     private int markCriticalBuildCount;
-
-    private boolean markCriticalEnabled;
 
     private transient Map<ENVIRONMENT_KEYS, ParameterValue> buildParameterMap;
 
@@ -158,10 +167,10 @@ public class LoadTestBuilder extends Builder
 
     @DataBoundConstructor
     public LoadTestBuilder(String xltTemplateDir, String testPropertiesFile, String xltConfig, int plotWidth, int plotHeight,
-                           String plotTitle, String builderID, boolean isPlotVertical, boolean createTrendReport,
-                           int numberOfBuildsForTrendReport, boolean createSummaryReport, int numberOfBuildsForSummaryReport,
+                           String plotTitle, String builderID, boolean isPlotVertical, TrendReportOption trendReportOption,
+                           SummaryReportOption summaryReportOption, int numberOfBuildsForSummaryReport,
                            AgentControllerConfig agentControllerConfig, String timeFormatPattern, boolean showBuildNumber,
-                           int markCriticalConditionCount, int markCriticalBuildCount, boolean markCriticalEnabled)
+                           MarkCriticalOption markCriticalOption, boolean markCriticalEnabled)
     {
         isSave = true;
         Thread.currentThread().setUncaughtExceptionHandler(new UncaughtExceptionHandler()
@@ -189,22 +198,51 @@ public class LoadTestBuilder extends Builder
         this.showBuildNumber = showBuildNumber;
 
         // criteria configuration
-        this.markCriticalEnabled = markCriticalEnabled;
-        this.markCriticalConditionCount = markCriticalConditionCount;
-        this.markCriticalBuildCount = (markCriticalConditionCount > 0 && markCriticalConditionCount > markCriticalBuildCount)
-                                                                                                                             ? markCriticalConditionCount
-                                                                                                                             : markCriticalBuildCount;
+        this.markCriticalOption = markCriticalOption;
+        if (markCriticalOption == null)
+        {
+            this.markCriticalEnabled = false;
+            this.markCriticalConditionCount = 0;
+            this.markCriticalBuildCount = 0;
+        }
+        else
+        {
+            this.markCriticalEnabled = true;
+            this.markCriticalConditionCount = markCriticalOption.getMarkCriticalConditionCount();
+            this.markCriticalBuildCount = (markCriticalConditionCount > 0 && markCriticalConditionCount > markCriticalOption.getMarkCriticalBuildCount())
+                                                                                                                                                         ? markCriticalConditionCount
+                                                                                                                                                         : markCriticalOption.getMarkCriticalBuildCount();
+        }
 
-        // report configuration
-        this.createTrendReport = createTrendReport;
-        this.createSummaryReport = createSummaryReport;
+        // trend report configuration
+        this.trendReportOption = trendReportOption;
+        if (trendReportOption == null)
+        {
+            this.createTrendReport = false;
+            this.numberOfBuildsForTrendReport = getDescriptor().getDefaultNumberOfBuildsForTrendReport();
+        }
+        else
+        {
+            this.createTrendReport = true;
+            this.numberOfBuildsForTrendReport = (trendReportOption.getNumberOfBuildsForTrendReport() > 0)
+                                                                                                         ? trendReportOption.getNumberOfBuildsForTrendReport()
+                                                                                                         : getDescriptor().getDefaultNumberOfBuildsForTrendReport();
+        }
 
-        this.numberOfBuildsForTrendReport = (numberOfBuildsForTrendReport > 0) ? numberOfBuildsForTrendReport
-                                                                              : getDescriptor().getDefaultNumberOfBuildsForTrendReport();
-
-        this.numberOfBuildsForSummaryReport = (numberOfBuildsForSummaryReport > 0)
-                                                                                  ? numberOfBuildsForSummaryReport
-                                                                                  : getDescriptor().getDefaultNumberOfBuildsForSummaryReport();
+        // trend report configuration
+        this.summaryReportOption = summaryReportOption;
+        if (summaryReportOption == null)
+        {
+            this.createSummaryReport = false;
+            this.numberOfBuildsForSummaryReport = getDescriptor().getDefaultNumberOfBuildsForSummaryReport();
+        }
+        else
+        {
+            this.createSummaryReport = true;
+            this.numberOfBuildsForSummaryReport = (summaryReportOption.getNumberOfBuildsForSummaryReport() > 0)
+                                                                                                               ? summaryReportOption.getNumberOfBuildsForSummaryReport()
+                                                                                                               : getDescriptor().getDefaultNumberOfBuildsForSummaryReport();
+        }
 
         // misc.
         this.builderID = StringUtils.defaultIfBlank(builderID, UUID.randomUUID().toString());
@@ -257,6 +295,21 @@ public class LoadTestBuilder extends Builder
     public AgentControllerConfig getAgentControllerConfig()
     {
         return agentControllerConfig;
+    }
+
+    public TrendReportOption getTrendReportOption()
+    {
+        return trendReportOption;
+    }
+
+    public SummaryReportOption getSummaryReportOption()
+    {
+        return summaryReportOption;
+    }
+
+    public MarkCriticalOption getMarkCriticalOption()
+    {
+        return markCriticalOption;
     }
 
     public boolean getMarkCriticalEnabled()

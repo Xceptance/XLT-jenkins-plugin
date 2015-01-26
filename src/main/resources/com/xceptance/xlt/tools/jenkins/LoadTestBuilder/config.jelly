@@ -75,13 +75,13 @@
         <div class="xlt-subsection">Report Configuration</div>
     </f:block>
 
-	<f:optionalBlock field="createTrendReport" inline="true" default="${descriptor.getDefaultCreateTrendReport()}" title="Create a trend report from the results of the last n builds (see below).">
+	<f:optionalBlock field="trendReportOption" default="${descriptor.getDefaultCreateTrendReport()}" title="Create a trend report from the results of the last n builds (see below)." checked="${instance.createTrendReport}">
 	    <f:entry title="#Builds For Trend Report" field="numberOfBuildsForTrendReport">
         	<f:textbox field="numberOfBuildsForTrendReport" default="${descriptor.getDefaultNumberOfBuildsForTrendReport()}"/>
     	</f:entry>
     </f:optionalBlock>
 
-	<f:optionalBlock field="createSummaryReport" inline="true" default="${descriptor.getDefaultCreateSummaryReport()}" title="Create a summary load test report from the results of the last n builds (see below).">
+	<f:optionalBlock field="summaryReportOption" default="${descriptor.getDefaultCreateSummaryReport()}" title="Create a summary load test report from the results of the last n builds (see below)." checked="${instance.createSummaryReport}">
 	    <f:entry title="#Builds For Summary Report" field="numberOfBuildsForSummaryReport">
         	<f:textbox field="numberOfBuildsForSummaryReport" default="${descriptor.getDefaultNumberOfBuildsForSummaryReport()}"/>
     	</f:entry>
@@ -123,7 +123,7 @@
             <f:checkbox field="showBuildNumber" default="false" title="Display the build number at the x-axis of the charts."/>
         </f:entry>        
 		
-		<f:optionalBlock field="markCriticalEnabled" inline="true" title="Tag the build as critical if a specified number of builds failed by a condition in the past.">
+		<f:optionalBlock field="markCriticalOption" title="Tag the build as critical if a specified number of builds failed by a condition in the past." checked="${instance.markCriticalEnabled}">
 	   		<f:entry title="Failed Condition Count" field="markCriticalConditionCount">
 	            <f:textbox field="markCriticalConditionCount"/>
 	        </f:entry>
