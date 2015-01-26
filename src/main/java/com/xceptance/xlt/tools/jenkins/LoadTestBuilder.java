@@ -1423,7 +1423,8 @@ public class LoadTestBuilder extends Builder
         String[] expandedUrls = new String[agentControllerUrls.length];
         for (int i = 0; i < agentControllerUrls.length; i++)
         {
-            expandedUrls[i] = "com.xceptance.xlt.mastercontroller.agentcontrollers.ac" + i + ".url=" + agentControllerUrls[i];
+            expandedUrls[i] = String.format("com.xceptance.xlt.mastercontroller.agentcontrollers.ac%03d.url=%s", i + 1,
+                                            agentControllerUrls[i]);
         }
         return expandedUrls;
     }
