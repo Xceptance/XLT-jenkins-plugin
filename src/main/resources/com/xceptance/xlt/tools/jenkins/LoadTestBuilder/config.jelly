@@ -124,11 +124,11 @@
         </f:entry>        
 		
 		<f:optionalBlock field="markCriticalOption" title="Tag the build as critical if a specified number of builds failed by a condition in the past." checked="${instance.markCriticalEnabled}">
-	   		<f:entry title="Failed Condition Count" field="markCriticalConditionCount">
+	   		<f:entry title="Critical Threshold" field="markCriticalConditionCount">
 	            <f:textbox field="markCriticalConditionCount"/>
 	        </f:entry>
 	        
-	        <f:entry title="Build Count" field="markCriticalBuildCount">
+	        <f:entry title="Considered Builds" field="markCriticalBuildCount">
 	        	<f:textbox field="markCriticalBuildCount"/>
 			</f:entry> 		       	
 		</f:optionalBlock>
