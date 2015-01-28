@@ -15,7 +15,9 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -149,6 +151,11 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
     public int getDefaultNumberOfBuildsForSummaryReport()
     {
         return 5;
+    }
+
+    public int getDefaultInitialResponseTimeout()
+    {
+        return 360000;
     }
 
     /**
@@ -468,6 +475,68 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
         return filePath;
     }
 
+    public static enum VALIDATION
+    {
+        IGNORE_BLANK_VALUE, IGNORE_MIN, IGNORE_MAX
+    }
+
+    /**
+     * Check if given string is valid number.
+     * 
+     * @param value
+     *            - the string to test, can be null or empty
+     * @param min
+     *            - the lowest allowed number
+     * @param max
+     *            - the highest allowed number
+     * @param flags
+     *            - optional VALIDATION flags to skip some checks. If no flag is given then all checks will be done.
+     * @return a FormValidation.OK if the value is a valid Integer within the bounds of min and max otherwise return a
+     *         FormValidation.ERROR
+     */
+    public static FormValidation validateInteger(String value, Integer min, Integer max, VALIDATION... flags)
+    {
+        EnumSet<VALIDATION> flagSet = EnumSet.copyOf(Arrays.asList(flags));
+        if (StringUtils.isBlank(value))
+        {
+            if (flagSet.contains(VALIDATION.IGNORE_BLANK_VALUE))
+                return FormValidation.ok();
+            else
+                return FormValidation.error("Please enter a number");
+        }
+
+        double number = -1;
+        try
+        {
+            number = Double.valueOf(value);
+        }
+        catch (NumberFormatException e)
+        {
+            return FormValidation.error("Please enter a number");
+        }
+        if (number != (int) number)
+        {
+            return FormValidation.error("Please enter a non decimal number");
+        }
+        if (!flagSet.contains(VALIDATION.IGNORE_MIN))
+        {
+            if (min == null)
+                return FormValidation.error("Min value is not defined.");
+
+            if (number < min)
+                return FormValidation.error("Please enter a valid number greater or equal " + min);
+        }
+        if (!flagSet.contains(VALIDATION.IGNORE_MAX))
+        {
+            if (max == null)
+                return FormValidation.error("Max value is not defined.");
+
+            if (number > max)
+                return FormValidation.error("Please enter a valid number lower or equal " + max);
+        }
+        return FormValidation.ok();
+    }
+
     /**
      * Fills the region select box.
      * 
@@ -594,4 +663,10 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
         }
         return FormValidation.ok();
     }
+
+    public FormValidation doCheckInitialResponseTimeout(@QueryParameter String value)
+    {
+        return validateInteger(value, 0, null, VALIDATION.IGNORE_BLANK_VALUE, VALIDATION.IGNORE_MAX);
+    }
+
 }
