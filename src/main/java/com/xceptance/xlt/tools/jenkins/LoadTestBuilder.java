@@ -140,8 +140,13 @@ public class LoadTestBuilder extends Builder
 
     public enum ENVIRONMENT_KEYS
     {
-        XLT_RUN_FAILED, XLT_CONDITION_CRITICAL, XLT_CONDITION_FAILED, XLT_CONDITION_ERROR
+        XLT_RUN_FAILED, XLT_CONDITION_CRITICAL, XLT_CONDITION_FAILED, XLT_CONDITION_ERROR, XLT_REPORT_URL, XLT_CONDITION_MESSAGE
     };
+
+    public static class FOLDER_NAMES
+    {
+        public static String ARTIFACT_REPORT = "report";
+    }
 
     static
     {
@@ -959,7 +964,19 @@ public class LoadTestBuilder extends Builder
 
     private FilePath getBuildReportFolder(AbstractBuild<?, ?> build)
     {
-        return new FilePath(new FilePath(build.getArtifactsDir()), builderID + "/report/" + Integer.toString(build.getNumber()));
+        return new FilePath(new FilePath(build.getArtifactsDir()), builderID + "/" + FOLDER_NAMES.ARTIFACT_REPORT + "/" +
+                                                                   Integer.toString(build.getNumber()));
+    }
+
+    private String getBuildReportURL(AbstractBuild<?, ?> build)
+    {
+        String jenkinsURL = Jenkins.getInstance().getRootUrl();
+        if (jenkinsURL == null)
+        {
+            jenkinsURL = "";
+        }
+        return jenkinsURL + build.getUrl() + XltRecorderAction.RELATIVE_REPORT_URL + builderID + "/" + FOLDER_NAMES.ARTIFACT_REPORT + "/" +
+               build.getNumber() + "/index.html";
     }
 
     private FilePath getBuildResultsFolder(AbstractBuild<?, ?> build)
@@ -1125,7 +1142,7 @@ public class LoadTestBuilder extends Builder
             build.setResult(Result.UNSTABLE);
         }
 
-        XltRecorderAction recorderAction = new XltRecorderAction(build, failedAlerts, builderID);
+        XltRecorderAction recorderAction = new XltRecorderAction(build, failedAlerts, builderID, getBuildReportURL(build));
         build.getActions().add(recorderAction);
 
         if (!recorderAction.getAlerts().isEmpty())
@@ -1141,6 +1158,7 @@ public class LoadTestBuilder extends Builder
                 setBuildParameterXLT_CONDITION_ERROR(true);
             }
         }
+        setBuildParameterXLT_CONDITION_MESSAGE(recorderAction.getConditionMessage());
     }
 
     private void checkForCritical(AbstractBuild<?, ?> currentBuild)
@@ -1231,6 +1249,16 @@ public class LoadTestBuilder extends Builder
         setBuildParameter(ENVIRONMENT_KEYS.XLT_CONDITION_CRITICAL, Boolean.toString(value));
     }
 
+    private void setBuildParameterXLT_CONDITION_MESSAGE(String message)
+    {
+        setBuildParameter(ENVIRONMENT_KEYS.XLT_CONDITION_MESSAGE, message);
+    }
+
+    private void setBuildParameterXLT_REPORT_URL(String reportURL)
+    {
+        setBuildParameter(ENVIRONMENT_KEYS.XLT_REPORT_URL, reportURL != null ? reportURL : "");
+    }
+
     public void initializeBuildParameter()
     {
         buildParameterMap = new Hashtable<ENVIRONMENT_KEYS, ParameterValue>();
@@ -1238,6 +1266,8 @@ public class LoadTestBuilder extends Builder
         setBuildParameterXLT_CONDITION_FAILED(false);
         setBuildParameterXLT_CONDITION_ERROR(false);
         setBuildParameterXLT_CONDITION_CRITICAL(false);
+        setBuildParameterXLT_REPORT_URL(null);
+        setBuildParameterXLT_CONDITION_MESSAGE("");
     }
 
     @Override
@@ -1658,6 +1688,7 @@ public class LoadTestBuilder extends Builder
         // save load test results and report
         saveArtifact(getFirstXltResultsFolder(build), getBuildResultsFolder(build));
         saveArtifact(getFirstXltReportFolder(build), getBuildReportFolder(build));
+        setBuildParameterXLT_REPORT_URL(getBuildReportURL(build));
     }
 
     private void saveArtifact(FilePath srcFolder, FilePath destFolder) throws IOException, InterruptedException

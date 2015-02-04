@@ -1,5 +1,7 @@
 package com.xceptance.xlt.tools.jenkins;
 
+import java.util.List;
+
 public class CriteriaResult
 {
 
@@ -115,29 +117,42 @@ public class CriteriaResult
         String logMessage = type.name() + ": " + message;
         if (criteriaID != null)
         {
-            logMessage += "\t\t\n Criteria: \"" + criteriaID + "\"";
+            logMessage += "\n    Criteria: \"" + criteriaID + "\"";
         }
         if (value != null)
         {
-            logMessage += "\t\t\n Value: \"" + value + "\"";
+            logMessage += "\n    Value: \"" + value + "\"";
         }
         if (condition != null)
         {
-            logMessage += "\t\t\n Condition: \"" + condition + "\"";
+            logMessage += "\n    Condition: \"" + condition + "\"";
         }
         if (xPath != null)
         {
-            logMessage += "\t\t\n XPath: \"" + xPath + "\"";
+            logMessage += "\n    XPath: \"" + xPath + "\"";
         }
         if (exceptionMessage != null)
         {
-            logMessage += "\t\t\n Error: \"" + exceptionMessage + "\"";
+            logMessage += "\n    Error: \"" + exceptionMessage + "\"";
         }
         if (causeMessage != null)
         {
-            logMessage += "\t\t\n Cause: \"" + causeMessage + "\"";
+            logMessage += "\n    Cause: \"" + causeMessage + "\"";
         }
         return logMessage;
     }
 
+    public static String getFormattedConditionMessage(String title, List<CriteriaResult> resultList)
+    {
+        String message = "";
+        if (!resultList.isEmpty())
+        {
+            message += title + ":\n";
+            for (CriteriaResult eachAlert : resultList)
+            {
+                message += eachAlert.getLogMessage() + "\n";
+            }
+        }
+        return message;
+    }
 }
