@@ -25,11 +25,18 @@ public class XltRecorderAction implements Action
 
     private String builderID;
 
-    public XltRecorderAction(AbstractBuild<?, ?> build, List<CriteriaResult> failedAlerts, String builderID)
+    private String reportURL;
+
+    public static String URL_NAME = "xltResult";
+
+    public static String RELATIVE_REPORT_URL = URL_NAME + "/report/";
+
+    public XltRecorderAction(AbstractBuild<?, ?> build, List<CriteriaResult> failedAlerts, String builderID, String reportURL)
     {
         this.build = build;
         this.failedAlerts = failedAlerts;
         this.builderID = builderID;
+        this.reportURL = reportURL;
     }
 
     public String getIconFileName()
@@ -44,7 +51,12 @@ public class XltRecorderAction implements Action
 
     public String getUrlName()
     {
-        return "xltResult";
+        return URL_NAME;
+    }
+
+    public String getReportURL()
+    {
+        return reportURL;
     }
 
     public String getBuilderID()
@@ -86,6 +98,15 @@ public class XltRecorderAction implements Action
     public String getBuildNumber()
     {
         return String.valueOf(build.number);
+    }
+
+    public String getConditionMessage()
+    {
+        String message = CriteriaResult.getFormattedConditionMessage("Failed Conditions", getFailedAlerts());
+        message += "\n";
+        message += CriteriaResult.getFormattedConditionMessage("Errors", getErrorAlerts());
+
+        return message;
     }
 
     public void doReport(StaplerRequest request, StaplerResponse response)
