@@ -10,7 +10,7 @@
 
     <groupId>com.xceptance</groupId>
     <artifactId>xlt-jenkins-plugin</artifactId>
-    <version>1.1.0</version>
+    <version>1.2.0-snapshot</version>
     <packaging>hpi</packaging>
     <name>XLT Plugin</name>
 
