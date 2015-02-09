@@ -146,6 +146,10 @@ public class LoadTestBuilder extends Builder
     public static class FOLDER_NAMES
     {
         public static String ARTIFACT_REPORT = "report";
+
+        public static String TEMPORARY_XLT_PREFIX = "xlt";
+
+        public static String TEMPORARY_XLT_MATCHER = TEMPORARY_XLT_PREFIX + "[0-9]+";
     }
 
     static
@@ -1004,9 +1008,14 @@ public class LoadTestBuilder extends Builder
         return new FilePath(getSummaryResultsFolder(project), "config");
     }
 
+    private String getTemporaryXLTFolderName(AbstractBuild<?, ?> build)
+    {
+        return FOLDER_NAMES.TEMPORARY_XLT_PREFIX + Integer.toString(build.getNumber());
+    }
+
     private FilePath getXltFolder(AbstractBuild<?, ?> build)
     {
-        return new FilePath(build.getWorkspace(), Integer.toString(build.getNumber()));
+        return new FilePath(new FilePath(build.getProject().getRootDir()), getTemporaryXLTFolderName(build));
     }
 
     private FilePath getXltTemplateFilePath()
@@ -1566,11 +1575,11 @@ public class LoadTestBuilder extends Builder
         listener.getLogger().println("-----------------------------------------------------------------\n"
                                          + "Cleaning up project directory ...\n");
 
-        List<FilePath> DIR = build.getWorkspace().list();
+        List<FilePath> DIR = getXltFolder(build).getParent().list();
 
         for (FilePath eachFilePath : DIR)
         {
-            if (eachFilePath.getBaseName().matches("[0-9]+"))
+            if (eachFilePath.getBaseName().matches(FOLDER_NAMES.TEMPORARY_XLT_MATCHER))
             {
                 eachFilePath.deleteRecursive();
                 listener.getLogger().println("Deleted directory: " + eachFilePath.getRemote());
