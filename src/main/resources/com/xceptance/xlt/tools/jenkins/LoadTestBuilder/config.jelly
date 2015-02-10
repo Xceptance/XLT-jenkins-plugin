@@ -26,7 +26,6 @@
     </f:entry>
     
     <f:entry title="Agent Controller Configuration">
-    	<f:block>    
         <f:radioBlock name="agentControllerConfig" value="embedded" title="Use a single embedded agent controller"
             checked="${instance.agentControllerConfig == null || instance.agentControllerConfig.type == 'embedded'}">
         </f:radioBlock>
@@ -70,13 +69,10 @@
         </f:radioBlock>
         
 		<f:advanced>
-			<f:optionalBlock field="waitForAgentControllersOption" title="Wait For Agent Controllers On Startup" checked="${instance.waitForAgentControllersOption == null || instance.waitForAgentControllersOption.getChecked()}">
-		    	<f:entry title="Initial Wait Timeout" field="initialResponseTimeout">
-		        	<f:textbox field="initialResponseTimeout" default="${descriptor.getDefaultInitialResponseTimeout()}"/>
-		    	</f:entry>
-		    </f:optionalBlock>
+	    	<f:entry title="Wait For Agent Controllers" field="initialResponseTimeout">
+	        	<f:textbox field="initialResponseTimeout" default="${descriptor.getDefaultInitialResponseTimeout()}"/>
+	    	</f:entry>
 	    </f:advanced>    
-	    </f:block>        
     </f:entry>
 
     <!-- ===================================================================== -->

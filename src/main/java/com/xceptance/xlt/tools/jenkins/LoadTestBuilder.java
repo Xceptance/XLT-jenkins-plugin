@@ -59,7 +59,6 @@ import com.xceptance.xlt.tools.jenkins.Chart.ChartLineValue;
 import com.xceptance.xlt.tools.jenkins.config.option.MarkCriticalOption;
 import com.xceptance.xlt.tools.jenkins.config.option.SummaryReportOption;
 import com.xceptance.xlt.tools.jenkins.config.option.TrendReportOption;
-import com.xceptance.xlt.tools.jenkins.config.option.WaitForAgentControllersOption;
 
 /**
  * Readout the configuration of XLT in Jenkins, perform load testing and plot build results on project page.
@@ -71,8 +70,6 @@ public class LoadTestBuilder extends Builder
     private final String testPropertiesFile;
 
     private AgentControllerConfig agentControllerConfig;
-
-    private WaitForAgentControllersOption waitForAgentControllersOption;
 
     private int initialResponseTimeout;
 
@@ -175,8 +172,7 @@ public class LoadTestBuilder extends Builder
                            String plotTitle, String builderID, boolean isPlotVertical, TrendReportOption trendReportOption,
                            SummaryReportOption summaryReportOption, int numberOfBuildsForSummaryReport,
                            AgentControllerConfig agentControllerConfig, String timeFormatPattern, boolean showBuildNumber,
-                           MarkCriticalOption markCriticalOption, boolean markCriticalEnabled,
-                           WaitForAgentControllersOption waitForAgentControllersOption)
+                           MarkCriticalOption markCriticalOption, boolean markCriticalEnabled, Integer initialResponseTimeout)
     {
         isSave = true;
         Thread.currentThread().setUncaughtExceptionHandler(new UncaughtExceptionHandler()
@@ -191,17 +187,9 @@ public class LoadTestBuilder extends Builder
         this.xltTemplateDir = StringUtils.defaultIfBlank(xltTemplateDir, null);
         this.testPropertiesFile = StringUtils.defaultIfBlank(testPropertiesFile, null);
         this.agentControllerConfig = (agentControllerConfig != null) ? agentControllerConfig : new AgentControllerConfig();
-        if (waitForAgentControllersOption != null)
-        {
-            this.waitForAgentControllersOption = waitForAgentControllersOption;
-            this.waitForAgentControllersOption.setChecked(true);
-        }
-        else
-        {
-            this.waitForAgentControllersOption = new WaitForAgentControllersOption();
-            this.waitForAgentControllersOption.setChecked(false);
-        }
-        this.initialResponseTimeout = this.waitForAgentControllersOption.getInitialResponseTimeout(getDescriptor().getDefaultInitialResponseTimeout());
+
+        this.initialResponseTimeout = initialResponseTimeout != null ? initialResponseTimeout
+                                                                    : getDescriptor().getDefaultInitialResponseTimeout();
 
         // plot/value configuration
         this.xltConfig = StringUtils.defaultIfBlank(xltConfig, getDescriptor().getDefaultXltConfig());
@@ -312,11 +300,6 @@ public class LoadTestBuilder extends Builder
     public AgentControllerConfig getAgentControllerConfig()
     {
         return agentControllerConfig;
-    }
-
-    public WaitForAgentControllersOption getWaitForAgentControllersOption()
-    {
-        return waitForAgentControllersOption;
     }
 
     public int getInitialResponseTimeout()
@@ -1622,11 +1605,6 @@ public class LoadTestBuilder extends Builder
         listener.getLogger().println("\nFinished");
     }
 
-    public boolean isWaitForAgentControllersEnabled()
-    {
-        return waitForAgentControllersOption != null && waitForAgentControllersOption.getChecked();
-    }
-
     private void runMasterController(AbstractBuild<?, ?> build, BuildListener listener, String[] agentControllerUrls) throws Exception
     {
         listener.getLogger().println("-----------------------------------------------------------------\nRunning master controller ...\n");
@@ -1654,11 +1632,8 @@ public class LoadTestBuilder extends Builder
         }
         else
         {
-            // set the initialResponseTimeout property if configured
-            if (isWaitForAgentControllersEnabled())
-            {
-                commandLine.add("-Dcom.xceptance.xlt.mastercontroller.initialResponseTimeout=" + initialResponseTimeout);
-            }
+            // set the initialResponseTimeout property
+            commandLine.add("-Dcom.xceptance.xlt.mastercontroller.initialResponseTimeout=" + initialResponseTimeout);
 
             // set agent controllers
             String[] agentControllerProperties = expandAgentControllerUrls(agentControllerUrls);
