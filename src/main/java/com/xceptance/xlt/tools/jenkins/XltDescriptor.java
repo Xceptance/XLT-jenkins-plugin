@@ -1,6 +1,5 @@
 package com.xceptance.xlt.tools.jenkins;
 
-import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Util;
