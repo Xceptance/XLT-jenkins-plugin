@@ -24,7 +24,7 @@
     <f:entry title="Load Test Configuration File" field="testPropertiesFile">
         <f:textbox/>
     </f:entry>
-
+    
     <f:entry title="Agent Controller Configuration">
         <f:radioBlock name="agentControllerConfig" value="embedded" title="Use a single embedded agent controller"
             checked="${instance.agentControllerConfig == null || instance.agentControllerConfig.type == 'embedded'}">
@@ -67,6 +67,12 @@
                 <f:textbox field="tagName" value="${instance.agentControllerConfig.tagName}"/>
             </f:entry>
         </f:radioBlock>
+        
+		<f:advanced>
+	    	<f:entry title="Wait For Agent Controllers" field="initialResponseTimeout">
+	        	<f:textbox field="initialResponseTimeout" default="${descriptor.getDefaultInitialResponseTimeout()}"/>
+	    	</f:entry>
+	    </f:advanced>    
     </f:entry>
 
     <!-- ===================================================================== -->

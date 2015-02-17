@@ -71,6 +71,8 @@ public class LoadTestBuilder extends Builder
 
     private AgentControllerConfig agentControllerConfig;
 
+    private int initialResponseTimeout;
+
     private final String xltConfig;
 
     private final String xltTemplateDir;
@@ -179,7 +181,7 @@ public class LoadTestBuilder extends Builder
                            String plotTitle, String builderID, boolean isPlotVertical, TrendReportOption trendReportOption,
                            SummaryReportOption summaryReportOption, int numberOfBuildsForSummaryReport,
                            AgentControllerConfig agentControllerConfig, String timeFormatPattern, boolean showBuildNumber,
-                           MarkCriticalOption markCriticalOption, boolean markCriticalEnabled)
+                           MarkCriticalOption markCriticalOption, boolean markCriticalEnabled, Integer initialResponseTimeout)
     {
         isSave = true;
         Thread.currentThread().setUncaughtExceptionHandler(new UncaughtExceptionHandler()
@@ -194,6 +196,9 @@ public class LoadTestBuilder extends Builder
         this.xltTemplateDir = StringUtils.defaultIfBlank(xltTemplateDir, null);
         this.testPropertiesFile = StringUtils.defaultIfBlank(testPropertiesFile, null);
         this.agentControllerConfig = (agentControllerConfig != null) ? agentControllerConfig : new AgentControllerConfig();
+
+        this.initialResponseTimeout = initialResponseTimeout != null ? initialResponseTimeout
+                                                                    : getDescriptor().getDefaultInitialResponseTimeout();
 
         // plot/value configuration
         this.xltConfig = StringUtils.defaultIfBlank(xltConfig, getDescriptor().getDefaultXltConfig());
@@ -304,6 +309,11 @@ public class LoadTestBuilder extends Builder
     public AgentControllerConfig getAgentControllerConfig()
     {
         return agentControllerConfig;
+    }
+
+    public int getInitialResponseTimeout()
+    {
+        return initialResponseTimeout;
     }
 
     public TrendReportOption getTrendReportOption()
@@ -1661,6 +1671,10 @@ public class LoadTestBuilder extends Builder
         }
         else
         {
+            // set the initialResponseTimeout property
+            commandLine.add("-Dcom.xceptance.xlt.mastercontroller.initialResponseTimeout=" + initialResponseTimeout);
+
+            // set agent controllers
             String[] agentControllerProperties = expandAgentControllerUrls(agentControllerUrls);
             for (int i = 0; i < agentControllerProperties.length; i++)
             {
