@@ -21,7 +21,7 @@ public class XltRecorderAction implements Action
 
     public AbstractBuild<?, ?> build;
 
-    private List<CriteriaResult> failedAlerts;
+    private List<CriterionResult> failedAlerts;
 
     private String builderID;
 
@@ -31,7 +31,7 @@ public class XltRecorderAction implements Action
 
     public static String RELATIVE_REPORT_URL = URL_NAME + "/report/";
 
-    public XltRecorderAction(AbstractBuild<?, ?> build, List<CriteriaResult> failedAlerts, String builderID, String reportURL)
+    public XltRecorderAction(AbstractBuild<?, ?> build, List<CriterionResult> failedAlerts, String builderID, String reportURL)
     {
         this.build = build;
         this.failedAlerts = failedAlerts;
@@ -64,17 +64,17 @@ public class XltRecorderAction implements Action
         return builderID;
     }
 
-    public List<CriteriaResult> getAlerts()
+    public List<CriterionResult> getAlerts()
     {
         return failedAlerts;
     }
 
-    public List<CriteriaResult> getFailedAlerts()
+    public List<CriterionResult> getFailedAlerts()
     {
-        List<CriteriaResult> failed = new ArrayList<CriteriaResult>();
-        for (CriteriaResult eachAlert : failedAlerts)
+        List<CriterionResult> failed = new ArrayList<CriterionResult>();
+        for (CriterionResult eachAlert : failedAlerts)
         {
-            if (eachAlert.getType() == CriteriaResult.Type.FAILED)
+            if (eachAlert.getType() == CriterionResult.Type.FAILED)
             {
                 failed.add(eachAlert);
             }
@@ -82,12 +82,12 @@ public class XltRecorderAction implements Action
         return failed;
     }
 
-    public List<CriteriaResult> getErrorAlerts()
+    public List<CriterionResult> getErrorAlerts()
     {
-        List<CriteriaResult> errors = new ArrayList<CriteriaResult>();
-        for (CriteriaResult eachError : failedAlerts)
+        List<CriterionResult> errors = new ArrayList<CriterionResult>();
+        for (CriterionResult eachError : failedAlerts)
         {
-            if (eachError.getType() == CriteriaResult.Type.ERROR)
+            if (eachError.getType() == CriterionResult.Type.ERROR)
             {
                 errors.add(eachError);
             }
@@ -102,9 +102,9 @@ public class XltRecorderAction implements Action
 
     public String getConditionMessage()
     {
-        String message = CriteriaResult.getFormattedConditionMessage("Failed Conditions", getFailedAlerts());
+        String message = CriterionResult.getFormattedConditionMessage("Failed Conditions", getFailedAlerts());
         message += "\n";
-        message += CriteriaResult.getFormattedConditionMessage("Errors", getErrorAlerts());
+        message += CriterionResult.getFormattedConditionMessage("Errors", getErrorAlerts());
 
         return message;
     }
