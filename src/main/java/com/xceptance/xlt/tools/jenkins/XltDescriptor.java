@@ -671,6 +671,14 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
         return validateInteger(value, 2, null, VALIDATION.IGNORE_MAX, VALIDATION.IGNORE_BLANK_VALUE);
     }
 
+    /**
+     * Performs on-the-fly validation of the form field 'numberOfBuildsForSummaryReport'.
+     */
+    public FormValidation doCheckNumberOfBuildsForSummaryReport(@QueryParameter String value)
+    {
+        return validateInteger(value, 2, null, VALIDATION.IGNORE_MAX, VALIDATION.IGNORE_BLANK_VALUE);
+    }
+
     public FormValidation doCheckInitialResponseTimeout(@QueryParameter String value)
     {
         return validateInteger(value, 0, null, VALIDATION.IGNORE_BLANK_VALUE, VALIDATION.IGNORE_MAX);
