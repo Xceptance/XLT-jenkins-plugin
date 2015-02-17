@@ -12,12 +12,16 @@ import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.model.ParametersAction;
 import hudson.model.StringParameterValue;
+import hudson.security.ACL;
 import hudson.tasks.Builder;
+import hudson.util.Secret;
 import hudson.util.StreamTaskListener;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.net.URISyntaxException;
@@ -39,6 +43,7 @@ import javax.xml.xpath.XPathFactory;
 import jenkins.model.Jenkins;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.SystemUtils;
@@ -54,6 +59,9 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.xml.sax.SAXException;
 
+import com.cloudbees.plugins.credentials.CredentialsMatchers;
+import com.cloudbees.plugins.credentials.CredentialsProvider;
+import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import com.xceptance.xlt.tools.jenkins.Chart.ChartLine;
 import com.xceptance.xlt.tools.jenkins.Chart.ChartLineValue;
 import com.xceptance.xlt.tools.jenkins.config.option.MarkCriticalOption;
@@ -1488,6 +1496,8 @@ public class LoadTestBuilder extends Builder
         commandLine.add("-o");
         commandLine.add(acUrlFile.absolutize().getRemote());
 
+        appendEc2Properties(build, listener);
+
         // run the EC2 admin tool
         FilePath workingDirectory = getXltBinFolder(build);
         int commandResult = executeCommand(build.getBuiltOn(), workingDirectory, commandLine, listener.getLogger());
@@ -1521,6 +1531,54 @@ public class LoadTestBuilder extends Builder
         }
 
         return urls.toArray(new String[urls.size()]);
+    }
+
+    private void appendEc2Properties(AbstractBuild<?, ?> build, BuildListener listener) throws IOException, InterruptedException
+    {
+        // append properties to the end of the file
+        // the last properties will win so this would overwrite the original properties
+        FilePath ec2PropertiesFile = new FilePath(getXltConfigFolder(build), "ec2_admin.properties");
+        BufferedWriter writer = null;
+        try
+        {
+            String originalContent = ec2PropertiesFile.readToString();
+            OutputStream outStream = ec2PropertiesFile.write(); // this will overwrite the existing file so we need the
+                                                                // original content to recreate the old content
+            writer = new BufferedWriter(new OutputStreamWriter(outStream));
+
+            writer.write(originalContent);
+            writer.newLine();
+
+            if (StringUtils.isNotBlank(agentControllerConfig.getAwsCredentials()))
+            {
+                List<AwsCredentials> availableCredentials = CredentialsProvider.lookupCredentials(AwsCredentials.class, build.getProject(),
+                                                                                                  ACL.SYSTEM, new DomainRequirement[0]);
+
+                AwsCredentials credentials = CredentialsMatchers.firstOrNull(availableCredentials,
+                                                                             CredentialsMatchers.withId(agentControllerConfig.getAwsCredentials()));
+                if (credentials != null)
+                {
+                    writer.write("aws.accessKey=" + Secret.toString(credentials.getAccessKey()));
+                    writer.newLine();
+                    writer.write("aws.secretKey=" + Secret.toString(credentials.getSecretKey()));
+                }
+                else
+                {
+                    LOGGER.warn("No credentials found for id: \"" + agentControllerConfig.getAwsCredentials() + "\"");
+                    listener.getLogger().println("No credentials found for id: \"" + agentControllerConfig.getAwsCredentials() + "\"");
+                }
+            }
+            writer.flush();
+        }
+        finally
+        {
+            if (writer != null)
+            {
+                IOUtils.closeQuietly(writer);
+            }
+            ec2PropertiesFile.getChannel().close();
+            ec2PropertiesFile.getChannel().join();
+        }
     }
 
     private void terminateEc2Machine(AbstractBuild<?, ?> build, BuildListener listener) throws Exception
