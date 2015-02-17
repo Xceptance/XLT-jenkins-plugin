@@ -1590,54 +1590,6 @@ public class LoadTestBuilder extends Builder
         }
     }
 
-    private void appendEc2Properties(AbstractBuild<?, ?> build, BuildListener listener) throws IOException, InterruptedException
-    {
-        // append properties to the end of the file
-        // the last properties will win so this would overwrite the original properties
-        FilePath ec2PropertiesFile = new FilePath(getXltConfigFolder(build), "ec2_admin.properties");
-        BufferedWriter writer = null;
-        try
-        {
-            String originalContent = ec2PropertiesFile.readToString();
-            OutputStream outStream = ec2PropertiesFile.write(); // this will overwrite the existing file so we need the
-                                                                // original content to recreate the old content
-            writer = new BufferedWriter(new OutputStreamWriter(outStream));
-
-            writer.write(originalContent);
-            writer.newLine();
-
-            if (StringUtils.isNotBlank(agentControllerConfig.getAwsCredentials()))
-            {
-                List<AwsCredentials> availableCredentials = CredentialsProvider.lookupCredentials(AwsCredentials.class, build.getProject(),
-                                                                                                  ACL.SYSTEM, new DomainRequirement[0]);
-
-                AwsCredentials credentials = CredentialsMatchers.firstOrNull(availableCredentials,
-                                                                             CredentialsMatchers.withId(agentControllerConfig.getAwsCredentials()));
-                if (credentials != null)
-                {
-                    writer.write("aws.accessKey=" + Secret.toString(credentials.getAccessKey()));
-                    writer.newLine();
-                    writer.write("aws.secretKey=" + Secret.toString(credentials.getSecretKey()));
-                }
-                else
-                {
-                    LOGGER.warn("No credentials found for id: \"" + agentControllerConfig.getAwsCredentials() + "\"");
-                    listener.getLogger().println("No credentials found for id: \"" + agentControllerConfig.getAwsCredentials() + "\"");
-                }
-            }
-            writer.flush();
-        }
-        finally
-        {
-            if (writer != null)
-            {
-                IOUtils.closeQuietly(writer);
-            }
-            ec2PropertiesFile.getChannel().close();
-            ec2PropertiesFile.getChannel().join();
-        }
-    }
-
     private void terminateEc2Machine(AbstractBuild<?, ?> build, BuildListener listener) throws Exception
     {
         listener.getLogger()
