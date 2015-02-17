@@ -77,14 +77,16 @@ public class AgentControllerConfig
 
     private final String tagName;
 
+    private String awsCredentials;
+
     public AgentControllerConfig()
     {
-        this(TYPE.embedded.toString(), null, null, null, null, null, null, null);
+        this(TYPE.embedded.toString(), null, null, null, null, null, null, null, null);
     }
 
     @DataBoundConstructor
     public AgentControllerConfig(String value, String urlList, String urlFile, String region, String amiId, String ec2Type,
-                                 String countMachines, String tagName)
+                                 String countMachines, String tagName, String awsCredentials)
     {
         this.type = value;
         this.urlList = urlList;
@@ -94,6 +96,7 @@ public class AgentControllerConfig
         this.ec2Type = ec2Type;
         this.countMachines = countMachines;
         this.tagName = tagName;
+        this.awsCredentials = awsCredentials;
     }
 
     public String getRegion()
@@ -119,6 +122,11 @@ public class AgentControllerConfig
     public String getTagName()
     {
         return this.tagName;
+    }
+
+    public String getAwsCredentials()
+    {
+        return awsCredentials;
     }
 
     /**

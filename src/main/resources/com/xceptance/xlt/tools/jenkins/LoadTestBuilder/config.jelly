@@ -1,5 +1,5 @@
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson"
-    xmlns:f="/lib/form">
+    xmlns:f="/lib/form" xmlns:c="/lib/credentials">
 
     <style>
         .xlt-subsection { color: #335B94; font-weight: bold; padding: 8px 0px 4px 4px }
@@ -46,6 +46,10 @@
         
         <f:radioBlock name="agentControllerConfig" value="ec2" title="Start agent machines in Amazon's EC2"
             checked="${instance.agentControllerConfig.type == 'ec2'}">
+            <!-- select credentials -->
+			<f:entry field="awsCredentials" title="AWS Credentials">
+				<c:select field="awsCredentials" value="${instance.agentControllerConfig.awsCredentials}"></c:select>
+			</f:entry>
             <!-- select region -->
             <f:entry field="region" title="Region">
 				<f:select default="${instance.agentControllerConfig.region}"/>
