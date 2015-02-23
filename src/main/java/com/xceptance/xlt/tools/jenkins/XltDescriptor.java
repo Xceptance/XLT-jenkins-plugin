@@ -154,7 +154,7 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
 
     public int getDefaultInitialResponseTimeout()
     {
-        return 360000;
+        return 360;
     }
 
     /**

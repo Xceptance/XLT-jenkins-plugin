@@ -1672,7 +1672,7 @@ public class LoadTestBuilder extends Builder
         else
         {
             // set the initialResponseTimeout property
-            commandLine.add("-Dcom.xceptance.xlt.mastercontroller.initialResponseTimeout=" + initialResponseTimeout);
+            commandLine.add("-Dcom.xceptance.xlt.mastercontroller.initialResponseTimeout=" + (initialResponseTimeout * 1000));
 
             // set agent controllers
             String[] agentControllerProperties = expandAgentControllerUrls(agentControllerUrls);

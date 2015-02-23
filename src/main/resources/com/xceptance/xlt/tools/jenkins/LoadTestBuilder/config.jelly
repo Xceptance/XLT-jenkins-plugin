@@ -69,7 +69,7 @@
         </f:radioBlock>
         
 		<f:advanced>
-	    	<f:entry title="AC Start-up Timeout" field="initialResponseTimeout">
+	    	<f:entry title="AC Start-up Timeout [s]" field="initialResponseTimeout">
 	        	<f:textbox field="initialResponseTimeout" default="${descriptor.getDefaultInitialResponseTimeout()}"/>
 	    	</f:entry>
 	    </f:advanced>    
