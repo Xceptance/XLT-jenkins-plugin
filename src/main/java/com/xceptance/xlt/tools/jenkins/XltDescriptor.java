@@ -513,7 +513,7 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
         {
             return FormValidation.error("Please enter a number");
         }
-        if (number != (int) number)
+        if (number != (int) number || !StringUtils.trimToEmpty(value).equals(Integer.toString((int) number)))
         {
             return FormValidation.error("Please enter an integer");
         }
