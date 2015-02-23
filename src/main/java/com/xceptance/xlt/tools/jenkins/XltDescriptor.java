@@ -515,7 +515,7 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
         }
         if (number != (int) number)
         {
-            return FormValidation.error("Please enter a non decimal number");
+            return FormValidation.error("Please enter an integer");
         }
         if (!flagSet.contains(VALIDATION.IGNORE_MIN))
         {
@@ -523,7 +523,7 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
                 return FormValidation.error("Min value is not defined.");
 
             if (number < min)
-                return FormValidation.error("Please enter a valid number greater or equal " + min);
+                return FormValidation.error("Please enter a valid number greater than or equal to " + min);
         }
         if (!flagSet.contains(VALIDATION.IGNORE_MAX))
         {
@@ -531,7 +531,7 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
                 return FormValidation.error("Max value is not defined.");
 
             if (number > max)
-                return FormValidation.error("Please enter a valid number lower or equal " + max);
+                return FormValidation.error("Please enter a valid number lower than or equal to " + max);
         }
         return FormValidation.ok();
     }
