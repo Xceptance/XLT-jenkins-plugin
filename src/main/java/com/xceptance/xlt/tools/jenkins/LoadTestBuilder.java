@@ -79,6 +79,8 @@ public class LoadTestBuilder extends Builder
 
     private AgentControllerConfig agentControllerConfig;
 
+    private int initialResponseTimeout;
+
     private final String xltConfig;
 
     private final String xltTemplateDir;
@@ -187,7 +189,7 @@ public class LoadTestBuilder extends Builder
                            String plotTitle, String builderID, boolean isPlotVertical, TrendReportOption trendReportOption,
                            SummaryReportOption summaryReportOption, int numberOfBuildsForSummaryReport,
                            AgentControllerConfig agentControllerConfig, String timeFormatPattern, boolean showBuildNumber,
-                           MarkCriticalOption markCriticalOption, boolean markCriticalEnabled)
+                           MarkCriticalOption markCriticalOption, boolean markCriticalEnabled, Integer initialResponseTimeout)
     {
         isSave = true;
         Thread.currentThread().setUncaughtExceptionHandler(new UncaughtExceptionHandler()
@@ -202,6 +204,9 @@ public class LoadTestBuilder extends Builder
         this.xltTemplateDir = StringUtils.defaultIfBlank(xltTemplateDir, null);
         this.testPropertiesFile = StringUtils.defaultIfBlank(testPropertiesFile, null);
         this.agentControllerConfig = (agentControllerConfig != null) ? agentControllerConfig : new AgentControllerConfig();
+
+        this.initialResponseTimeout = initialResponseTimeout != null ? initialResponseTimeout
+                                                                    : getDescriptor().getDefaultInitialResponseTimeout();
 
         // plot/value configuration
         this.xltConfig = StringUtils.defaultIfBlank(xltConfig, getDescriptor().getDefaultXltConfig());
@@ -312,6 +317,11 @@ public class LoadTestBuilder extends Builder
     public AgentControllerConfig getAgentControllerConfig()
     {
         return agentControllerConfig;
+    }
+
+    public int getInitialResponseTimeout()
+    {
+        return initialResponseTimeout;
     }
 
     public TrendReportOption getTrendReportOption()
@@ -1046,19 +1056,19 @@ public class LoadTestBuilder extends Builder
         return new FilePath(getXltFolder(build), "config");
     }
 
-    private List<CriteriaResult> validateCriteria(AbstractBuild<?, ?> build, BuildListener listener)
+    private List<CriterionResult> getFailedCriteria(AbstractBuild<?, ?> build, BuildListener listener)
         throws IOException, InterruptedException
     {
         listener.getLogger().println("-----------------------------------------------------------------\n"
                                          + "Checking success criteria ...\n");
 
-        List<CriteriaResult> failedAlerts = new ArrayList<CriteriaResult>();
+        List<CriterionResult> failedAlerts = new ArrayList<CriterionResult>();
 
         Document dataXml = getDataDocument(build);
         if (dataXml == null)
         {
-            CriteriaResult criteriaResult = CriteriaResult.error("No test data found.");
-            failedAlerts.add(criteriaResult);
+            CriterionResult criterionResult = CriterionResult.error("No test data found.");
+            failedAlerts.add(criterionResult);
         }
         else
         {
@@ -1076,14 +1086,14 @@ public class LoadTestBuilder extends Builder
                         condition = getOptionalValueConfigValue(eachID, CONFIG_VALUE_PARAMETER.condition);
                         if (StringUtils.isBlank(condition))
                         {
-                            LOGGER.debug("No condition for criteria. (criteriaID: \"" + eachID + "\")");
+                            LOGGER.debug("No condition for criterion. (criterionID: \"" + eachID + "\")");
                             continue;
                         }
                         if (StringUtils.isBlank(xPath))
                         {
-                            CriteriaResult criteriaResult = CriteriaResult.error("No xPath for Criteria");
-                            criteriaResult.setCriteriaID(eachID);
-                            failedAlerts.add(criteriaResult);
+                            CriterionResult criterionResult = CriterionResult.error("No xPath for Criterion");
+                            criterionResult.setCriterionID(eachID);
+                            failedAlerts.add(criterionResult);
                             continue;
                         }
                         String conditionPath = xPath + condition;
@@ -1091,10 +1101,10 @@ public class LoadTestBuilder extends Builder
                         Element node = (Element) XPathFactory.newInstance().newXPath().evaluate(xPath, dataXml, XPathConstants.NODE);
                         if (node == null)
                         {
-                            CriteriaResult criteriaResult = CriteriaResult.error("No result for XPath");
-                            criteriaResult.setCriteriaID(eachID);
-                            criteriaResult.setXPath(xPath);
-                            failedAlerts.add(criteriaResult);
+                            CriterionResult criterionResult = CriterionResult.error("No result for XPath");
+                            criterionResult.setCriterionID(eachID);
+                            criterionResult.setXPath(xPath);
+                            failedAlerts.add(criterionResult);
                             continue;
                         }
 
@@ -1103,54 +1113,54 @@ public class LoadTestBuilder extends Builder
                         if (result == null)
                         {
                             String value = XPathFactory.newInstance().newXPath().evaluate(xPath, dataXml);
-                            CriteriaResult criteriaResult = CriteriaResult.failed("Condition");
-                            criteriaResult.setCriteriaID(eachID);
-                            criteriaResult.setValue(value);
-                            criteriaResult.setCondition(condition);
-                            criteriaResult.setXPath(xPath);
-                            failedAlerts.add(criteriaResult);
+                            CriterionResult criterionResult = CriterionResult.failed("Condition");
+                            criterionResult.setCriterionID(eachID);
+                            criterionResult.setValue(value);
+                            criterionResult.setCondition(condition);
+                            criterionResult.setXPath(xPath);
+                            failedAlerts.add(criterionResult);
                             continue;
                         }
                     }
                     catch (JSONException e)
                     {
-                        CriteriaResult criteriaResult = CriteriaResult.error("Failed to get parameter from configuration");
-                        criteriaResult.setCriteriaID(eachID);
-                        criteriaResult.setExceptionMessage(e.getMessage());
-                        criteriaResult.setCauseMessage(e.getCause() != null ? e.getCause().getMessage() : null);
-                        failedAlerts.add(criteriaResult);
+                        CriterionResult criterionResult = CriterionResult.error("Failed to get parameter from configuration");
+                        criterionResult.setCriterionID(eachID);
+                        criterionResult.setExceptionMessage(e.getMessage());
+                        criterionResult.setCauseMessage(e.getCause() != null ? e.getCause().getMessage() : null);
+                        failedAlerts.add(criterionResult);
                     }
                     catch (XPathExpressionException e)
                     {
-                        CriteriaResult criteriaResult = CriteriaResult.error("Incorrect xPath expression");
-                        criteriaResult.setCriteriaID(eachID);
-                        criteriaResult.setCondition(condition);
-                        criteriaResult.setXPath(xPath);
-                        criteriaResult.setExceptionMessage(e.getMessage());
-                        criteriaResult.setCauseMessage(e.getCause() != null ? e.getCause().getMessage() : null);
-                        failedAlerts.add(criteriaResult);
+                        CriterionResult criterionResult = CriterionResult.error("Incorrect xPath expression");
+                        criterionResult.setCriterionID(eachID);
+                        criterionResult.setCondition(condition);
+                        criterionResult.setXPath(xPath);
+                        criterionResult.setExceptionMessage(e.getMessage());
+                        criterionResult.setCauseMessage(e.getCause() != null ? e.getCause().getMessage() : null);
+                        failedAlerts.add(criterionResult);
                     }
                 }
             }
             catch (JSONException e)
             {
-                CriteriaResult criteriaResult = CriteriaResult.error("Failed to start process criteria.");
-                criteriaResult.setExceptionMessage(e.getMessage());
-                criteriaResult.setCauseMessage(e.getCause() != null ? e.getCause().getMessage() : null);
-                failedAlerts.add(criteriaResult);
+                CriterionResult criterionResult = CriterionResult.error("Failed to start process criterion.");
+                criterionResult.setExceptionMessage(e.getMessage());
+                criterionResult.setCauseMessage(e.getCause() != null ? e.getCause().getMessage() : null);
+                failedAlerts.add(criterionResult);
             }
         }
         return failedAlerts;
     }
 
-    private void validateCriterias(AbstractBuild<?, ?> build, BuildListener listener) throws IOException, InterruptedException
+    private void validateCriteria(AbstractBuild<?, ?> build, BuildListener listener) throws IOException, InterruptedException
     {
-        List<CriteriaResult> failedAlerts = validateCriteria(build, listener);
+        List<CriterionResult> failedAlerts = getFailedCriteria(build, listener);
 
         if (!failedAlerts.isEmpty())
         {
             listener.getLogger().println();
-            for (CriteriaResult eachAlert : failedAlerts)
+            for (CriterionResult eachAlert : failedAlerts)
             {
                 listener.getLogger().println(eachAlert.getLogMessage());
             }
@@ -1186,7 +1196,7 @@ public class LoadTestBuilder extends Builder
             List<AbstractBuild<?, ?>> builds = new ArrayList<AbstractBuild<?, ?>>();
             builds.addAll(getBuilds(currentBuild.getProject(), 0, markCriticalBuildCount));
 
-            int failedCriteriaBuilds = 0;
+            int failedCriterionBuilds = 0;
             for (AbstractBuild<?, ?> eachBuild : builds)
             {
                 XltRecorderAction recorderAction = eachBuild.getAction(XltRecorderAction.class);
@@ -1194,8 +1204,8 @@ public class LoadTestBuilder extends Builder
                 {
                     if (!recorderAction.getFailedAlerts().isEmpty())
                     {
-                        failedCriteriaBuilds++;
-                        if (failedCriteriaBuilds == markCriticalConditionCount)
+                        failedCriterionBuilds++;
+                        if (failedCriterionBuilds == markCriticalConditionCount)
                         {
                             setBuildParameterXLT_CONDITION_CRITICAL(true);
                             break;
@@ -1310,7 +1320,7 @@ public class LoadTestBuilder extends Builder
             saveArtifacts(build, listener);
             artifactsSaved = true;
 
-            validateCriterias(build, listener);
+            validateCriteria(build, listener);
         }
         catch (InterruptedException e)
         {
@@ -1719,6 +1729,10 @@ public class LoadTestBuilder extends Builder
         }
         else
         {
+            // set the initialResponseTimeout property
+            commandLine.add("-Dcom.xceptance.xlt.mastercontroller.initialResponseTimeout=" + (initialResponseTimeout * 1000));
+
+            // set agent controllers
             String[] agentControllerProperties = expandAgentControllerUrls(agentControllerUrls);
             for (int i = 0; i < agentControllerProperties.length; i++)
             {

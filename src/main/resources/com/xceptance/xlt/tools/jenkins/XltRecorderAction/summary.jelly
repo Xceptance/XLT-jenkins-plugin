@@ -37,8 +37,8 @@
 				        		<dl>
 				        			<j:forEach var="eachResult" items="${it.getFailedAlerts()}">
 				        				<dt><b>${eachResult.getMessage()}</b></dt>				        					
-										<j:if test="${eachResult.getCriteriaID() != null}">
-		        							<dd>Criteria: ${eachResult.getCriteriaID()}</dd>
+										<j:if test="${eachResult.getCriterionID() != null}">
+		        							<dd>Criterion: ${eachResult.getCriterionID()}</dd>
 		        						</j:if>
 										<j:if test="${eachResult.getValue() != null}">
 		        							<dd>Value: ${eachResult.getValue()}</dd>
@@ -65,8 +65,8 @@
 				        		<dl>
 				        			<j:forEach var="eachResult" items="${it.getErrorAlerts()}">
 				        				<dt><b>${eachResult.getMessage()}</b></dt>				        					
-										<j:if test="${eachResult.getCriteriaID() != null}">
-		        							<dd>Criteria: ${eachResult.getCriteriaID()}</dd>
+										<j:if test="${eachResult.getCriterionID() != null}">
+		        							<dd>Criterion: ${eachResult.getCriterionID()}</dd>
 		        						</j:if>
 										<j:if test="${eachResult.getValue() != null}">
 		        							<dd>Value: ${eachResult.getValue()}</dd>
