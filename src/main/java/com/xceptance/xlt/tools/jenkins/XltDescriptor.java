@@ -369,52 +369,12 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
 
     public FormValidation doCheckPlotWidth(@QueryParameter String value)
     {
-        if (StringUtils.isBlank(value))
-            return FormValidation.ok("The default width will be used for empty field. (" + getDefaultPlotWidth() + ")");
-
-        double number = -1;
-        try
-        {
-            number = Double.valueOf(value);
-        }
-        catch (NumberFormatException e)
-        {
-            return FormValidation.error("Please enter a valid number for width.");
-        }
-        if (number < 1)
-        {
-            return FormValidation.error("Please enter a valid positive number for width.");
-        }
-        if (number != (int) number)
-        {
-            return FormValidation.warning("Decimal number for width. Width will be " + (int) number);
-        }
-        return FormValidation.ok();
+        return validateNumber(value, 0, null, VALIDATION.IGNORE_BLANK_VALUE, VALIDATION.IGNORE_MAX, VALIDATION.IS_INTEGER);
     }
 
     public FormValidation doCheckPlotHeight(@QueryParameter String value)
     {
-        if (StringUtils.isBlank(value))
-            return FormValidation.ok("The default height will be used for empty field. (" + getDefaultPlotHeight() + ")");
-
-        double number = -1;
-        try
-        {
-            number = Double.valueOf(value);
-        }
-        catch (NumberFormatException e)
-        {
-            return FormValidation.error("Please enter a valid number for height.");
-        }
-        if (number < 1)
-        {
-            return FormValidation.error("Please enter a valid positive number for height.");
-        }
-        if (number != (int) number)
-        {
-            return FormValidation.warning("Decimal number for height. Height will be " + (int) number);
-        }
-        return FormValidation.ok();
+        return validateNumber(value, 0, null, VALIDATION.IGNORE_BLANK_VALUE, VALIDATION.IGNORE_MAX, VALIDATION.IS_INTEGER);
     }
 
     public FormValidation doCheckTimeFormatPattern(@QueryParameter String value)
@@ -482,7 +442,7 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
 
     public static enum VALIDATION
     {
-        IGNORE_BLANK_VALUE, IGNORE_MIN, IGNORE_MAX
+        IGNORE_BLANK_VALUE, IGNORE_MIN, IGNORE_MAX, IS_INTEGER
     }
 
     /**
@@ -496,10 +456,10 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
      *            - the highest allowed number
      * @param flags
      *            - optional VALIDATION flags to skip some checks. If no flag is given then all checks will be done.
-     * @return a FormValidation.OK if the value is a valid Integer within the bounds of min and max otherwise return a
+     * @return a FormValidation.OK if the value is a valid number within the bounds of min and max otherwise return a
      *         FormValidation.ERROR
      */
-    public static FormValidation validateInteger(String value, Integer min, Integer max, VALIDATION... flags)
+    public static FormValidation validateNumber(String value, Number min, Number max, VALIDATION... flags)
     {
         EnumSet<VALIDATION> flagSet = EnumSet.copyOf(Arrays.asList(flags));
         if (StringUtils.isBlank(value))
@@ -519,7 +479,8 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
         {
             return FormValidation.error("Please enter a number");
         }
-        if (number != (int) number || !StringUtils.trimToEmpty(value).equals(Integer.toString((int) number)))
+        if (flagSet.contains(VALIDATION.IS_INTEGER) &&
+            (number != (int) number || !StringUtils.trimToEmpty(value).equals(Integer.toString((int) number))))
         {
             return FormValidation.error("Please enter an integer");
         }
@@ -528,7 +489,7 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
             if (min == null)
                 return FormValidation.error("Min value is not defined.");
 
-            if (number < min)
+            if (number < min.doubleValue())
                 return FormValidation.error("Please enter a valid number greater than or equal to " + min);
         }
         if (!flagSet.contains(VALIDATION.IGNORE_MAX))
@@ -536,7 +497,7 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
             if (max == null)
                 return FormValidation.error("Max value is not defined.");
 
-            if (number > max)
+            if (number > max.doubleValue())
                 return FormValidation.error("Please enter a valid number lower than or equal to " + max);
         }
         return FormValidation.ok();
@@ -585,24 +546,7 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
      */
     public FormValidation doCheckCountMachines(@QueryParameter String value)
     {
-        if (StringUtils.isBlank(value))
-        {
-            return FormValidation.validateRequired(value);
-        }
-        int count = -1;
-        try
-        {
-            count = Integer.parseInt(value);
-        }
-        catch (NumberFormatException e)
-        {
-            return FormValidation.error("Please enter a valid count of machines.");
-        }
-        if (count < 1)
-        {
-            return FormValidation.error("Please enter a valid positive count of machines.");
-        }
-        return FormValidation.ok();
+        return validateNumber(value, 1, null, VALIDATION.IGNORE_MAX, VALIDATION.IS_INTEGER);
     }
 
     /**
@@ -618,27 +562,7 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
      */
     public FormValidation doCheckMarkCriticalConditionCount(@QueryParameter String value)
     {
-        if (StringUtils.isBlank(value))
-            return FormValidation.ok();
-
-        double number = -1;
-        try
-        {
-            number = Double.valueOf(value);
-        }
-        catch (NumberFormatException e)
-        {
-            return FormValidation.error("Please enter a valid positive number.");
-        }
-        if (number < 0)
-        {
-            return FormValidation.error("Please enter a valid number greater or equal 0.");
-        }
-        if (number != (int) number)
-        {
-            return FormValidation.error("Please enter a valid number greater or equal 0. Decimal number is not allowed.");
-        }
-        return FormValidation.ok();
+        return validateNumber(value, 0, null, VALIDATION.IGNORE_BLANK_VALUE, VALIDATION.IGNORE_MAX, VALIDATION.IS_INTEGER);
     }
 
     /**
@@ -646,27 +570,7 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
      */
     public FormValidation doCheckMarkCriticalBuildCount(@QueryParameter String value)
     {
-        if (StringUtils.isBlank(value))
-            return FormValidation.ok();
-
-        double number = -1;
-        try
-        {
-            number = Double.valueOf(value);
-        }
-        catch (NumberFormatException e)
-        {
-            return FormValidation.error("Please enter a valid number.");
-        }
-        if (number < 0)
-        {
-            return FormValidation.error("Please enter a valid number greater or equal 0.");
-        }
-        if (number != (int) number)
-        {
-            return FormValidation.error("Please enter a valid number greater or equal 0. Decimal number is not allowed.");
-        }
-        return FormValidation.ok();
+        return validateNumber(value, 0, null, VALIDATION.IGNORE_BLANK_VALUE, VALIDATION.IGNORE_MAX, VALIDATION.IS_INTEGER);
     }
 
     /**
@@ -674,7 +578,7 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
      */
     public FormValidation doCheckNumberOfBuildsForTrendReport(@QueryParameter String value)
     {
-        return validateInteger(value, 2, null, VALIDATION.IGNORE_MAX, VALIDATION.IGNORE_BLANK_VALUE);
+        return validateNumber(value, 2, null, VALIDATION.IGNORE_MAX, VALIDATION.IGNORE_BLANK_VALUE, VALIDATION.IS_INTEGER);
     }
 
     /**
@@ -682,12 +586,12 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
      */
     public FormValidation doCheckNumberOfBuildsForSummaryReport(@QueryParameter String value)
     {
-        return validateInteger(value, 2, null, VALIDATION.IGNORE_MAX, VALIDATION.IGNORE_BLANK_VALUE);
+        return validateNumber(value, 2, null, VALIDATION.IGNORE_MAX, VALIDATION.IGNORE_BLANK_VALUE, VALIDATION.IS_INTEGER);
     }
 
     public FormValidation doCheckInitialResponseTimeout(@QueryParameter String value)
     {
-        return validateInteger(value, 0, null, VALIDATION.IGNORE_BLANK_VALUE, VALIDATION.IGNORE_MAX);
+        return validateNumber(value, 0, null, VALIDATION.IGNORE_BLANK_VALUE, VALIDATION.IGNORE_MAX, VALIDATION.IS_INTEGER);
     }
 
     public ListBoxModel doFillAwsCredentialsItems(@AncestorInPath Item project)
