@@ -1,6 +1,8 @@
 package com.xceptance.xlt.tools.jenkins;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -79,14 +81,32 @@ public class AgentControllerConfig
 
     private String awsCredentials;
 
+    private List<AWSSecurityGroup> securityGroups;
+
+    public static class AWSSecurityGroup
+    {
+        private String ID;
+
+        @DataBoundConstructor
+        public AWSSecurityGroup(String ID)
+        {
+            this.ID = ID;
+        }
+
+        public String getID()
+        {
+            return ID;
+        }
+    }
+
     public AgentControllerConfig()
     {
-        this(TYPE.embedded.toString(), null, null, null, null, null, null, null, null);
+        this(TYPE.embedded.toString(), null, null, null, null, null, null, null, null, null);
     }
 
     @DataBoundConstructor
     public AgentControllerConfig(String value, String urlList, String urlFile, String region, String amiId, String ec2Type,
-                                 String countMachines, String tagName, String awsCredentials)
+                                 String countMachines, String tagName, String awsCredentials, List<AWSSecurityGroup> securityGroups)
     {
         this.type = value;
         this.urlList = urlList;
@@ -96,7 +116,8 @@ public class AgentControllerConfig
         this.ec2Type = ec2Type;
         this.countMachines = countMachines;
         this.tagName = tagName;
-        this.awsCredentials = awsCredentials;
+        this.awsCredentials = awsCredentials;        
+        this.securityGroups = securityGroups != null ? securityGroups : new ArrayList<AgentControllerConfig.AWSSecurityGroup>();
     }
 
     public String getRegion()
@@ -127,6 +148,11 @@ public class AgentControllerConfig
     public String getAwsCredentials()
     {
         return awsCredentials;
+    }
+
+    public List<AWSSecurityGroup> getSecurityGroups()
+    {
+        return securityGroups;
     }
 
     /**

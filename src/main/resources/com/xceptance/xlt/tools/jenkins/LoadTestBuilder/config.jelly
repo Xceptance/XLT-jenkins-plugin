@@ -70,7 +70,24 @@
 			<f:entry field="tagName" title="Tag Name">
                 <f:textbox field="tagName" value="${instance.agentControllerConfig.tagName}"/>
             </f:entry>
-        </f:radioBlock>
+            
+			<f:entry title="SecurityGroups">
+				<j:set var="instance" value="${instance.agentControllerConfig}"/>			
+				<f:repeatable field="securityGroups">
+					<table width="100%">																
+						<f:entry title="ID">								
+							<f:textbox field="ID"/>																					
+						</f:entry> 					
+						<f:entry>
+							<div align="right"> 
+								<f:repeatableDeleteButton />
+							</div>
+						</f:entry>			
+					</table>
+				</f:repeatable>				
+			</f:entry>
+            
+        </f:radioBlock>                
         
 		<f:advanced>
 	    	<f:entry title="AC Start-up Timeout [s]" field="initialResponseTimeout">

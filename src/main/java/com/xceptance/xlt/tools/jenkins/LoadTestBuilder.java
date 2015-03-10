@@ -62,6 +62,7 @@ import org.xml.sax.SAXException;
 import com.cloudbees.plugins.credentials.CredentialsMatchers;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
+import com.xceptance.xlt.tools.jenkins.AgentControllerConfig.AWSSecurityGroup;
 import com.xceptance.xlt.tools.jenkins.Chart.ChartLine;
 import com.xceptance.xlt.tools.jenkins.Chart.ChartLineValue;
 import com.xceptance.xlt.tools.jenkins.config.option.MarkCriticalOption;
@@ -1511,6 +1512,13 @@ public class LoadTestBuilder extends Builder
         commandLine.add(agentControllerConfig.getCountMachines());
         commandLine.add(agentControllerConfig.getTagName());
 
+        String securityGroupsParameter = getSecurityGroupParameter();
+        if (securityGroupsParameter != null)
+        {
+            commandLine.add("-s");
+            commandLine.add(securityGroupsParameter);
+        }
+
         FilePath acUrlFile = new FilePath(getXltConfigFolder(build), "acUrls.properties");
         commandLine.add("-o");
         commandLine.add(acUrlFile.absolutize().getRemote());
@@ -1550,6 +1558,21 @@ public class LoadTestBuilder extends Builder
         }
 
         return urls.toArray(new String[urls.size()]);
+    }
+
+    private String getSecurityGroupParameter()
+    {
+        String securityGroupsParameter = "";
+        List<AWSSecurityGroup> securityGroups = agentControllerConfig.getSecurityGroups();
+        for (int i = 0; i < securityGroups.size(); i++)
+        {
+            if (i > 0)
+            {
+                securityGroupsParameter += ",";
+            }
+            securityGroupsParameter += securityGroups.get(i).getID();
+        }
+        return StringUtils.isNotBlank(securityGroupsParameter) ? securityGroupsParameter : null;
     }
 
     private void appendEc2Properties(AbstractBuild<?, ?> build, BuildListener listener) throws IOException, InterruptedException
