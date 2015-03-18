@@ -403,16 +403,49 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
     {
         if (StringUtils.isBlank(value))
         {
-            return FormValidation.error("The specified directory does not exist (yet).");
+            return FormValidation.error("Please enter a valid directory path.");
         }
 
         FilePath path = resolvePath(value);
         if (!path.isDirectory())
         {
-            return FormValidation.error("The specified directory does not exist (yet). - " + path.getRemote());
+            return FormValidation.error("The specified directory does not exist (yet) - " + path.getRemote());
         }
 
         return FormValidation.ok("(" + path.getRemote() + ")");
+    }
+
+    public FormValidation doCheckRelativePathToTestSuite(@QueryParameter String value, @AncestorInPath AbstractProject project)
+        throws IOException, InterruptedException
+    {
+        return doCheckDirectory(value, project.getSomeWorkspace(), true);
+    }
+
+    private FormValidation doCheckDirectory(String relativePath, FilePath baseDir, boolean optional)
+        throws IOException, InterruptedException
+    {
+        if (StringUtils.isBlank(relativePath))
+        {
+            if (optional)
+            {
+                return FormValidation.ok();
+            }
+            else
+            {
+                return FormValidation.error("Please enter a valid directory path.");
+            }
+        }
+
+        File file = new File(relativePath);
+        FilePath filePath = file.isAbsolute() ? new FilePath(file) : new FilePath(baseDir, relativePath);
+        if (filePath.isDirectory())
+        {
+            return FormValidation.ok("(" + filePath.getRemote() + ")");
+        }
+        else
+        {
+            return FormValidation.error("The specified directory does not exist (yet) - " + filePath.getRemote());
+        }
     }
 
     public static String environmentResolve(String value)
