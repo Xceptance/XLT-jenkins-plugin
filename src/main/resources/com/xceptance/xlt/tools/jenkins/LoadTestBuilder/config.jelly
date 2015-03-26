@@ -76,7 +76,7 @@
             </f:entry>
             
             <f:advanced>
-				<f:entry title="SecurityGroups" field="securityGroups">		
+				<f:entry title="Security Groups" field="securityGroups">		
 					<f:repeatableProperty field="securityGroups" />
 				</f:entry>
 				
