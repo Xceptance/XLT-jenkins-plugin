@@ -71,7 +71,7 @@
                 <f:textbox field="tagName" value="${instance.agentControllerConfig.tagName}"/>
             </f:entry>
             
-			<f:entry title="SecurityGroups">		
+			<f:entry title="SecurityGroups" field="securityGroups">		
 				<f:repeatableProperty field="securityGroups" />
 			</f:entry>
 			
