@@ -5,9 +5,7 @@ import hudson.model.AbstractDescribableImpl;
 import hudson.model.Descriptor;
 
 import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.export.ExportedBean;
 
-@ExportedBean
 public class AWSSecurityGroup extends AbstractDescribableImpl<AWSSecurityGroup>
 {
     private String ID;

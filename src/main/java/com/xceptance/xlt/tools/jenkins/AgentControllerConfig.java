@@ -7,7 +7,6 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.export.Exported;
 
 import com.amazonaws.services.ec2.model.InstanceType;
 
@@ -139,7 +138,6 @@ public class AgentControllerConfig
         return awsCredentials;
     }
 
-    @Exported
     public List<AWSSecurityGroup> getSecurityGroups()
     {
         return securityGroups;
