@@ -283,6 +283,11 @@ public class LoadTestBuilder extends Builder
         return agentControllerConfig.getSecurityGroups();
     }
 
+    public String getAwsUserData()
+    {
+        return agentControllerConfig.getAwsUserData();
+    }
+
     private SimpleDateFormat getDateFormat()
     {
         if (dateFormat == null)
