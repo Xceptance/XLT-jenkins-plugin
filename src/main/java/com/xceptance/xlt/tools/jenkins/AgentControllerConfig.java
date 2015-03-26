@@ -83,6 +83,8 @@ public class AgentControllerConfig
 
     private List<AWSSecurityGroup> securityGroups;
 
+    private String awsUserData;
+
     public static class AWSSecurityGroup
     {
         private String ID;
@@ -101,12 +103,12 @@ public class AgentControllerConfig
 
     public AgentControllerConfig()
     {
-        this(TYPE.embedded.toString(), null, null, null, null, null, null, null, null, null);
+        this(TYPE.embedded.toString(), null, null, null, null, null, null, null, null, null, null);
     }
 
     @DataBoundConstructor
     public AgentControllerConfig(String value, String urlList, String urlFile, String region, String amiId, String ec2Type,
-                                 String countMachines, String tagName, String awsCredentials, List<AWSSecurityGroup> securityGroups)
+                                 String countMachines, String tagName, String awsCredentials, List<AWSSecurityGroup> securityGroups, String awsUserData)
     {
         this.type = value;
         this.urlList = urlList;
@@ -118,6 +120,7 @@ public class AgentControllerConfig
         this.tagName = tagName;
         this.awsCredentials = awsCredentials;        
         this.securityGroups = securityGroups != null ? securityGroups : new ArrayList<AgentControllerConfig.AWSSecurityGroup>();
+        this.awsUserData = awsUserData;
     }
 
     public String getRegion()
@@ -153,6 +156,11 @@ public class AgentControllerConfig
     public List<AWSSecurityGroup> getSecurityGroups()
     {
         return securityGroups;
+    }
+    
+    public String getAwsUserData()
+    {
+        return awsUserData;
     }
 
     /**

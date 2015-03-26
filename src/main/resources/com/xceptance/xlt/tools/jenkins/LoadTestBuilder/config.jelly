@@ -86,7 +86,12 @@
 					</table>
 				</f:repeatable>				
 			</f:entry>
-            
+			
+			<f:entry title ="User Data" field="awsUserData">           
+	           	<j:set var="instance" value="${instance.agentControllerConfig}"/> 	
+	            	<f:textarea field="awsUserData" />
+            </f:entry>
+                        
         </f:radioBlock>                
         
 		<f:advanced>

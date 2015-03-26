@@ -1513,10 +1513,20 @@ public class LoadTestBuilder extends Builder
         commandLine.add(agentControllerConfig.getTagName());
 
         String securityGroupsParameter = getSecurityGroupParameter();
-        if (securityGroupsParameter != null)
+        if (StringUtils.isNotBlank(securityGroupsParameter))
         {
             commandLine.add("-s");
             commandLine.add(securityGroupsParameter);
+        }
+
+        String awsUserData = agentControllerConfig.getAwsUserData();
+        if (StringUtils.isNotBlank(awsUserData))
+        {
+            FilePath userData = new FilePath(getXltConfigFolder(build), "userData.txt");
+            userData.write(awsUserData, null);
+
+            commandLine.add("-uf");
+            commandLine.add(userData.absolutize().getRemote());
         }
 
         FilePath acUrlFile = new FilePath(getXltConfigFolder(build), "acUrls.properties");
