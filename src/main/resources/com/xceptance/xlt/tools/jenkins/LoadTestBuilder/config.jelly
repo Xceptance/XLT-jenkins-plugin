@@ -71,20 +71,8 @@
                 <f:textbox field="tagName" value="${instance.agentControllerConfig.tagName}"/>
             </f:entry>
             
-			<f:entry title="SecurityGroups">
-				<j:set var="instance" value="${instance.agentControllerConfig}"/>			
-				<f:repeatable field="securityGroups">
-					<table width="100%">																
-						<f:entry title="ID">								
-							<f:textbox field="ID"/>																					
-						</f:entry> 					
-						<f:entry>
-							<div align="right"> 
-								<f:repeatableDeleteButton />
-							</div>
-						</f:entry>			
-					</table>
-				</f:repeatable>				
+			<f:entry title="SecurityGroups">		
+				<f:repeatableProperty field="securityGroups" />
 			</f:entry>
 			
 			<f:entry title ="User Data" field="awsUserData">           

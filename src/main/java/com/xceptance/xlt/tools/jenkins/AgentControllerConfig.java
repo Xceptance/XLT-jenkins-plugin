@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.export.Exported;
 
 import com.amazonaws.services.ec2.model.InstanceType;
 
@@ -85,22 +86,6 @@ public class AgentControllerConfig
 
     private String awsUserData;
 
-    public static class AWSSecurityGroup
-    {
-        private String ID;
-
-        @DataBoundConstructor
-        public AWSSecurityGroup(String ID)
-        {
-            this.ID = ID;
-        }
-
-        public String getID()
-        {
-            return ID;
-        }
-    }
-
     public AgentControllerConfig()
     {
         this(TYPE.embedded.toString(), null, null, null, null, null, null, null, null, null, null);
@@ -108,7 +93,8 @@ public class AgentControllerConfig
 
     @DataBoundConstructor
     public AgentControllerConfig(String value, String urlList, String urlFile, String region, String amiId, String ec2Type,
-                                 String countMachines, String tagName, String awsCredentials, List<AWSSecurityGroup> securityGroups, String awsUserData)
+                                 String countMachines, String tagName, String awsCredentials, List<AWSSecurityGroup> securityGroups,
+                                 String awsUserData)
     {
         this.type = value;
         this.urlList = urlList;
@@ -118,8 +104,8 @@ public class AgentControllerConfig
         this.ec2Type = ec2Type;
         this.countMachines = countMachines;
         this.tagName = tagName;
-        this.awsCredentials = awsCredentials;        
-        this.securityGroups = securityGroups != null ? securityGroups : new ArrayList<AgentControllerConfig.AWSSecurityGroup>();
+        this.awsCredentials = awsCredentials;
+        this.securityGroups = securityGroups != null ? securityGroups : new ArrayList<AWSSecurityGroup>();
         this.awsUserData = awsUserData;
     }
 
@@ -153,11 +139,12 @@ public class AgentControllerConfig
         return awsCredentials;
     }
 
+    @Exported
     public List<AWSSecurityGroup> getSecurityGroups()
     {
         return securityGroups;
     }
-    
+
     public String getAwsUserData()
     {
         return awsUserData;

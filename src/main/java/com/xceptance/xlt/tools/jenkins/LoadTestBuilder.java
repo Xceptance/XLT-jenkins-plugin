@@ -62,7 +62,6 @@ import org.xml.sax.SAXException;
 import com.cloudbees.plugins.credentials.CredentialsMatchers;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
-import com.xceptance.xlt.tools.jenkins.AgentControllerConfig.AWSSecurityGroup;
 import com.xceptance.xlt.tools.jenkins.Chart.ChartLine;
 import com.xceptance.xlt.tools.jenkins.Chart.ChartLineValue;
 import com.xceptance.xlt.tools.jenkins.config.option.MarkCriticalOption;
@@ -277,6 +276,11 @@ public class LoadTestBuilder extends Builder
         {
             return LoadTestBuilder.this;
         }
+    }
+
+    public List<AWSSecurityGroup> getSecurityGroups()
+    {
+        return agentControllerConfig.getSecurityGroups();
     }
 
     private SimpleDateFormat getDateFormat()
