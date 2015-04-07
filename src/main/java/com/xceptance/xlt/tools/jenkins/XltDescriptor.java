@@ -396,35 +396,35 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
 
     public FormValidation doCheckXltTemplateDir(@QueryParameter String value) throws IOException, InterruptedException
     {
-        return doCheckDirectory(value);
+        return doCheckDirectory(value, false, Jenkins.getInstance().getRootPath());
     }
 
-    private FormValidation doCheckDirectory(String value) throws IOException, InterruptedException
-    {
-        if (StringUtils.isBlank(value))
-        {
-            return FormValidation.error("Please enter a valid directory path.");
-        }
-
-        FilePath path = resolvePath(value);
-        if (!path.isDirectory())
-        {
-            return FormValidation.error("The specified directory does not exist (yet) - " + path.getRemote());
-        }
-
-        return FormValidation.ok("(" + path.getRemote() + ")");
-    }
-
-    public FormValidation doCheckRelativePathToTestSuite(@QueryParameter String value, @AncestorInPath AbstractProject project)
+    public FormValidation doCheckRelativePathToTestSuite(@QueryParameter String value, @AncestorInPath AbstractProject<?, ?> project)
         throws IOException, InterruptedException
     {
-        return doCheckDirectory(value, project.getSomeWorkspace(), true);
+        return doCheckDirectory(value, true, project.getSomeWorkspace());
     }
 
-    private FormValidation doCheckDirectory(String relativePath, FilePath baseDir, boolean optional)
-        throws IOException, InterruptedException
+    /**
+     * Checks if the given path can be resolved to an existing directory and returns an appropriate form validation
+     * result. Any environment variable in the path will be resolved. If the optional parameter is <code>true</code>,
+     * blank path values are accepted as well. If the path is relative it will be resolved against the given base
+     * directory.
+     * 
+     * @param path
+     *            the path
+     * @param optional
+     *            whether or not the path is optional
+     * @param baseDir
+     *            the base directory (may be <code>null</code>, in which case {@link Jenkins#getRootPath()} will be
+     *            used)
+     * @return the form validation result
+     * @throws IOException
+     * @throws InterruptedException
+     */
+    private FormValidation doCheckDirectory(String path, boolean optional, FilePath baseDir) throws IOException, InterruptedException
     {
-        if (StringUtils.isBlank(relativePath))
+        if (StringUtils.isBlank(path))
         {
             if (optional)
             {
@@ -436,9 +436,11 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
             }
         }
 
-        File file = new File(relativePath);
-        FilePath filePath = file.isAbsolute() ? new FilePath(file) : new FilePath(baseDir, relativePath);
-        if (filePath.isDirectory())
+        // process any environment variables and, if the path is relative, resolve the path against the base directory
+        FilePath filePath = resolvePath(path, baseDir);
+
+        // now check if the path is a directory
+        if (filePath != null && filePath.isDirectory())
         {
             return FormValidation.ok("(" + filePath.getRemote() + ")");
         }
@@ -458,6 +460,11 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
 
     public static FilePath resolvePath(String path)
     {
+        return resolvePath(path, null);
+    }
+
+    public static FilePath resolvePath(String path, FilePath baseDir)
+    {
         String dir = environmentResolve(path);
         if (StringUtils.isBlank(dir))
         {
@@ -468,7 +475,11 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
         FilePath filePath = new FilePath(file);
         if (!file.isAbsolute())
         {
-            filePath = new FilePath(Jenkins.getInstance().getRootPath(), dir);
+            if (baseDir == null)
+            {
+                baseDir = Jenkins.getInstance().getRootPath();
+            }
+            filePath = new FilePath(baseDir, dir);
         }
         return filePath;
     }
