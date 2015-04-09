@@ -74,7 +74,7 @@
 			<f:entry field="tagName" title="Tag Name">
                 <f:textbox field="tagName" value="${instance.agentControllerConfig.tagName}"/>
             </f:entry>
-            
+            <!-- temporarily disabled until ec2_admin supports these settings as well
             <f:advanced>
 				<f:entry title="Security Groups" field="securityGroups">		
 					<f:repeatableProperty field="securityGroups" />
@@ -83,7 +83,8 @@
 				<f:entry title ="User Data" field="awsUserData">
 					<f:textarea field="awsUserData"/>
 	            </f:entry>
-			</f:advanced>                        
+			</f:advanced>
+            -->                        
         </f:radioBlock>                
         
 		<f:advanced>
