@@ -399,7 +399,7 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
         return doCheckDirectory(value, false, Jenkins.getInstance().getRootPath());
     }
 
-    public FormValidation doCheckRelativePathToTestSuite(@QueryParameter String value, @AncestorInPath AbstractProject<?, ?> project)
+    public FormValidation doCheckPathToTestSuite(@QueryParameter String value, @AncestorInPath AbstractProject<?, ?> project)
         throws IOException, InterruptedException
     {
         return doCheckDirectory(value, true, project.getSomeWorkspace());

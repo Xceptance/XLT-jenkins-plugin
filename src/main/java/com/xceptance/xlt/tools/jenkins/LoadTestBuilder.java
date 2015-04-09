@@ -85,7 +85,7 @@ public class LoadTestBuilder extends Builder
 
     private final String xltTemplateDir;
 
-    private final String relativePathToTestSuite;
+    private final String pathToTestSuite;
 
     transient private JSONObject config = new JSONObject();
 
@@ -187,12 +187,11 @@ public class LoadTestBuilder extends Builder
     }
 
     @DataBoundConstructor
-    public LoadTestBuilder(String xltTemplateDir, String relativePathToTestSuite, String testPropertiesFile, String xltConfig,
-                           int plotWidth, int plotHeight, String plotTitle, String builderID, boolean isPlotVertical,
-                           TrendReportOption trendReportOption, SummaryReportOption summaryReportOption,
-                           int numberOfBuildsForSummaryReport, AgentControllerConfig agentControllerConfig, String timeFormatPattern,
-                           boolean showBuildNumber, MarkCriticalOption markCriticalOption, boolean markCriticalEnabled,
-                           Integer initialResponseTimeout)
+    public LoadTestBuilder(String xltTemplateDir, String pathToTestSuite, String testPropertiesFile, String xltConfig, int plotWidth,
+                           int plotHeight, String plotTitle, String builderID, boolean isPlotVertical, TrendReportOption trendReportOption,
+                           SummaryReportOption summaryReportOption, int numberOfBuildsForSummaryReport,
+                           AgentControllerConfig agentControllerConfig, String timeFormatPattern, boolean showBuildNumber,
+                           MarkCriticalOption markCriticalOption, boolean markCriticalEnabled, Integer initialResponseTimeout)
     {
         isSave = true;
         Thread.currentThread().setUncaughtExceptionHandler(new UncaughtExceptionHandler()
@@ -205,7 +204,7 @@ public class LoadTestBuilder extends Builder
 
         // load test configuration
         this.xltTemplateDir = StringUtils.defaultIfBlank(xltTemplateDir, null);
-        this.relativePathToTestSuite = StringUtils.defaultIfBlank(relativePathToTestSuite, "");
+        this.pathToTestSuite = StringUtils.defaultIfBlank(pathToTestSuite, "");
         this.testPropertiesFile = StringUtils.defaultIfBlank(testPropertiesFile, null);
         this.agentControllerConfig = (agentControllerConfig != null) ? agentControllerConfig : new AgentControllerConfig();
 
@@ -368,9 +367,9 @@ public class LoadTestBuilder extends Builder
         return markCriticalBuildCount;
     }
 
-    public String getRelativePathToTestSuite()
+    public String getPathToTestSuite()
     {
-        return relativePathToTestSuite;
+        return pathToTestSuite;
     }
 
     public String getTestPropertiesFile()
@@ -1686,7 +1685,7 @@ public class LoadTestBuilder extends Builder
 
     private FilePath getTestSuiteFolder(AbstractBuild<?, ?> build)
     {
-        return new FilePath(build.getModuleRoot(), relativePathToTestSuite);
+        return new FilePath(build.getModuleRoot(), pathToTestSuite);
     }
 
     private FilePath getTestSuiteConfigFolder(AbstractBuild<?, ?> build)

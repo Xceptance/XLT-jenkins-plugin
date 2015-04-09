@@ -21,7 +21,7 @@
         <div class="xlt-subsection">Load Test Configuration</div>
     </f:block>
 
-    <f:entry title="Relative Path to Test Suite" field="relativePathToTestSuite">
+    <f:entry title="Path to Test Suite" field="pathToTestSuite">
         <f:textbox/>
     </f:entry>
     
