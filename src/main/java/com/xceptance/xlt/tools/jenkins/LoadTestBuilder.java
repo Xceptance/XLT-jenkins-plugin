@@ -1604,7 +1604,7 @@ public class LoadTestBuilder extends Builder
         return StringUtils.isNotBlank(securityGroupsParameter) ? securityGroupsParameter : null;
     }
 
-    private void appendEc2Properties(AbstractBuild<?, ?> build, BuildListener listener) throws IOException, InterruptedException
+    private void appendEc2Properties(AbstractBuild<?, ?> build, BuildListener listener) throws Exception
     {
         // append properties to the end of the file
         // the last properties will win so this would overwrite the original properties
@@ -1635,8 +1635,9 @@ public class LoadTestBuilder extends Builder
                 }
                 else
                 {
-                    LOGGER.warn("No credentials found for id: \"" + agentControllerConfig.getAwsCredentials() + "\"");
-                    listener.getLogger().println("No credentials found for id: \"" + agentControllerConfig.getAwsCredentials() + "\"");
+                    LOGGER.warn("Credentials no longer available. (id: \"" + agentControllerConfig.getAwsCredentials() + "\")");
+                    listener.getLogger().println("Credentials no longer available. (id: \"" + agentControllerConfig.getAwsCredentials() + "\")");
+                    throw new Exception("Credentials no longer available.");
                 }
             }
             writer.flush();
