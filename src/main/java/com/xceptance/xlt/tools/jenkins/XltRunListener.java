@@ -39,11 +39,7 @@ public class XltRunListener extends RunListener<AbstractBuild<?, ?>>
     @Override
     public void onStarted(AbstractBuild<?, ?> r, TaskListener listener)
     {
-        List<LoadTestBuilder> builders = getLoadTestBuilder(r);
-        for (LoadTestBuilder eachBuilder : builders)
-        {
-            eachBuilder.initializeBuildParameter();
-        }
+
     }
 
     @Override

@@ -1318,6 +1318,8 @@ public class LoadTestBuilder extends Builder
     @Override
     public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener)
     {
+        initializeBuildParameter();
+
         try
         {
             initialCleanUp(build, listener);
