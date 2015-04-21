@@ -24,11 +24,13 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.lang.Thread.UncaughtExceptionHandler;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
@@ -44,12 +46,11 @@ import jenkins.model.Jenkins;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang.ArrayUtils;
-import org.apache.commons.lang.StringUtils;
-import org.apache.commons.lang.SystemUtils;
-import org.apache.log4j.FileAppender;
-import org.apache.log4j.Logger;
-import org.apache.log4j.PatternLayout;
+import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.SystemUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -117,7 +118,11 @@ public class LoadTestBuilder extends Builder
 
     private final int numberOfBuildsForSummaryReport;
 
-    transient public static final Logger LOGGER = Logger.getLogger(LoadTestBuilder.class);
+    transient public static final String DEFAULT_LOGGER_NAME = "defaultLogger";
+
+    transient public static Logger LOGGER = LogManager.getLogger(DEFAULT_LOGGER_NAME);
+
+    transient private static Map<String, String> loggerLookupMap = new HashMap<String, String>();
 
     transient private List<Chart<Integer, Double>> charts = new ArrayList<Chart<Integer, Double>>();
 
@@ -168,17 +173,13 @@ public class LoadTestBuilder extends Builder
     {
         try
         {
-            File logFile = new File(
-                                    new File(
-                                             Jenkins.getInstance().getPlugin(XltDescriptor.PLUGIN_NAME).getWrapper().baseResourceURL.toURI()),
-                                    "xltPlugin.log");
-            LOGGER.addAppender(new FileAppender(
-                                                new PatternLayout("%d{yyyy-MMM-dd} : %d{HH:mm:ss,SSS} | [%t] %p %C.%M line:%L | %x - %m%n"),
-                                                logFile.getAbsolutePath(), true));
-        }
-        catch (IOException e)
-        {
-            e.printStackTrace();
+            File pluginResourceFolder = new File(
+                                                 Jenkins.getInstance().getPlugin(XltDescriptor.PLUGIN_NAME).getWrapper().baseResourceURL.toURI());
+            URI logConfigURI = new File(pluginResourceFolder, "logConfig.xml").toURI();
+            File logFolder = new File(pluginResourceFolder, "logs");
+
+            loggerLookupMap.put("org.xceptance.xlt.jenkins.logFolder", logFolder.getAbsolutePath());
+            LogManager.getContext(LoadTestBuilder.class.getClassLoader(), false, null, logConfigURI, "XLT-LoggerContext");
         }
         catch (URISyntaxException e)
         {
@@ -279,6 +280,11 @@ public class LoadTestBuilder extends Builder
         {
             return LoadTestBuilder.this;
         }
+    }
+
+    public static String getLoggerLookup(String key)
+    {
+        return loggerLookupMap.get(key);
     }
 
     public List<AWSSecurityGroup> getSecurityGroups()
