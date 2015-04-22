@@ -6,7 +6,7 @@
   </Properties>  
     
   <Appenders>
-    <RollingFile name="defaultRollingFileAppender" fileName="${defaultLogFile}" filePattern="xltPlugin-%i.log" append="false">
+    <RollingFile name="defaultRollingFileAppender" fileName="${defaultLogFile}" filePattern="xltPlugin-%i.log" append="true">
     	<PatternLayout pattern="${defaultPattern}" />
     	<Policies>
     		<SizeBasedTriggeringPolicy size="20 MB"/>
