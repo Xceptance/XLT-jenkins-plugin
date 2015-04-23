@@ -31,7 +31,8 @@ import javax.xml.xpath.XPathFactory;
 
 import jenkins.model.Jenkins;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -166,17 +167,23 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
     /**
      * Performs on-the-fly validation of the form field 'testPropertiesFile'.
      */
-    // public FormValidation doCheckTestPropertiesFile(@QueryParameter String value)
-    // {
-    // if (StringUtils.isBlank(value))
-    // {
-    // return FormValidation.ok();
-    // }
-    // else
-    // {
-    // return doCheckFile(value);
-    // }
-    // }
+    public FormValidation doCheckTestPropertiesFile(@QueryParameter String value)
+    {
+        if (StringUtils.isNotBlank(value))
+        {
+            File file = new File(value);
+            if (file.toPath().isAbsolute())
+            {
+                return FormValidation.error("The file path must be relative to the \"<testSuite>/config/\" directory.");
+            }
+            if (StringUtils.isBlank(FilenameUtils.getName(value)))
+            {
+                return FormValidation.error("The file path must specify a file, not a directory.");
+            }
+            return FormValidation.ok("(" + "<testSuite>/config/" + value + ")");
+        }
+        return FormValidation.ok();
+    }
 
     /**
      * Performs on-the-fly validation of the form field 'urlList'.
