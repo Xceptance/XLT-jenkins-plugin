@@ -164,6 +164,8 @@ public class LoadTestBuilder extends Builder
     {
         public static String ARTIFACT_REPORT = "report";
 
+        public static String ARTIFACT_RESULT = "result";
+
         public static String TEMPORARY_XLT_PREFIX = "xlt";
 
         public static String TEMPORARY_XLT_MATCHER = TEMPORARY_XLT_PREFIX + "[0-9]+";
@@ -943,9 +945,9 @@ public class LoadTestBuilder extends Builder
         return new FilePath(getBuildReportFolder(build), "testreport.xml");
     }
 
-    private FilePath getXltResultsFolder(AbstractBuild<?, ?> build)
+    private FilePath getXltResultFolder(AbstractBuild<?, ?> build)
     {
-        return new FilePath(getXltFolder(build), "results");
+        return new FilePath(getXltFolder(build), FOLDER_NAMES.ARTIFACT_RESULT);
     }
 
     private FilePath getXltLogFolder(AbstractBuild<?, ?> build)
@@ -953,54 +955,33 @@ public class LoadTestBuilder extends Builder
         return new FilePath(getXltFolder(build), "log");
     }
 
-    private FilePath getFirstXltResultsFolder(AbstractBuild<?, ?> build)
+    private FilePath getXltReportFolder(AbstractBuild<?, ?> build)
     {
-        return getFirstSubFolder(getXltResultsFolder(build));
+        return new FilePath(getXltFolder(build), FOLDER_NAMES.ARTIFACT_REPORT + "/" + Integer.toString(build.getNumber()));
     }
 
-    private FilePath getXltReportsFolder(AbstractBuild<?, ?> build)
+    private FilePath getFirstSubFolder(FilePath dir) throws IOException, InterruptedException
     {
-        return new FilePath(getXltFolder(build), "reports");
-    }
-
-    private FilePath getFirstXltReportFolder(AbstractBuild<?, ?> build)
-    {
-        return getFirstSubFolder(getXltReportsFolder(build));
-    }
-
-    private FilePath getFirstSubFolder(FilePath dir)
-    {
-        try
+        if (dir != null && dir.isDirectory())
         {
-            if (dir != null && dir.isDirectory())
+            List<FilePath> subFiles = dir.list();
+            if (subFiles != null)
             {
-                List<FilePath> subFiles = dir.list();
-                if (subFiles != null)
+                for (FilePath subFile : subFiles)
                 {
-                    for (FilePath subFile : subFiles)
+                    if (subFile.isDirectory())
                     {
-                        if (subFile.isDirectory())
-                        {
-                            return subFile;
-                        }
+                        return subFile;
                     }
                 }
             }
-        }
-        catch (IOException e)
-        {
-            LOGGER.error("", e);
-        }
-        catch (InterruptedException e)
-        {
-            LOGGER.error("", e);
         }
         return null;
     }
 
     private FilePath getBuildResultConfigFolder(AbstractBuild<?, ?> build)
     {
-        return new FilePath(getBuildResultsFolder(build), "config");
+        return new FilePath(getBuildResultFolder(build), "config");
     }
 
     private FilePath getBuildLogsFolder(AbstractBuild<?, ?> build)
@@ -1025,9 +1006,9 @@ public class LoadTestBuilder extends Builder
                build.getNumber() + "/index.html";
     }
 
-    private FilePath getBuildResultsFolder(AbstractBuild<?, ?> build)
+    private FilePath getBuildResultFolder(AbstractBuild<?, ?> build)
     {
-        return new FilePath(new FilePath(build.getArtifactsDir()), builderID + "/results");
+        return new FilePath(new FilePath(build.getArtifactsDir()), builderID + "/" + FOLDER_NAMES.ARTIFACT_RESULT);
     }
 
     private FilePath getTrendReportFolder(AbstractProject<?, ?> project)
@@ -1343,6 +1324,7 @@ public class LoadTestBuilder extends Builder
 
             String[] agentControllerProperties = configureAgentController(build, listener);
             runMasterController(build, listener, agentControllerProperties);
+            createReport(build, listener);
             saveArtifacts(build, listener);
             artifactsSaved = true;
 
@@ -1642,7 +1624,8 @@ public class LoadTestBuilder extends Builder
                 else
                 {
                     LOGGER.warn("Credentials no longer available. (id: \"" + agentControllerConfig.getAwsCredentials() + "\")");
-                    listener.getLogger().println("Credentials no longer available. (id: \"" + agentControllerConfig.getAwsCredentials() + "\")");
+                    listener.getLogger().println("Credentials no longer available. (id: \"" + agentControllerConfig.getAwsCredentials() +
+                                                     "\")");
                     throw new Exception("Credentials no longer available.");
                 }
             }
@@ -1755,6 +1738,10 @@ public class LoadTestBuilder extends Builder
         // copy XLT to a local directory
         srcDir.copyRecursiveTo(destDir);
 
+        getXltResultFolder(build).deleteRecursive();
+        getXltReportFolder(build).deleteRecursive();
+        getXltLogFolder(build).deleteRecursive();
+
         // make XLT start scripts executable
         FilePath workingDirectory = getXltBinFolder(build);
 
@@ -1805,7 +1792,6 @@ public class LoadTestBuilder extends Builder
         }
 
         commandLine.add("-auto");
-        commandLine.add("-report");
 
         if (testPropertiesFile != null)
         {
@@ -1814,6 +1800,7 @@ public class LoadTestBuilder extends Builder
         }
 
         commandLine.add("-Dcom.xceptance.xlt.mastercontroller.testSuitePath=" + getTestSuiteFolder(build).getRemote());
+        commandLine.add("-Dcom.xceptance.xlt.mastercontroller.results=" + getXltResultFolder(build).getRemote());
 
         // run the master controller
         FilePath workingDirectory = getXltBinFolder(build);
@@ -1826,13 +1813,55 @@ public class LoadTestBuilder extends Builder
         }
     }
 
+    private void createReport(AbstractBuild<?, ?> build, BuildListener listener) throws Exception
+    {
+        listener.getLogger().println("-----------------------------------------------------------------\nRunning report generator ...\n");
+
+        FilePath resultSubFolder = getFirstSubFolder(getXltResultFolder(build));
+        if (resultSubFolder == null || resultSubFolder.list() == null || resultSubFolder.list().isEmpty())
+        {
+            throw new Exception("No results found at: " + getXltResultFolder(build).getRemote());
+        }
+        resultSubFolder.moveAllChildrenTo(getXltResultFolder(build));
+
+        // build the master controller command line
+        List<String> commandLine = new ArrayList<String>();
+
+        if (SystemUtils.IS_OS_WINDOWS)
+        {
+            commandLine.add("cmd.exe");
+            commandLine.add("/c");
+            commandLine.add("create_report.cmd");
+        }
+        else
+        {
+            commandLine.add("./create_report.sh");
+        }
+
+        commandLine.add("-o");
+        commandLine.add(getXltReportFolder(build).getRemote());
+        commandLine.add("-linkToResults");
+        commandLine.add("yes");
+        commandLine.add(getXltResultFolder(build).getRemote());
+
+        // run the report generator
+        FilePath workingDirectory = getXltBinFolder(build);
+        int commandResult = executeCommand(build.getBuiltOn(), workingDirectory, commandLine, listener.getLogger());
+        listener.getLogger().println("Report generator returned with exit code: " + commandResult);
+
+        if (commandResult != 0)
+        {
+            throw new Exception("Report generator returned with exit code: " + commandResult);
+        }
+    }
+
     private void saveArtifacts(AbstractBuild<?, ?> build, BuildListener listener) throws IOException, InterruptedException
     {
         listener.getLogger()
                 .println("\n\n-----------------------------------------------------------------\nArchive results and report...\n");
-        // save load test results and report
-        saveArtifact(getFirstXltResultsFolder(build), getBuildResultsFolder(build));
-        saveArtifact(getFirstXltReportFolder(build), getBuildReportFolder(build));
+        // save load test results and report (copy from node)
+        saveArtifact(getXltResultFolder(build), getBuildResultFolder(build));
+        saveArtifact(getXltReportFolder(build), getBuildReportFolder(build));
         setBuildParameterXLT_REPORT_URL(getBuildReportURL(build));
     }
 
@@ -1921,7 +1950,7 @@ public class LoadTestBuilder extends Builder
 
         for (AbstractBuild<?, ?> build : builds)
         {
-            FilePath resultsFolder = getBuildResultsFolder(build);
+            FilePath resultsFolder = getBuildResultFolder(build);
             if (resultsFolder.isDirectory())
             {
                 copyResults(summaryResultsFolder, resultsFolder, build.getNumber());
