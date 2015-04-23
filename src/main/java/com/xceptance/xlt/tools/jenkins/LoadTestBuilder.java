@@ -1735,12 +1735,14 @@ public class LoadTestBuilder extends Builder
         FilePath destDir = getXltFolder(build);
         listener.getLogger().println("Target directory: " + destDir.getRemote());
 
-        // copy XLT to a local directory
-        srcDir.copyRecursiveTo(destDir);
-
-        getXltResultFolder(build).deleteRecursive();
-        getXltReportFolder(build).deleteRecursive();
-        getXltLogFolder(build).deleteRecursive();
+        // copy XLT to a remote directory
+        String excludePattern = "config/scriptdoc/, config/externaldataconfig.xml.sample, config/scriptdocgenerator.properties";
+        int copyCount = srcDir.copyRecursiveTo("bin/**, config/**, lib/**", excludePattern, destDir);
+        if (copyCount == 0 || destDir.list() == null || destDir.list().isEmpty())
+        {
+            throw new Exception("Copy template failed. Nothing was copyed from xlt template \"" + srcDir.getRemote() +
+                                "\" to destination \"" + destDir + "\"");
+        }
 
         // make XLT start scripts executable
         FilePath workingDirectory = getXltBinFolder(build);
