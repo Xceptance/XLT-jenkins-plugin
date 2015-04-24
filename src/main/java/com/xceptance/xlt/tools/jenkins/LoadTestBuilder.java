@@ -1802,12 +1802,12 @@ public class LoadTestBuilder extends Builder
 
         if (StringUtils.isNotBlank(testPropertiesFile))
         {
-            validateTestPropertiesFile(build);
+            // validateTestPropertiesFile(build);
             commandLine.add("-testPropertiesFile");
             commandLine.add(testPropertiesFile);
         }
 
-        validateTestSuiteDirectory(build);
+        // validateTestSuiteDirectory(build);
         commandLine.add("-Dcom.xceptance.xlt.mastercontroller.testSuitePath=" + getTestSuiteFolder(build).getRemote());
         commandLine.add("-Dcom.xceptance.xlt.mastercontroller.results=" + getXltResultFolder(build).getRemote());
 
