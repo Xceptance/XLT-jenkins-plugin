@@ -1685,6 +1685,11 @@ public class LoadTestBuilder extends Builder
         return new FilePath(getTestSuiteFolder(build), "/config/");
     }
 
+    private FilePath getTestPropertiesFile(AbstractBuild<?, ?> build)
+    {
+        return new FilePath(getTestSuiteConfigFolder(build), testPropertiesFile);
+    }
+
     private void initialCleanUp(AbstractBuild<?, ?> build, BuildListener listener) throws IOException, InterruptedException
     {
         listener.getLogger().println("-----------------------------------------------------------------\n"
@@ -1797,11 +1802,12 @@ public class LoadTestBuilder extends Builder
 
         if (StringUtils.isNotBlank(testPropertiesFile))
         {
-            XltDescriptor.validateTestPropertiesFilePath(testPropertiesFile);
+            validateTestPropertiesFile(build);
             commandLine.add("-testPropertiesFile");
             commandLine.add(testPropertiesFile);
         }
 
+        validateTestSuiteDirectory(build);
         commandLine.add("-Dcom.xceptance.xlt.mastercontroller.testSuitePath=" + getTestSuiteFolder(build).getRemote());
         commandLine.add("-Dcom.xceptance.xlt.mastercontroller.results=" + getXltResultFolder(build).getRemote());
 
@@ -1813,6 +1819,64 @@ public class LoadTestBuilder extends Builder
         if (commandResult != 0)
         {
             throw new Exception("Master controller returned with exit code: " + commandResult);
+        }
+    }
+
+    private void validateTestPropertiesFile(AbstractBuild<?, ?> build) throws Exception
+    {
+        if (testPropertiesFile == null)
+        {
+            throw new Exception("No test properties file configured.");
+        }
+
+        File file = new File(testPropertiesFile);
+        if (file.toPath().isAbsolute())
+        {
+            throw new Exception("The test properties file path must be relative to the \"<testSuite>/config/\" directory.");
+        }
+
+        FilePath testProperties = getTestPropertiesFile(build);
+        if (!testProperties.exists())
+        {
+            throw new Exception("The test properties file does not exists. (" + testProperties.getRemote() + ")");
+        }
+        else if (testProperties.isDirectory())
+        {
+            throw new Exception("The test properties file path  must specify a file, not a directory. (" + testProperties.getRemote() + ")");
+        }
+    }
+
+    private void validateTestSuiteDirectory(AbstractBuild<?, ?> build) throws Exception
+    {
+        if (pathToTestSuite == null)
+        {
+            throw new Exception("The test suit path is not configured.");
+        }
+
+        FilePath testSuiteDirectory = getTestSuiteFolder(build);
+        if (!testSuiteDirectory.exists())
+        {
+            throw new Exception("The test suite path does not exists. (" + testSuiteDirectory.getRemote() + ")");
+        }
+        else if (!testSuiteDirectory.isDirectory())
+        {
+            throw new Exception("The test suite path must specify a directory, not a file. (" + testSuiteDirectory.getRemote() + ")");
+        }
+        else if (testSuiteDirectory.list() == null || testSuiteDirectory.list().isEmpty())
+        {
+            throw new Exception("The test suite directory is empty. (" + testSuiteDirectory.getRemote() + ")");
+        }
+
+        FilePath testSuiteConfig = getTestSuiteConfigFolder(build);
+        if (!testSuiteConfig.exists() || !testSuiteConfig.isDirectory())
+        {
+            throw new Exception("Invalid test suite directory. No \"<testSuite>/config/\" directory found. (" +
+                                testSuiteConfig.getRemote() + ")");
+        }
+        else if (testSuiteConfig.list() == null || testSuiteConfig.list().isEmpty())
+        {
+            throw new Exception("Invalid test suite directory. The \"<testSuite>/config/\" directory is empty. (" +
+                                testSuiteConfig.getRemote() + ")");
         }
     }
 

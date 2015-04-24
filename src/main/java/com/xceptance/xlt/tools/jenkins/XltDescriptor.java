@@ -171,15 +171,20 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
     {
         if (StringUtils.isNotBlank(value))
         {
-            try
+            String resolvedFilePath = environmentResolve(value);
+            File file = new File(resolvedFilePath);
+            FilePath filePath = new FilePath(file);
+            if (file.toPath().isAbsolute())
             {
-                validateTestPropertiesFilePath(value);
+                return FormValidation.error("The test properties file path must be relative to the \"<testSuite>/config/\" directory. (" +
+                                            filePath.getRemote() + ")");
             }
-            catch (Exception e)
+            if (StringUtils.isBlank(FilenameUtils.getName(resolvedFilePath)))
             {
-                return FormValidation.error(e.getMessage());
+                return FormValidation.error("The test properties file path must specify a file, not a directory. (" + filePath.getRemote() +
+                                            ")");
             }
-            return FormValidation.ok("(" + "<testSuite>/config/" + value + ")");
+            return FormValidation.ok("(" + "<testSuite>/config/" + filePath.getRemote() + ")");
         }
         return FormValidation.ok();
     }
@@ -400,60 +405,70 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
         return FormValidation.ok("Preview: " + format.format(new Date()));
     }
 
-    public FormValidation doCheckXltTemplateDir(@QueryParameter String value) throws IOException, InterruptedException
+    public FormValidation doCheckXltTemplateDir(@QueryParameter String value)
     {
-        return doCheckDirectory(value, false, Jenkins.getInstance().getRootPath());
-    }
-
-    public FormValidation doCheckPathToTestSuite(@QueryParameter String value, @AncestorInPath AbstractProject<?, ?> project)
-        throws IOException, InterruptedException
-    {
-        return doCheckDirectory(value, true, project.getSomeWorkspace());
-    }
-
-    /**
-     * Checks if the given path can be resolved to an existing directory and returns an appropriate form validation
-     * result. Any environment variable in the path will be resolved. If the optional parameter is <code>true</code>,
-     * blank path values are accepted as well. If the path is relative it will be resolved against the given base
-     * directory.
-     * 
-     * @param path
-     *            the path
-     * @param optional
-     *            whether or not the path is optional
-     * @param baseDir
-     *            the base directory (may be <code>null</code>, in which case {@link Jenkins#getRootPath()} will be
-     *            used)
-     * @return the form validation result
-     * @throws IOException
-     * @throws InterruptedException
-     */
-    private FormValidation doCheckDirectory(String path, boolean optional, FilePath baseDir) throws IOException, InterruptedException
-    {
-        if (StringUtils.isBlank(path))
+        if (StringUtils.isBlank(value))
         {
-            if (optional)
-            {
-                return FormValidation.ok();
-            }
-            else
-            {
-                return FormValidation.error("Please enter a valid directory path.");
-            }
+            return FormValidation.error("Please enter a valid directory path.");
         }
 
-        // process any environment variables and, if the path is relative, resolve the path against the base directory
-        FilePath filePath = resolvePath(path, baseDir);
+        String resolvedPath = environmentResolve(value);
+        FilePath filePath = resolvePath(resolvedPath, Jenkins.getInstance().getRootPath());
 
-        // now check if the path is a directory
-        if (filePath != null && filePath.isDirectory())
+        try
+        {
+            if (!filePath.exists())
+            {
+                return FormValidation.error("The specified directory does not exists. (" + filePath.getRemote() + ")");
+            }
+        }
+        catch (Exception e)
+        {
+            return FormValidation.warning("Can not check if the directory exists. (" + filePath.getRemote() + ")");
+        }
+
+        try
+        {
+            if (!filePath.isDirectory())
+            {
+                return FormValidation.error("The path must specified a directory, not a file. (" + filePath.getRemote() + ")");
+            }
+        }
+        catch (Exception e)
+        {
+            return FormValidation.warning("Can not check if the path specifies a directory. (" + filePath.getRemote() + ")");
+        }
+
+        if (value.contains("$") || !new File(resolvedPath).toPath().isAbsolute())
         {
             return FormValidation.ok("(" + filePath.getRemote() + ")");
         }
-        else
+        return FormValidation.ok();
+    }
+
+    public FormValidation doCheckPathToTestSuite(@QueryParameter String value, @AncestorInPath AbstractProject<?, ?> project)
+    {
+        if (StringUtils.isBlank(value))
         {
-            return FormValidation.error("The specified directory does not exist (yet) - " + filePath.getRemote());
+            return FormValidation.ok("(<workspace>/)");
         }
+
+        String resolvedPath = environmentResolve(value);
+        FilePath filePath = new FilePath(new File(resolvedPath));
+        if (!StringUtils.isBlank(FilenameUtils.getExtension(resolvedPath)))
+        {
+            return FormValidation.error("The path must specify a directory, not a file. (" + filePath.getRemote() + ")");
+        }
+
+        if (!new File(resolvedPath).toPath().isAbsolute())
+        {
+            return FormValidation.ok("(<workspace>/" + filePath.getRemote() + ")");
+        }
+        if (value.contains("$"))
+        {
+            return FormValidation.ok("(" + filePath.getRemote() + ")");
+        }
+        return FormValidation.ok();
     }
 
     public static String environmentResolve(String value)
@@ -466,7 +481,7 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
 
     public static FilePath resolvePath(String path)
     {
-        return resolvePath(path, null);
+        return resolvePath(path, Jenkins.getInstance().getRootPath());
     }
 
     public static FilePath resolvePath(String path, FilePath baseDir)
@@ -477,14 +492,10 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
             return null;
         }
 
-        File file = new File(path);
+        File file = new File(dir);
         FilePath filePath = new FilePath(file);
-        if (!file.isAbsolute())
+        if (!file.isAbsolute() && baseDir != null)
         {
-            if (baseDir == null)
-            {
-                baseDir = Jenkins.getInstance().getRootPath();
-            }
             filePath = new FilePath(baseDir, dir);
         }
         return filePath;
@@ -551,22 +562,6 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
                 return FormValidation.error("Please enter a valid number lower than or equal to " + max);
         }
         return FormValidation.ok();
-    }
-
-    public static void validateTestPropertiesFilePath(String filePath) throws Exception
-    {
-        if (StringUtils.isNotBlank(filePath))
-        {
-            File file = new File(filePath);
-            if (file.toPath().isAbsolute())
-            {
-                throw new Exception("The test properties file path must be relative to the \"<testSuite>/config/\" directory.");
-            }
-            if (StringUtils.isBlank(FilenameUtils.getName(filePath)))
-            {
-                throw new Exception("The test properties file path must specify a file, not a directory.");
-            }
-        }
     }
 
     /**
