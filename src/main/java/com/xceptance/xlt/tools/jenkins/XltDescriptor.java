@@ -171,14 +171,13 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
     {
         if (StringUtils.isNotBlank(value))
         {
-            File file = new File(value);
-            if (file.toPath().isAbsolute())
+            try
             {
-                return FormValidation.error("The file path must be relative to the \"<testSuite>/config/\" directory.");
+                validateTestPropertiesFilePath(value);
             }
-            if (StringUtils.isBlank(FilenameUtils.getName(value)))
+            catch (Exception e)
             {
-                return FormValidation.error("The file path must specify a file, not a directory.");
+                return FormValidation.error(e.getMessage());
             }
             return FormValidation.ok("(" + "<testSuite>/config/" + value + ")");
         }
@@ -552,6 +551,22 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
                 return FormValidation.error("Please enter a valid number lower than or equal to " + max);
         }
         return FormValidation.ok();
+    }
+
+    public static void validateTestPropertiesFilePath(String filePath) throws Exception
+    {
+        if (StringUtils.isNotBlank(filePath))
+        {
+            File file = new File(filePath);
+            if (file.toPath().isAbsolute())
+            {
+                throw new Exception("The test properties file path must be relative to the \"<testSuite>/config/\" directory.");
+            }
+            if (StringUtils.isBlank(FilenameUtils.getName(filePath)))
+            {
+                throw new Exception("The test properties file path must specify a file, not a directory.");
+            }
+        }
     }
 
     /**

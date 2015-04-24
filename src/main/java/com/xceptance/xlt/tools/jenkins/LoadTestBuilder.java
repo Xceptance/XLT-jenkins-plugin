@@ -1795,8 +1795,9 @@ public class LoadTestBuilder extends Builder
 
         commandLine.add("-auto");
 
-        if (testPropertiesFile != null)
+        if (StringUtils.isNotBlank(testPropertiesFile))
         {
+            XltDescriptor.validateTestPropertiesFilePath(testPropertiesFile);
             commandLine.add("-testPropertiesFile");
             commandLine.add(testPropertiesFile);
         }
