@@ -1682,7 +1682,7 @@ public class LoadTestBuilder extends Builder
 
     private FilePath getTestSuiteConfigFolder(AbstractBuild<?, ?> build)
     {
-        return new FilePath(getTestSuiteFolder(build), "/config/");
+        return new FilePath(getTestSuiteFolder(build), "config");
     }
 
     private FilePath getTestPropertiesFile(AbstractBuild<?, ?> build)
@@ -1802,12 +1802,12 @@ public class LoadTestBuilder extends Builder
 
         if (StringUtils.isNotBlank(testPropertiesFile))
         {
-            // validateTestPropertiesFile(build);
+            validateTestPropertiesFile(build);
             commandLine.add("-testPropertiesFile");
             commandLine.add(testPropertiesFile);
         }
 
-        // validateTestSuiteDirectory(build);
+        validateTestSuiteDirectory(build);
         commandLine.add("-Dcom.xceptance.xlt.mastercontroller.testSuitePath=" + getTestSuiteFolder(build).getRemote());
         commandLine.add("-Dcom.xceptance.xlt.mastercontroller.results=" + getXltResultFolder(build).getRemote());
 
@@ -1865,18 +1865,6 @@ public class LoadTestBuilder extends Builder
         else if (testSuiteDirectory.list() == null || testSuiteDirectory.list().isEmpty())
         {
             throw new Exception("The test suite directory is empty. (" + testSuiteDirectory.getRemote() + ")");
-        }
-
-        FilePath testSuiteConfig = getTestSuiteConfigFolder(build);
-        if (!testSuiteConfig.exists() || !testSuiteConfig.isDirectory())
-        {
-            throw new Exception("Invalid test suite directory. No \"<testSuite>/config/\" directory found. (" +
-                                testSuiteConfig.getRemote() + ")");
-        }
-        else if (testSuiteConfig.list() == null || testSuiteConfig.list().isEmpty())
-        {
-            throw new Exception("Invalid test suite directory. The \"<testSuite>/config/\" directory is empty. (" +
-                                testSuiteConfig.getRemote() + ")");
         }
     }
 
