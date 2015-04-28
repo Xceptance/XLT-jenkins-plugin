@@ -165,10 +165,6 @@ public class LoadTestBuilder extends Builder
         public static String ARTIFACT_REPORT = "report";
 
         public static String ARTIFACT_RESULT = "result";
-
-        public static String TEMPORARY_XLT_PREFIX = "xlt";
-
-        public static String TEMPORARY_XLT_MATCHER = TEMPORARY_XLT_PREFIX + "[0-9]+";
     }
 
     static
@@ -947,17 +943,17 @@ public class LoadTestBuilder extends Builder
 
     private FilePath getXltResultFolder(AbstractBuild<?, ?> build)
     {
-        return new FilePath(getXltFolder(build), FOLDER_NAMES.ARTIFACT_RESULT);
+        return new FilePath(getTemporaryXltFolder(build), FOLDER_NAMES.ARTIFACT_RESULT);
     }
 
     private FilePath getXltLogFolder(AbstractBuild<?, ?> build)
     {
-        return new FilePath(getXltFolder(build), "log");
+        return new FilePath(getTemporaryXltFolder(build), "log");
     }
 
     private FilePath getXltReportFolder(AbstractBuild<?, ?> build)
     {
-        return new FilePath(getXltFolder(build), FOLDER_NAMES.ARTIFACT_REPORT + "/" + Integer.toString(build.getNumber()));
+        return new FilePath(getTemporaryXltFolder(build), FOLDER_NAMES.ARTIFACT_REPORT + "/" + Integer.toString(build.getNumber()));
     }
 
     private FilePath getFirstSubFolder(FilePath dir) throws IOException, InterruptedException
@@ -1031,14 +1027,29 @@ public class LoadTestBuilder extends Builder
         return new FilePath(getSummaryResultsFolder(project), "config");
     }
 
-    private String getTemporaryXLTFolderName(AbstractBuild<?, ?> build)
+    private FilePath getTemporaryXltBaseFolder(AbstractBuild<?, ?> build)
     {
-        return FOLDER_NAMES.TEMPORARY_XLT_PREFIX + Integer.toString(build.getNumber());
+        FilePath base = new FilePath(build.getProject().getRootDir());
+        if (build.getBuiltOn() != null && build.getBuiltOn() != Jenkins.getInstance())
+        {
+            base = build.getBuiltOn().getRootPath();
+        }
+        return new FilePath(base, "tmp-xlt");
     }
 
-    private FilePath getXltFolder(AbstractBuild<?, ?> build)
+    private FilePath getTemporaryXltProjectFolder(AbstractBuild<?, ?> build)
     {
-        return new FilePath(new FilePath(build.getProject().getRootDir()), getTemporaryXLTFolderName(build));
+        return new FilePath(getTemporaryXltBaseFolder(build), build.getProject().getName());
+    }
+
+    private FilePath getTemporaryXltBuildFolder(AbstractBuild<?, ?> build)
+    {
+        return new FilePath(getTemporaryXltProjectFolder(build), "" + build.getNumber());
+    }
+
+    private FilePath getTemporaryXltFolder(AbstractBuild<?, ?> build)
+    {
+        return new FilePath(new FilePath(getTemporaryXltBuildFolder(build), getBuilderID()), "xlt");
     }
 
     private FilePath getXltTemplateFilePath()
@@ -1048,7 +1059,7 @@ public class LoadTestBuilder extends Builder
 
     private FilePath getXltBinFolder(AbstractBuild<?, ?> build)
     {
-        return new FilePath(getXltFolder(build), "bin");
+        return new FilePath(getTemporaryXltFolder(build), "bin");
     }
 
     private FilePath getXltBinFolderOnMaster()
@@ -1058,7 +1069,7 @@ public class LoadTestBuilder extends Builder
 
     private FilePath getXltConfigFolder(AbstractBuild<?, ?> build)
     {
-        return new FilePath(getXltFolder(build), "config");
+        return new FilePath(getTemporaryXltFolder(build), "config");
     }
 
     private List<CriterionResult> getFailedCriteria(AbstractBuild<?, ?> build, BuildListener listener)
@@ -1410,18 +1421,21 @@ public class LoadTestBuilder extends Builder
 
         listener.getLogger().println("\n\n-----------------------------------------------------------------\nCleanup ...\n");
         // delete any temporary directory with local XLT
-        FilePath xltDir = getXltFolder(build);
+        FilePath tempProjectFolder = getTemporaryXltProjectFolder(build);
         try
         {
-            if (xltDir.exists())
+            tempProjectFolder.deleteRecursive();
+
+            FilePath tempFolder = getTemporaryXltBaseFolder(build);
+            if (tempFolder.exists() || tempFolder.list() == null || tempFolder.list().isEmpty())
             {
-                FileUtils.forceDelete(new File(xltDir.toURI()));
+                tempFolder.delete();
             }
         }
         catch (Exception e)
         {
-            listener.getLogger().println("Failed to remove " + xltDir.getRemote());
-            LOGGER.error("Failed to remove " + xltDir.getRemote(), e);
+            listener.getLogger().println("Failed to remove " + tempProjectFolder.getRemote());
+            LOGGER.error("Failed to remove " + tempProjectFolder.getRemote(), e);
         }
 
         listener.getLogger().println("\nFinished");
@@ -1695,16 +1709,7 @@ public class LoadTestBuilder extends Builder
         listener.getLogger().println("-----------------------------------------------------------------\n"
                                          + "Cleaning up project directory ...\n");
 
-        List<FilePath> DIR = getXltFolder(build).getParent().list();
-
-        for (FilePath eachFilePath : DIR)
-        {
-            if (eachFilePath.getBaseName().matches(FOLDER_NAMES.TEMPORARY_XLT_MATCHER))
-            {
-                eachFilePath.deleteRecursive();
-                listener.getLogger().println("Deleted directory: " + eachFilePath.getRemote());
-            }
-        }
+        getTemporaryXltProjectFolder(build).deleteRecursive();
 
         listener.getLogger().println("\nFinished");
     }
@@ -1737,7 +1742,7 @@ public class LoadTestBuilder extends Builder
         }
 
         // the target directory in the project folder
-        FilePath destDir = getXltFolder(build);
+        FilePath destDir = getTemporaryXltFolder(build);
         listener.getLogger().println("Target directory: " + destDir.getRemote());
 
         // copy XLT to a remote directory
