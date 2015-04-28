@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Configuration name="defaultConfiguration" monitorInterval="60" status="OFF">
-  <Properties>    
+  <Properties>
      <Property name="defaultLogFile">${xlt:org.xceptance.xlt.jenkins.logFolder}/xltPlugin.log</Property>
-     <Property name="defaultPattern">%d{yyyy-MMM-dd} : %d{HH:mm:ss,SSS} | [%t] %p %C.%M line:%L | %x - %m%n</Property>
+     <Property name="defaultPattern">[%d{yyyy/MM/dd}-%d{HH:mm:ss,SSS}] %level [%thread] %class - %message%n</Property>
   </Properties>  
     
   <Appenders>
@@ -13,21 +13,11 @@
 		</Policies>
 		<DefaultRolloverStrategy max="3"/>
     </RollingFile>
-    <Console name="defaultConsoleAppender" target="SYSTEM_OUT">
-      <PatternLayout pattern="${defaultPattern}"/>
-    </Console>
   </Appenders>
   
   <Loggers>  
-  	<Logger name="defaultLogger" level="ALL">
-  		<AppenderRef ref="defaultRollingFileAppender">
-  			<ThresholdFilter level="WARN" onMatch="ACCEPT" onMismatch="DENY"/>
-  		</AppenderRef>  		  		
+  	<Logger name="defaultLogger" level="WARN">
+  		<AppenderRef ref="defaultRollingFileAppender" />
   	</Logger>
-    <Root level="ALL">
-		<AppenderRef ref="defaultConsoleAppender">
-			<ThresholdFilter level="INFO" onMatch="ACCEPT" onMismatch="DENY"/>
-		</AppenderRef>		      
-    </Root>    
   </Loggers>
 </Configuration>
