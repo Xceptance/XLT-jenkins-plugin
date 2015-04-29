@@ -1829,9 +1829,9 @@ public class LoadTestBuilder extends Builder
 
     private void validateTestPropertiesFile(AbstractBuild<?, ?> build) throws Exception
     {
-        if (testPropertiesFile == null)
+        if (StringUtils.isBlank(testPropertiesFile))
         {
-            throw new Exception("No test properties file configured.");
+            return;
         }
 
         File file = new File(testPropertiesFile);
