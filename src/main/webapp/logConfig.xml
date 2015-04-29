@@ -16,8 +16,9 @@
   </Appenders>
   
   <Loggers>  
-  	<Logger name="defaultLogger" level="WARN">
+  	<Logger name="defaultLogger" level="WARN" />
+  	<Root level="WARN">
   		<AppenderRef ref="defaultRollingFileAppender" />
-  	</Logger>
+  	</Root>
   </Loggers>
 </Configuration>
