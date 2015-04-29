@@ -1834,10 +1834,10 @@ public class LoadTestBuilder extends Builder
             return;
         }
 
-        File file = new File(testPropertiesFile);
-        if (file.isAbsolute())
+        if (!XltDescriptor.isRelativePath(testPropertiesFile))
         {
-            throw new Exception("The test properties file path must be relative to the \"<testSuite>/config/\" directory.");
+            throw new Exception("The test properties file path must be relative to the \"<testSuite>/config/\" directory. (" +
+                                testPropertiesFile + ")");
         }
 
         FilePath testProperties = getTestPropertiesFile(build);
