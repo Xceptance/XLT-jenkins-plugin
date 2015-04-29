@@ -174,7 +174,7 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
             String resolvedFilePath = environmentResolve(value);
             File file = new File(resolvedFilePath);
             FilePath filePath = new FilePath(file);
-            if (file.toPath().isAbsolute())
+            if (file.isAbsolute())
             {
                 return FormValidation.error("The test properties file path must be relative to the \"<testSuite>/config/\" directory. (" +
                                             filePath.getRemote() + ")");
@@ -439,7 +439,7 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
             return FormValidation.warning("Can not check if the path specifies a directory. (" + filePath.getRemote() + ")");
         }
 
-        if (value.contains("$") || !new File(resolvedPath).toPath().isAbsolute())
+        if (value.contains("$") || !new File(resolvedPath).isAbsolute())
         {
             return FormValidation.ok("(" + filePath.getRemote() + ")");
         }
@@ -460,7 +460,7 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
             return FormValidation.error("The path must specify a directory, not a file. (" + filePath.getRemote() + ")");
         }
 
-        if (!new File(resolvedPath).toPath().isAbsolute())
+        if (!new File(resolvedPath).isAbsolute())
         {
             return FormValidation.ok("(<workspace>/" + filePath.getRemote() + ")");
         }

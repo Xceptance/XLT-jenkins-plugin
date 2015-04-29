@@ -1835,7 +1835,7 @@ public class LoadTestBuilder extends Builder
         }
 
         File file = new File(testPropertiesFile);
-        if (file.toPath().isAbsolute())
+        if (file.isAbsolute())
         {
             throw new Exception("The test properties file path must be relative to the \"<testSuite>/config/\" directory.");
         }
