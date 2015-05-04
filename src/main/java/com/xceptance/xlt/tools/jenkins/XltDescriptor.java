@@ -174,11 +174,7 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
             String resolvedFilePath = environmentResolve(value);
             File file = new File(resolvedFilePath);
             FilePath filePath = new FilePath(file);
-            if (!isRelativePath(resolvedFilePath))
-            {
-                return FormValidation.error("The test properties file path must be relative to the \"<testSuite>/config/\" directory. (" +
-                                            filePath.getRemote() + ")");
-            }
+
             if (StringUtils.isBlank(FilenameUtils.getName(resolvedFilePath)))
             {
                 return FormValidation.error("The test properties file path must specify a file, not a directory. (" + filePath.getRemote() +
@@ -438,12 +434,7 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
         {
             return FormValidation.warning("Can not check if the path specifies a directory. (" + filePath.getRemote() + ")");
         }
-
-        if (value.contains("$") || isRelativePath(resolvedPath))
-        {
-            return FormValidation.ok("(" + filePath.getRemote() + ")");
-        }
-        return FormValidation.ok();
+        return FormValidation.ok("(" + filePath.getRemote() + ")");
     }
 
     public FormValidation doCheckPathToTestSuite(@QueryParameter String value, @AncestorInPath AbstractProject<?, ?> project)
@@ -459,16 +450,7 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
         {
             return FormValidation.error("The path must specify a directory, not a file. (" + filePath.getRemote() + ")");
         }
-
-        if (isRelativePath(resolvedPath))
-        {
-            return FormValidation.ok("(<workspace>/" + filePath.getRemote() + ")");
-        }
-        if (value.contains("$"))
-        {
-            return FormValidation.ok("(" + filePath.getRemote() + ")");
-        }
-        return FormValidation.ok();
+        return FormValidation.ok("(<workspace>/" + filePath.getRemote() + ") or (" + filePath.getRemote() + ")");
     }
 
     public static String environmentResolve(String value)
@@ -499,21 +481,6 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
             filePath = new FilePath(baseDir, dir);
         }
         return filePath;
-    }
-
-    public static boolean isRelativePath(String filePath)
-    {
-        // Windows
-        if (filePath.startsWith("\\") || filePath.startsWith("\\\\") || filePath.contains(":"))
-        {
-            return false;
-        }
-        // Linux
-        if (filePath.startsWith("/") || filePath.startsWith("~"))
-        {
-            return false;
-        }
-        return true;
     }
 
     public static enum VALIDATION
