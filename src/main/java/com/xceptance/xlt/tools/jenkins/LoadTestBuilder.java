@@ -1827,6 +1827,24 @@ public class LoadTestBuilder extends Builder
         }
     }
 
+    public static boolean isBuildOnUnix(AbstractBuild<?, ?> build)
+    {
+        return build.getBuiltOn().createLauncher(null).isUnix();
+    }
+
+    public static boolean isRelativeFilePathOnNode(AbstractBuild<?, ?> build, String filePath)
+    {
+        if (isBuildOnUnix(build) && (filePath.startsWith("/") || filePath.startsWith("~")))
+        {
+            return false;
+        }
+        else if (filePath.startsWith("\\") || filePath.startsWith("\\") || filePath.contains(":"))
+        {
+            return false;
+        }
+        return true;
+    }
+
     private void validateTestPropertiesFile(AbstractBuild<?, ?> build) throws Exception
     {
         if (StringUtils.isBlank(testPropertiesFile))
@@ -1834,7 +1852,7 @@ public class LoadTestBuilder extends Builder
             return;
         }
 
-        if (!XltDescriptor.isRelativePath(testPropertiesFile))
+        if (!isRelativeFilePathOnNode(build, testPropertiesFile))
         {
             throw new Exception("The test properties file path must be relative to the \"<testSuite>/config/\" directory. (" +
                                 testPropertiesFile + ")");
