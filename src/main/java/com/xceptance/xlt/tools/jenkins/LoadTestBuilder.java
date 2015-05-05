@@ -564,7 +564,7 @@ public class LoadTestBuilder extends Builder
         }
         else
         {
-            LOGGER.warn("No test data found for build. (build: \"" + build.number + "\" searchLocation: \"" + testDataFile.getRemote() +
+            LOGGER.info("No test data found for build. (build: \"" + build.number + "\" searchLocation: \"" + testDataFile.getRemote() +
                         "\")");
         }
         return null;
@@ -600,7 +600,7 @@ public class LoadTestBuilder extends Builder
                     Chart<Integer, Double> chart = getChart(eachPlotID);
                     if (chart == null)
                     {
-                        LOGGER.warn("No chart found for plot. (build: \"" + eachBuild.number + "\" plotID: \"" + eachPlotID + "\")");
+                        LOGGER.debug("No chart found for plot. (build: \"" + eachBuild.number + "\" plotID: \"" + eachPlotID + "\")");
                         continue;
                     }
                     boolean addedValueToChart = false;
@@ -612,15 +612,15 @@ public class LoadTestBuilder extends Builder
                             ChartLine<Integer, Double> line = chart.getLine(eachValueID);
                             if (line == null)
                             {
-                                LOGGER.warn("No line found for value. (build: \"" + eachBuild.number + "\" valueID: \"" + eachValueID +
-                                            "\" chartID:\"" + chart.getChartID() + "\")");
+                                LOGGER.debug("No line found for value. (build: \"" + eachBuild.number + "\" valueID: \"" + eachValueID +
+                                             "\" chartID:\"" + chart.getChartID() + "\")");
                                 continue;
                             }
 
                             boolean addedValueToLine = false;
                             if (dataXml == null)
                             {
-                                LOGGER.warn("No test data found for build. (build: \"" + eachBuild.number + "\")");
+                                LOGGER.info("No test data found for build. (build: \"" + eachBuild.number + "\")");
                             }
                             else
                             {
@@ -724,7 +724,7 @@ public class LoadTestBuilder extends Builder
         }
         else
         {
-            LOGGER.warn("Plot config parameter \"showNoValues\" is undefined (plotID: \"" + plotID + "\")");
+            LOGGER.info("Plot config parameter \"showNoValues\" is undefined (plotID: \"" + plotID + "\")");
         }
 
         Chart<Integer, Double> chart = new Chart<Integer, Double>(plotID, chartTitle);
