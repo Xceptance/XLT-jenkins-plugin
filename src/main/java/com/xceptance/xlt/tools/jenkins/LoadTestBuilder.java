@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintStream;
+import java.io.StringReader;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -941,17 +942,17 @@ public class LoadTestBuilder extends Builder
         return new FilePath(getBuildReportFolder(build), "testreport.xml");
     }
 
-    private FilePath getXltResultFolder(AbstractBuild<?, ?> build)
+    private FilePath getXltResultFolder(AbstractBuild<?, ?> build) throws BuildNodeGoneException
     {
         return new FilePath(getTemporaryXltFolder(build), FOLDER_NAMES.ARTIFACT_RESULT);
     }
 
-    private FilePath getXltLogFolder(AbstractBuild<?, ?> build)
+    private FilePath getXltLogFolder(AbstractBuild<?, ?> build) throws BuildNodeGoneException
     {
         return new FilePath(getTemporaryXltFolder(build), "log");
     }
 
-    private FilePath getXltReportFolder(AbstractBuild<?, ?> build)
+    private FilePath getXltReportFolder(AbstractBuild<?, ?> build) throws BuildNodeGoneException
     {
         return new FilePath(getTemporaryXltFolder(build), FOLDER_NAMES.ARTIFACT_REPORT + "/" + Integer.toString(build.getNumber()));
     }
@@ -1027,27 +1028,28 @@ public class LoadTestBuilder extends Builder
         return new FilePath(getSummaryResultsFolder(project), "config");
     }
 
-    private FilePath getTemporaryXltBaseFolder(AbstractBuild<?, ?> build)
+    private FilePath getTemporaryXltBaseFolder(AbstractBuild<?, ?> build) throws BuildNodeGoneException
     {
+        hudson.model.Node node = getBuildNodeIfOnlineOrFail(build);
         FilePath base = new FilePath(build.getProject().getRootDir());
-        if (build.getBuiltOn() != null && build.getBuiltOn() != Jenkins.getInstance())
+        if (node != Jenkins.getInstance())
         {
             base = build.getBuiltOn().getRootPath();
         }
         return new FilePath(base, "tmp-xlt");
     }
 
-    private FilePath getTemporaryXltProjectFolder(AbstractBuild<?, ?> build)
+    private FilePath getTemporaryXltProjectFolder(AbstractBuild<?, ?> build) throws BuildNodeGoneException
     {
         return new FilePath(getTemporaryXltBaseFolder(build), build.getProject().getName());
     }
 
-    private FilePath getTemporaryXltBuildFolder(AbstractBuild<?, ?> build)
+    private FilePath getTemporaryXltBuildFolder(AbstractBuild<?, ?> build) throws BuildNodeGoneException
     {
         return new FilePath(getTemporaryXltProjectFolder(build), "" + build.getNumber());
     }
 
-    private FilePath getTemporaryXltFolder(AbstractBuild<?, ?> build)
+    private FilePath getTemporaryXltFolder(AbstractBuild<?, ?> build) throws BuildNodeGoneException
     {
         return new FilePath(new FilePath(getTemporaryXltBuildFolder(build), getBuilderID()), "xlt");
     }
@@ -1057,7 +1059,7 @@ public class LoadTestBuilder extends Builder
         return XltDescriptor.resolvePath(getXltTemplateDir());
     }
 
-    private FilePath getXltBinFolder(AbstractBuild<?, ?> build)
+    private FilePath getXltBinFolder(AbstractBuild<?, ?> build) throws BuildNodeGoneException
     {
         return new FilePath(getTemporaryXltFolder(build), "bin");
     }
@@ -1067,7 +1069,7 @@ public class LoadTestBuilder extends Builder
         return new FilePath(getXltTemplateFilePath(), "bin");
     }
 
-    private FilePath getXltConfigFolder(AbstractBuild<?, ?> build)
+    private FilePath getXltConfigFolder(AbstractBuild<?, ?> build) throws BuildNodeGoneException
     {
         return new FilePath(getTemporaryXltFolder(build), "config");
     }
@@ -1415,15 +1417,15 @@ public class LoadTestBuilder extends Builder
         }
         catch (Exception e)
         {
-            listener.getLogger().println("Failed to archive xlt logs");
-            LOGGER.error("Failed to archive xlt logs", e);
+            listener.getLogger().println("Archive logs failed: " + e);
+            LOGGER.error("Archive logs failed: ", e);
         }
 
         listener.getLogger().println("\n\n-----------------------------------------------------------------\nCleanup ...\n");
         // delete any temporary directory with local XLT
-        FilePath tempProjectFolder = getTemporaryXltProjectFolder(build);
         try
         {
+            FilePath tempProjectFolder = getTemporaryXltProjectFolder(build);
             tempProjectFolder.deleteRecursive();
 
             FilePath tempFolder = getTemporaryXltBaseFolder(build);
@@ -1434,8 +1436,8 @@ public class LoadTestBuilder extends Builder
         }
         catch (Exception e)
         {
-            listener.getLogger().println("Failed to remove " + tempProjectFolder.getRemote());
-            LOGGER.error("Failed to remove " + tempProjectFolder.getRemote(), e);
+            listener.getLogger().println("Cleanup Failed: " + e);
+            LOGGER.error("Cleanup Failed: ", e);
         }
 
         listener.getLogger().println("\nFinished");
@@ -1516,7 +1518,7 @@ public class LoadTestBuilder extends Builder
         // build the EC2 admin command line
         List<String> commandLine = new ArrayList<String>();
 
-        if (SystemUtils.IS_OS_WINDOWS)
+        if (isBuildOnWindows(build))
         {
             commandLine.add("cmd.exe");
             commandLine.add("/c");
@@ -1558,7 +1560,7 @@ public class LoadTestBuilder extends Builder
 
         // run the EC2 admin tool
         FilePath workingDirectory = getXltBinFolder(build);
-        int commandResult = executeCommand(build.getBuiltOn(), workingDirectory, commandLine, listener.getLogger());
+        int commandResult = executeCommand(getBuildNodeIfOnlineOrFail(build), workingDirectory, commandLine, listener.getLogger());
         listener.getLogger().println("EC2 admin tool returned with exit code: " + commandResult);
 
         if (commandResult != 0)
@@ -1569,7 +1571,7 @@ public class LoadTestBuilder extends Builder
         listener.getLogger().printf("\nRead agent controller URLs from file %s:\n\n", acUrlFile);
 
         // read the lines from agent controller file
-        List<?> lines = FileUtils.readLines(new File(acUrlFile.toURI()));
+        List<?> lines = IOUtils.readLines(new StringReader(acUrlFile.readToString()));
         List<String> urls = new ArrayList<String>(lines.size());
         for (Object eachLine : lines)
         {
@@ -1651,8 +1653,6 @@ public class LoadTestBuilder extends Builder
             {
                 IOUtils.closeQuietly(writer);
             }
-            ec2PropertiesFile.getChannel().close();
-            ec2PropertiesFile.getChannel().join();
         }
     }
 
@@ -1664,7 +1664,7 @@ public class LoadTestBuilder extends Builder
         // build the EC2 admin command line
         List<String> commandLine = new ArrayList<String>();
 
-        if (SystemUtils.IS_OS_WINDOWS)
+        if (isBuildOnWindows(build))
         {
             commandLine.add("cmd.exe");
             commandLine.add("/c");
@@ -1680,7 +1680,7 @@ public class LoadTestBuilder extends Builder
 
         // run the EC2 admin tool
         FilePath workingDirectory = getXltBinFolder(build);
-        int commandResult = executeCommand(build.getBuiltOn(), workingDirectory, commandLine, listener.getLogger());
+        int commandResult = executeCommand(getBuildNodeIfOnlineOrFail(build), workingDirectory, commandLine, listener.getLogger());
         listener.getLogger().println("EC2 admin tool returned with exit code: " + commandResult);
 
         if (commandResult != 0)
@@ -1704,7 +1704,8 @@ public class LoadTestBuilder extends Builder
         return new FilePath(getTestSuiteConfigFolder(build), testPropertiesFile);
     }
 
-    private void initialCleanUp(AbstractBuild<?, ?> build, BuildListener listener) throws IOException, InterruptedException
+    private void initialCleanUp(AbstractBuild<?, ?> build, BuildListener listener)
+        throws IOException, InterruptedException, BuildNodeGoneException
     {
         listener.getLogger().println("-----------------------------------------------------------------\n"
                                          + "Cleaning up project directory ...\n");
@@ -1772,7 +1773,7 @@ public class LoadTestBuilder extends Builder
         // build the master controller command line
         List<String> commandLine = new ArrayList<String>();
 
-        if (SystemUtils.IS_OS_WINDOWS)
+        if (isBuildOnWindows(build))
         {
             commandLine.add("cmd.exe");
             commandLine.add("/c");
@@ -1818,7 +1819,7 @@ public class LoadTestBuilder extends Builder
 
         // run the master controller
         FilePath workingDirectory = getXltBinFolder(build);
-        int commandResult = executeCommand(build.getBuiltOn(), workingDirectory, commandLine, listener.getLogger());
+        int commandResult = executeCommand(getBuildNodeIfOnlineOrFail(build), workingDirectory, commandLine, listener.getLogger());
         listener.getLogger().println("Master controller returned with exit code: " + commandResult);
 
         if (commandResult != 0)
@@ -1827,12 +1828,42 @@ public class LoadTestBuilder extends Builder
         }
     }
 
-    public static boolean isBuildOnUnix(AbstractBuild<?, ?> build)
+    public static boolean isBuildOnWindows(AbstractBuild<?, ?> build) throws BuildNodeGoneException
     {
-        return build.getBuiltOn().createLauncher(null).isUnix();
+        return !isBuildOnUnix(build);
     }
 
-    public static boolean isRelativeFilePathOnNode(AbstractBuild<?, ?> build, String filePath)
+    public static boolean isBuildOnUnix(AbstractBuild<?, ?> build) throws BuildNodeGoneException
+    {
+        return getBuildNodeIfOnlineOrFail(build).createLauncher(null).isUnix();
+    }
+
+    public static boolean isBuildNodeOnline(AbstractBuild<?, ?> build)
+    {
+        return getBuildNode(build) != null;
+    }
+
+    public static hudson.model.Node getBuildNodeIfOnlineOrFail(AbstractBuild<?, ?> build) throws BuildNodeGoneException
+    {
+        hudson.model.Node node = getBuildNode(build);
+        if (node != null)
+        {
+            return node;
+        }
+        throw new BuildNodeGoneException("Build node is not available");
+    }
+
+    public static hudson.model.Node getBuildNode(AbstractBuild<?, ?> build)
+    {
+        hudson.model.Node node = build.getBuiltOn();
+        if (node != null && node.toComputer() != null && node.toComputer().isOnline())
+        {
+            return node;
+        }
+        return null;
+    }
+
+    public static boolean isRelativeFilePathOnNode(AbstractBuild<?, ?> build, String filePath) throws BuildNodeGoneException
     {
         if (isBuildOnUnix(build) && (filePath.startsWith("/") || filePath.startsWith("~")))
         {
@@ -1905,7 +1936,7 @@ public class LoadTestBuilder extends Builder
         // build the master controller command line
         List<String> commandLine = new ArrayList<String>();
 
-        if (SystemUtils.IS_OS_WINDOWS)
+        if (isBuildOnWindows(build))
         {
             commandLine.add("cmd.exe");
             commandLine.add("/c");
@@ -1924,7 +1955,7 @@ public class LoadTestBuilder extends Builder
 
         // run the report generator
         FilePath workingDirectory = getXltBinFolder(build);
-        int commandResult = executeCommand(build.getBuiltOn(), workingDirectory, commandLine, listener.getLogger());
+        int commandResult = executeCommand(getBuildNodeIfOnlineOrFail(build), workingDirectory, commandLine, listener.getLogger());
         listener.getLogger().println("Report generator returned with exit code: " + commandResult);
 
         if (commandResult != 0)
@@ -1933,7 +1964,8 @@ public class LoadTestBuilder extends Builder
         }
     }
 
-    private void saveArtifacts(AbstractBuild<?, ?> build, BuildListener listener) throws IOException, InterruptedException
+    private void saveArtifacts(AbstractBuild<?, ?> build, BuildListener listener)
+        throws IOException, InterruptedException, BuildNodeGoneException
     {
         listener.getLogger()
                 .println("\n\n-----------------------------------------------------------------\nArchive results and report...\n");
