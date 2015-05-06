@@ -1260,6 +1260,12 @@ public class LoadTestBuilder extends Builder
             {
                 return "XLT Parameters";
             }
+            
+            @Override
+            public String getUrlName()
+            {              
+                return "xltParameters";
+            }
 
             @Override
             public String getIconFileName()
