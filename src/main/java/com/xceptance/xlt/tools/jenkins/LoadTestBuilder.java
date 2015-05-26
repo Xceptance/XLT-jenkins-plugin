@@ -165,7 +165,7 @@ public class LoadTestBuilder extends Builder
     {
         public static String ARTIFACT_REPORT = "report";
 
-        public static String ARTIFACT_RESULT = "result";
+        public static String ARTIFACT_RESULT = "results";
     }
 
     static
