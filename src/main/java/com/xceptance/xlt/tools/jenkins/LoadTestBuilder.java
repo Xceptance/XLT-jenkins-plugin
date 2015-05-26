@@ -204,7 +204,7 @@ public class LoadTestBuilder extends Builder
 
         // load test configuration
         this.xltTemplateDir = StringUtils.defaultIfBlank(xltTemplateDir, null);
-        this.pathToTestSuite = StringUtils.defaultIfBlank(pathToTestSuite, "");
+        this.pathToTestSuite = StringUtils.defaultIfBlank(pathToTestSuite, null);
         this.testPropertiesFile = StringUtils.defaultIfBlank(testPropertiesFile, null);
         this.agentControllerConfig = (agentControllerConfig != null) ? agentControllerConfig : new AgentControllerConfig();
 
@@ -1260,10 +1260,10 @@ public class LoadTestBuilder extends Builder
             {
                 return "XLT Parameters";
             }
-            
+
             @Override
             public String getUrlName()
-            {              
+            {
                 return "xltParameters";
             }
 
@@ -1697,7 +1697,14 @@ public class LoadTestBuilder extends Builder
 
     private FilePath getTestSuiteFolder(AbstractBuild<?, ?> build)
     {
-        return new FilePath(build.getModuleRoot(), pathToTestSuite);
+        if (StringUtils.isBlank(pathToTestSuite))
+        {
+            return build.getModuleRoot();
+        }
+        else
+        {
+            return new FilePath(build.getModuleRoot(), pathToTestSuite);
+        }
     }
 
     private FilePath getTestSuiteConfigFolder(AbstractBuild<?, ?> build)
@@ -1707,7 +1714,14 @@ public class LoadTestBuilder extends Builder
 
     private FilePath getTestPropertiesFile(AbstractBuild<?, ?> build)
     {
-        return new FilePath(getTestSuiteConfigFolder(build), testPropertiesFile);
+        if (StringUtils.isBlank(testPropertiesFile))
+        {
+            return null;
+        }
+        else
+        {
+            return new FilePath(getTestSuiteConfigFolder(build), testPropertiesFile);
+        }
     }
 
     private void initialCleanUp(AbstractBuild<?, ?> build, BuildListener listener)
@@ -1896,7 +1910,7 @@ public class LoadTestBuilder extends Builder
         }
 
         FilePath testProperties = getTestPropertiesFile(build);
-        if (!testProperties.exists())
+        if (testProperties == null || !testProperties.exists())
         {
             throw new Exception("The test properties file does not exists. (" + testProperties.getRemote() + ")");
         }
@@ -1908,11 +1922,6 @@ public class LoadTestBuilder extends Builder
 
     private void validateTestSuiteDirectory(AbstractBuild<?, ?> build) throws Exception
     {
-        if (pathToTestSuite == null)
-        {
-            throw new Exception("The test suit path is not configured.");
-        }
-
         FilePath testSuiteDirectory = getTestSuiteFolder(build);
         if (!testSuiteDirectory.exists())
         {
