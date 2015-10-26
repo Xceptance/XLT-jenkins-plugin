@@ -31,34 +31,51 @@
 			    </tr>
 			    <tr>
 					<td>
-						<j:if test="${it.getFailedAlerts().isEmpty() == false}">
+						<j:if test="${it.getFailedTestCases().isEmpty() == false}">
 							<div>
-				        		<h3>Failed Conditions</h3>
+				        		<h3>Failed Test Cases</h3>
 				        		<dl>
-				        			<j:forEach var="eachResult" items="${it.getFailedAlerts()}">
-				        				<dt><b>${eachResult.getMessage()}</b></dt>				        					
-										<j:if test="${eachResult.getCriterionID() != null}">
-		        							<dd>Criterion: ${eachResult.getCriterionID()}</dd>
-		        						</j:if>
-										<j:if test="${eachResult.getValue() != null}">
-		        							<dd>Value: ${eachResult.getValue()}</dd>
-		        						</j:if>
-		        						<j:if test="${eachResult.getCondition() != null}">
-		        							<dd>Condition: ${eachResult.getCondition()}</dd>
-		        						</j:if>
-		        						<j:if test="${eachResult.getXPath() != null}">
-		        							<dd>XPath: ${eachResult.getXPath()}</dd>
-		        						</j:if>				        						
-		        						<j:if test="${eachResult.getExceptionMessage() != null}">
-		        							<dd>Error: ${eachResult.setExceptionMessage()}</dd>
-		        						</j:if>
-		        						<j:if test="${eachResult.getCauseMessage() != null}">
-		        							<dd>Cause: ${eachResult.getCauseMessage()}</dd>
-		        						</j:if>
+				        			<j:forEach var="testCase" items="${it.getFailedTestCases()}">
+				        				<dt>
+                                            <b>${testCase.getTestCaseName()}
+                                                <j:if test="testCase.getActionName() != null}">
+                                                    ${testCase.getActionName()}
+                                                </j:if>
+                                            </b>
+                                        </dt>				        					
+	        							<dd>${testCase.getMessage()}</dd>
 				        			</j:forEach> 
 				        		</dl>
 							</div>
 						</j:if>
+                        <j:if test="${it.getFailedAlerts().isEmpty() == false}">
+                            <div>
+                                <h3>Failed Conditions</h3>
+                                <dl>
+                                    <j:forEach var="eachResult" items="${it.getFailedAlerts()}">
+                                        <dt><b>${eachResult.getMessage()}</b></dt>                                          
+                                        <j:if test="${eachResult.getCriterionID() != null}">
+                                            <dd>Criterion: ${eachResult.getCriterionID()}</dd>
+                                        </j:if>
+                                        <j:if test="${eachResult.getValue() != null}">
+                                            <dd>Value: ${eachResult.getValue()}</dd>
+                                        </j:if>
+                                        <j:if test="${eachResult.getCondition() != null}">
+                                            <dd>Condition: ${eachResult.getCondition()}</dd>
+                                        </j:if>
+                                        <j:if test="${eachResult.getXPath() != null}">
+                                            <dd>XPath: ${eachResult.getXPath()}</dd>
+                                        </j:if>                                             
+                                        <j:if test="${eachResult.getExceptionMessage() != null}">
+                                            <dd>Error: ${eachResult.setExceptionMessage()}</dd>
+                                        </j:if>
+                                        <j:if test="${eachResult.getCauseMessage() != null}">
+                                            <dd>Cause: ${eachResult.getCauseMessage()}</dd>
+                                        </j:if>
+                                    </j:forEach> 
+                                </dl>
+                            </div>
+                        </j:if>
 						<j:if test="${it.getErrorAlerts().isEmpty() == false}">
 							<div>
 				        		<h3>Errors</h3>

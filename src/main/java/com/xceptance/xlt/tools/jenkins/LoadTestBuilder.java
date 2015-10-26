@@ -31,6 +31,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.List;
@@ -39,6 +40,7 @@ import java.util.UUID;
 
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
@@ -59,6 +61,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
 import com.cloudbees.plugins.credentials.CredentialsMatchers;
@@ -1187,7 +1190,9 @@ public class LoadTestBuilder extends Builder
             build.setResult(Result.UNSTABLE);
         }
 
-        XltRecorderAction recorderAction = new XltRecorderAction(build, failedAlerts, builderID, getBuildReportURL(build));
+        List<TestCaseInfo> failedTestCases = determineFailedTestCases(build, listener);
+
+        XltRecorderAction recorderAction = new XltRecorderAction(build, failedAlerts, builderID, getBuildReportURL(build), failedTestCases);
         build.getActions().add(recorderAction);
 
         if (!recorderAction.getAlerts().isEmpty())
@@ -1232,6 +1237,56 @@ public class LoadTestBuilder extends Builder
                 }
             }
         }
+    }
+
+    /**
+     * Extracts test case name, action name, and error message from each failed test case.
+     * 
+     * @param build
+     * @param listener
+     * @return the list of failure info objects
+     * @throws IOException
+     * @throws InterruptedException
+     */
+    private List<TestCaseInfo> determineFailedTestCases(AbstractBuild<?, ?> build, BuildListener listener)
+        throws IOException, InterruptedException
+    {
+        List<TestCaseInfo> failedTestCases = new ArrayList<TestCaseInfo>();
+
+        // get the info from the test report
+        Document dataXml = getDataDocument(build);
+        if (dataXml != null)
+        {
+            try
+            {
+                final XPath xpath = XPathFactory.newInstance().newXPath();
+
+                NodeList nodeList = (NodeList) xpath.evaluate("/testreport/errors/error", dataXml, XPathConstants.NODESET);
+                for (int i = 0; i < nodeList.getLength(); i++)
+                {
+                    Node item = nodeList.item(i);
+
+                    String testCaseName = xpath.evaluate("testCaseName", item);
+                    String actionName = xpath.evaluate("actionName", item);
+                    String message = xpath.evaluate("message", item);
+
+                    // ensure action name is null if it was not in the test report
+                    actionName = StringUtils.defaultIfBlank(actionName, null);
+
+                    failedTestCases.add(new TestCaseInfo(testCaseName, actionName, message));
+                }
+            }
+            catch (XPathExpressionException e)
+            {
+                // should never happen
+                listener.error("Failed to determine failed test cases", e);
+            }
+        }
+
+        // sort the list by test case name
+        Collections.sort(failedTestCases);
+
+        return failedTestCases;
     }
 
     @Override
