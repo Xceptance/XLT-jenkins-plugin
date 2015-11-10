@@ -25,6 +25,8 @@ public class XltRecorderAction implements Action
 
     private List<TestCaseInfo> failedTestCases;
 
+    private List<SlowRequestInfo> slowestRequests;
+
     private String builderID;
 
     private String reportURL;
@@ -34,13 +36,14 @@ public class XltRecorderAction implements Action
     public static String RELATIVE_REPORT_URL = URL_NAME + "/report/";
 
     public XltRecorderAction(AbstractBuild<?, ?> build, List<CriterionResult> failedAlerts, String builderID, String reportURL,
-                             List<TestCaseInfo> failedTestCases)
+                             List<TestCaseInfo> failedTestCases, List<SlowRequestInfo> slowestRequests)
     {
         this.build = build;
         this.failedAlerts = failedAlerts;
         this.builderID = builderID;
         this.reportURL = reportURL;
         this.failedTestCases = failedTestCases;
+        this.slowestRequests = slowestRequests;
     }
 
     public String getIconFileName()
@@ -102,6 +105,11 @@ public class XltRecorderAction implements Action
     public List<TestCaseInfo> getFailedTestCases()
     {
         return failedTestCases;
+    }
+
+    public List<SlowRequestInfo> getSlowestRequests()
+    {
+        return slowestRequests;
     }
 
     public String getBuildNumber()

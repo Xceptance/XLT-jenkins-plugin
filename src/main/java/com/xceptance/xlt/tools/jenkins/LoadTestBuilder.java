@@ -1077,7 +1077,7 @@ public class LoadTestBuilder extends Builder
         return new FilePath(getTemporaryXltFolder(build), "config");
     }
 
-    private List<CriterionResult> getFailedCriteria(AbstractBuild<?, ?> build, BuildListener listener)
+    private List<CriterionResult> getFailedCriteria(AbstractBuild<?, ?> build, BuildListener listener, Document dataXml)
         throws IOException, InterruptedException
     {
         listener.getLogger().println("-----------------------------------------------------------------\n"
@@ -1085,7 +1085,6 @@ public class LoadTestBuilder extends Builder
 
         List<CriterionResult> failedAlerts = new ArrayList<CriterionResult>();
 
-        Document dataXml = getDataDocument(build);
         if (dataXml == null)
         {
             CriterionResult criterionResult = CriterionResult.error("No test data found.");
@@ -1176,8 +1175,20 @@ public class LoadTestBuilder extends Builder
 
     private void validateCriteria(AbstractBuild<?, ?> build, BuildListener listener) throws IOException, InterruptedException
     {
-        List<CriterionResult> failedAlerts = getFailedCriteria(build, listener);
+        // get the test report document
+        final Document dataXml = getDataDocument(build);
 
+        // process the test report
+        final List<CriterionResult> failedAlerts = getFailedCriteria(build, listener, dataXml);
+        final List<TestCaseInfo> failedTestCases = determineFailedTestCases(build, listener, dataXml);
+        final List<SlowRequestInfo> slowestRequests = determineSlowestRequests(build, listener, dataXml);
+
+        // create the action with all the collected data
+        XltRecorderAction recorderAction = new XltRecorderAction(build, failedAlerts, builderID, getBuildReportURL(build), failedTestCases,
+                                                                 slowestRequests);
+        build.getActions().add(recorderAction);
+
+        // log failed criteria to the build's console
         if (!failedAlerts.isEmpty())
         {
             listener.getLogger().println();
@@ -1190,11 +1201,7 @@ public class LoadTestBuilder extends Builder
             build.setResult(Result.UNSTABLE);
         }
 
-        List<TestCaseInfo> failedTestCases = determineFailedTestCases(build, listener);
-
-        XltRecorderAction recorderAction = new XltRecorderAction(build, failedAlerts, builderID, getBuildReportURL(build), failedTestCases);
-        build.getActions().add(recorderAction);
-
+        // set build parameters
         if (!recorderAction.getAlerts().isEmpty())
         {
             if (!recorderAction.getFailedAlerts().isEmpty())
@@ -1244,17 +1251,18 @@ public class LoadTestBuilder extends Builder
      * 
      * @param build
      * @param listener
+     * @param dataXml
+     *            the test report document
      * @return the list of failure info objects
      * @throws IOException
      * @throws InterruptedException
      */
-    private List<TestCaseInfo> determineFailedTestCases(AbstractBuild<?, ?> build, BuildListener listener)
+    private List<TestCaseInfo> determineFailedTestCases(AbstractBuild<?, ?> build, BuildListener listener, Document dataXml)
         throws IOException, InterruptedException
     {
         List<TestCaseInfo> failedTestCases = new ArrayList<TestCaseInfo>();
 
         // get the info from the test report
-        Document dataXml = getDataDocument(build);
         if (dataXml != null)
         {
             try
@@ -1287,6 +1295,51 @@ public class LoadTestBuilder extends Builder
         Collections.sort(failedTestCases);
 
         return failedTestCases;
+    }
+
+    /**
+     * Extracts URL and runtime from the slowest requests in the test report.
+     * 
+     * @param build
+     * @param listener
+     * @param dataXml
+     *            the test report document
+     * @return the list of info objects
+     * @throws IOException
+     * @throws InterruptedException
+     */
+    private List<SlowRequestInfo> determineSlowestRequests(AbstractBuild<?, ?> build, BuildListener listener, Document dataXml)
+        throws IOException, InterruptedException
+    {
+        List<SlowRequestInfo> slowestRequests = new ArrayList<SlowRequestInfo>();
+
+        // get the info from the test report
+        if (dataXml != null)
+        {
+            try
+            {
+                final XPath xpath = XPathFactory.newInstance().newXPath();
+
+                NodeList nodeList = (NodeList) xpath.evaluate("/testreport/general/slowestRequests/request", dataXml,
+                                                              XPathConstants.NODESET);
+                for (int i = 0; i < nodeList.getLength(); i++)
+                {
+                    Node item = nodeList.item(i);
+
+                    String url = xpath.evaluate("url", item);
+                    String runtime = xpath.evaluate("runtime", item);
+
+                    slowestRequests.add(new SlowRequestInfo(url, runtime));
+                }
+            }
+            catch (XPathExpressionException e)
+            {
+                // should never happen
+                listener.error("Failed to determine slowest requests", e);
+            }
+        }
+
+        return slowestRequests;
     }
 
     @Override
@@ -2022,6 +2075,7 @@ public class LoadTestBuilder extends Builder
         commandLine.add("-linkToResults");
         commandLine.add("yes");
         commandLine.add(getXltResultFolder(build).getRemote());
+        commandLine.add("-Dmonitoring.trackSlowestRequests=true");
 
         // run the report generator
         FilePath workingDirectory = getXltBinFolder(build);
