@@ -45,6 +45,7 @@ import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import com.xceptance.xlt.tools.jenkins.LoadTestBuilder.CONFIG_PLOT_PARAMETER;
 import com.xceptance.xlt.tools.jenkins.LoadTestBuilder.CONFIG_SECTIONS_PARAMETER;
 import com.xceptance.xlt.tools.jenkins.LoadTestBuilder.CONFIG_VALUE_PARAMETER;
+import com.xceptance.xlt.tools.jenkins.logging.LOGGER;
 
 @Extension
 public class XltDescriptor extends BuildStepDescriptor<Builder>
@@ -104,11 +105,11 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
         }
         catch (URISyntaxException e)
         {
-            LoadTestBuilder.LOGGER.error("", e);
+            LOGGER.error("", e);
         }
         catch (IOException e)
         {
-            LoadTestBuilder.LOGGER.error("", e);
+            LOGGER.error("", e);
         }
         return null;
     }
