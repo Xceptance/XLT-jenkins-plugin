@@ -25,8 +25,6 @@ import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.io.StringReader;
 import java.lang.Thread.UncaughtExceptionHandler;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -52,8 +50,6 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.SystemUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -72,6 +68,7 @@ import com.xceptance.xlt.tools.jenkins.Chart.ChartLineValue;
 import com.xceptance.xlt.tools.jenkins.config.option.MarkCriticalOption;
 import com.xceptance.xlt.tools.jenkins.config.option.SummaryReportOption;
 import com.xceptance.xlt.tools.jenkins.config.option.TrendReportOption;
+import com.xceptance.xlt.tools.jenkins.logging.LOGGER;
 
 /**
  * Readout the configuration of XLT in Jenkins, perform load testing and plot build results on project page.
@@ -122,10 +119,6 @@ public class LoadTestBuilder extends Builder
 
     private final int numberOfBuildsForSummaryReport;
 
-    transient public static final String DEFAULT_LOGGER_NAME = "defaultLogger";
-
-    transient public static Logger LOGGER = LogManager.getLogger(DEFAULT_LOGGER_NAME);
-
     transient private static Map<String, String> loggerLookupMap = new HashMap<String, String>();
 
     transient private List<Chart<Integer, Double>> charts = new ArrayList<Chart<Integer, Double>>();
@@ -169,24 +162,6 @@ public class LoadTestBuilder extends Builder
         public static String ARTIFACT_REPORT = "report";
 
         public static String ARTIFACT_RESULT = "results";
-    }
-
-    static
-    {
-        try
-        {
-            File pluginResourceFolder = new File(
-                                                 Jenkins.getInstance().getPlugin(XltDescriptor.PLUGIN_NAME).getWrapper().baseResourceURL.toURI());
-            URI logConfigURI = new File(pluginResourceFolder, "logConfig.xml").toURI();
-            File logFolder = new File(pluginResourceFolder, "logs");
-
-            loggerLookupMap.put("org.xceptance.xlt.jenkins.logFolder", logFolder.getAbsolutePath());
-            LogManager.getContext(LoadTestBuilder.class.getClassLoader(), false, null, logConfigURI, "XLT-LoggerContext");
-        }
-        catch (URISyntaxException e)
-        {
-            e.printStackTrace();
-        }
     }
 
     @DataBoundConstructor
