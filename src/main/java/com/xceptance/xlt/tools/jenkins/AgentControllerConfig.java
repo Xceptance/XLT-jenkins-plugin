@@ -53,7 +53,7 @@ public class AgentControllerConfig
     static
     {
         FRIENDLY_REGION_NAMES.put("ap-northeast-1", "Asia Pacific - Tokyo");
-        FRIENDLY_REGION_NAMES.put("ap-northeast-2", "Asia Pacific - Soul");
+        FRIENDLY_REGION_NAMES.put("ap-northeast-2", "Asia Pacific - Seoul");
         FRIENDLY_REGION_NAMES.put("ap-southeast-1", "Asia Pacific - Singapore");
         FRIENDLY_REGION_NAMES.put("ap-southeast-2", "Asia Pacific - Sydney");
         FRIENDLY_REGION_NAMES.put("eu-central-1", "EU - Frankfurt");
