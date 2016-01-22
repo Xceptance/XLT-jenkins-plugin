@@ -8,10 +8,39 @@ import java.util.TreeMap;
 
 import org.kohsuke.stapler.DataBoundConstructor;
 
-import com.amazonaws.services.ec2.model.InstanceType;
-
 public class AgentControllerConfig
 {
+    /**
+     * Supported EC2 Instance Types.
+     */
+    private enum InstanceType
+    {
+
+        M3Large("m3.large"),
+        M3Xlarge("m3.xlarge"),
+        M32xlarge("m3.2xlarge"),
+        C1Xlarge("c1.xlarge"),
+        C3Large("c3.large"),
+        C3Xlarge("c3.xlarge"),
+        C32xlarge("c3.2xlarge"),
+        C34xlarge("c3.4xlarge"),
+        C38xlarge("c3.8xlarge");
+
+        private final String value;
+
+        private InstanceType(String value)
+        {
+            this.value = value;
+        }
+
+        @Override
+        public String toString()
+        {
+            return this.value;
+        }
+
+    }
+
     public enum TYPE
     {
         embedded, list, file, ec2
@@ -24,6 +53,7 @@ public class AgentControllerConfig
     static
     {
         FRIENDLY_REGION_NAMES.put("ap-northeast-1", "Asia Pacific - Tokyo");
+        FRIENDLY_REGION_NAMES.put("ap-northeast-2", "Asia Pacific - Soul");
         FRIENDLY_REGION_NAMES.put("ap-southeast-1", "Asia Pacific - Singapore");
         FRIENDLY_REGION_NAMES.put("ap-southeast-2", "Asia Pacific - Sydney");
         FRIENDLY_REGION_NAMES.put("eu-central-1", "EU - Frankfurt");
@@ -33,19 +63,6 @@ public class AgentControllerConfig
         FRIENDLY_REGION_NAMES.put("us-west-1", "US West - North California");
         FRIENDLY_REGION_NAMES.put("us-west-2", "US West - Oregon");
     };
-
-    /**
-     * The default AMI IDs, keyed by region name.
-     */
-    private static final Map<String, String> DEFAULT_AMI_IDS = new TreeMap<String, String>();
-    static
-    {
-        DEFAULT_AMI_IDS.put("eu-west-1", "ami-a0d20cd7");
-        DEFAULT_AMI_IDS.put("us-east-1", "ami-b26ab4da");
-        DEFAULT_AMI_IDS.put("us-west-1", "ami-75fcf030");
-        DEFAULT_AMI_IDS.put("us-west-2", "ami-5f6d296f");
-        DEFAULT_AMI_IDS.put("ap-southeast-2", "ami-27aecf1d");
-    }
 
     /**
      * The descriptions of the instance types suitable for load tests, keyed by instance type.
@@ -59,6 +76,7 @@ public class AgentControllerConfig
         INSTANCE_TYPES.put(InstanceType.M3Xlarge.toString(), " 4 cores,  13.0 compute units, 15.00 GB RAM, 64 bit, $0.28...0.41/h");
         INSTANCE_TYPES.put(InstanceType.C1Xlarge.toString(), " 8 cores,  20.0 compute units,  7.00 GB RAM, 64 bit, $0.52...0.66/h");
         INSTANCE_TYPES.put(InstanceType.C32xlarge.toString(), " 8 cores,  28.0 compute units, 15.00 GB RAM, 64 bit, $0.42...0.53/h");
+        INSTANCE_TYPES.put(InstanceType.M32xlarge.toString(), " 8 cores,  26.0 compute units, 30.00 GB RAM, 64 bit, $0.53...0.78/h");
         INSTANCE_TYPES.put(InstanceType.C34xlarge.toString(), "16 cores,  55.0 compute units, 30.00 GB RAM, 64 bit, $0.84...1.06/h");
         INSTANCE_TYPES.put(InstanceType.C38xlarge.toString(), "32 cores, 108.0 compute units, 60.00 GB RAM, 64 bit, $1.68...2.12/h");
     }
@@ -156,17 +174,6 @@ public class AgentControllerConfig
     public static Map<String, String> getAllRegions()
     {
         return FRIENDLY_REGION_NAMES;
-    }
-
-    /**
-     * Returns a default AMI in the given region that includes XLT.
-     * 
-     * @param region
-     * @return XLT AMI ID
-     */
-    public static String getAmiIdByRegion(String region)
-    {
-        return DEFAULT_AMI_IDS.get(region);
     }
 
     /**
