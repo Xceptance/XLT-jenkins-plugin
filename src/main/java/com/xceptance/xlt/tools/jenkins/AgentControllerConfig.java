@@ -8,6 +8,7 @@ import java.util.TreeMap;
 
 import org.kohsuke.stapler.DataBoundConstructor;
 
+
 public class AgentControllerConfig
 {
     /**
@@ -40,7 +41,6 @@ public class AgentControllerConfig
         }
 
     }
-
     public enum TYPE
     {
         embedded, list, file, ec2

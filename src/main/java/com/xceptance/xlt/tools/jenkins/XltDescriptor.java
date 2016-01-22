@@ -65,6 +65,7 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
         load();
     }
 
+    @SuppressWarnings("rawtypes")
     @Override
     public boolean isApplicable(Class<? extends AbstractProject> aClass)
     {
@@ -103,11 +104,7 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
         {
             return getXltConfigFile().readToString();
         }
-        catch (URISyntaxException e)
-        {
-            LOGGER.error("", e);
-        }
-        catch (IOException e)
+        catch (Exception e)
         {
             LOGGER.error("", e);
         }

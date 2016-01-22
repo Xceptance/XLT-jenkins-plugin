@@ -298,7 +298,7 @@ public class LoadTestBuilder extends Builder
         return dateFormat;
     }
 
-    private String[] parseAgentControllerUrlsFromFile(FilePath file) throws IOException
+    private String[] parseAgentControllerUrlsFromFile(FilePath file) throws Exception
     {
         String fileContent = file.readToString();
 
@@ -1009,7 +1009,7 @@ public class LoadTestBuilder extends Builder
     private FilePath getTemporaryXltBaseFolder(AbstractBuild<?, ?> build) throws BuildNodeGoneException
     {
         hudson.model.Node node = getBuildNodeIfOnlineOrFail(build);
-        FilePath base = new FilePath(build.getProject().getRootDir());
+        FilePath base = new FilePath(build.getParent().getRootDir());
         if (node != Jenkins.getInstance())
         {
             base = build.getBuiltOn().getRootPath();
@@ -1161,7 +1161,7 @@ public class LoadTestBuilder extends Builder
         // create the action with all the collected data
         XltRecorderAction recorderAction = new XltRecorderAction(build, failedAlerts, builderID, getBuildReportURL(build), failedTestCases,
                                                                  slowestRequests);
-        build.getActions().add(recorderAction);
+        build.addAction(recorderAction);
 
         // log failed criteria to the build's console
         if (!failedAlerts.isEmpty())
@@ -1199,7 +1199,7 @@ public class LoadTestBuilder extends Builder
             (markCriticalBuildCount > 0 && markCriticalConditionCount > 0 && markCriticalBuildCount >= markCriticalConditionCount))
         {
             List<AbstractBuild<?, ?>> builds = new ArrayList<AbstractBuild<?, ?>>();
-            builds.addAll(getBuilds(currentBuild.getProject(), 0, markCriticalBuildCount));
+            builds.addAll(getBuilds(currentBuild.getParent(), 0, markCriticalBuildCount));
 
             int failedCriterionBuilds = 0;
             for (AbstractBuild<?, ?> eachBuild : builds)
@@ -1715,7 +1715,7 @@ public class LoadTestBuilder extends Builder
 
             if (StringUtils.isNotBlank(agentControllerConfig.getAwsCredentials()))
             {
-                List<AwsCredentials> availableCredentials = CredentialsProvider.lookupCredentials(AwsCredentials.class, build.getProject(),
+                List<AwsCredentials> availableCredentials = CredentialsProvider.lookupCredentials(AwsCredentials.class, build.getParent(),
                                                                                                   ACL.SYSTEM, new DomainRequirement[0]);
 
                 AwsCredentials credentials = CredentialsMatchers.firstOrNull(availableCredentials,
