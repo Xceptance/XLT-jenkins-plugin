@@ -87,7 +87,6 @@
             </plugins>
         </pluginManagement>
     </build>
-
     <dependencies>
         <dependency>
             <groupId>org.json</groupId>
@@ -97,7 +96,7 @@
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>credentials</artifactId>
-            <version>1.22</version>
+            <version>1.18</version>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
