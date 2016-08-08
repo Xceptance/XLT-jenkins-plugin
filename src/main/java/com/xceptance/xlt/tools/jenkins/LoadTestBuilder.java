@@ -10,7 +10,6 @@ import hudson.model.ParameterValue;
 import hudson.model.Result;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
-import hudson.model.ParametersAction;
 import hudson.model.StringParameterValue;
 import hudson.security.ACL;
 import hudson.tasks.Builder;
@@ -1329,33 +1328,14 @@ public class LoadTestBuilder extends Builder
         return true;
     }
 
-    public String getResourcePath(String fileName)
+    public static String getResourcePath(String fileName)
     {
         return "/plugin/" + Jenkins.getInstance().getPlugin(XltDescriptor.PLUGIN_NAME).getWrapper().getShortName() + "/" + fileName;
     }
 
     public void publishBuildParameters(AbstractBuild<?, ?> build)
     {
-        build.addAction(new ParametersAction(new ArrayList<ParameterValue>(buildParameterMap.values()))
-        {
-            @Override
-            public String getDisplayName()
-            {
-                return "XLT Parameters";
-            }
-
-            @Override
-            public String getUrlName()
-            {
-                return "xltParameters";
-            }
-
-            @Override
-            public String getIconFileName()
-            {
-                return getResourcePath("logo_24_24.png");
-            }
-        });
+        build.addAction(new XltParametersAction(new ArrayList<ParameterValue>(buildParameterMap.values())));
     }
 
     private void setBuildParameter(ENVIRONMENT_KEYS parameter, String value)

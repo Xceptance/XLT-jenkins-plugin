@@ -5,8 +5,12 @@
     <parent>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
-        <version>1.580.1</version><!-- which version of Jenkins is this plugin built against? v1.580 was released mid of Sep, 2014. -->
+        <version>2.2</version><!-- Jenkins Plugin Parent Version (Not the Jenkins version to build against)-->
     </parent>
+    
+    <properties>
+    	<jenkins.version>1.580.1</jenkins.version><!-- which version of Jenkins is this plugin built against? v1.580 was released mid of Sep, 2014. -->
+	</properties>
 
     <groupId>com.xceptance</groupId>
     <artifactId>xlt-jenkins-plugin</artifactId>
