@@ -1,8 +1,8 @@
 package com.xceptance.xlt.tools.jenkins;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -181,7 +181,7 @@ public class Chart<X, Y>
 
         private Y yValue;
 
-        private Map<String, String> dataObjectValues = new HashMap<String, String>();
+        private Map<String, String> dataObjectValues = new LinkedHashMap<String, String>();
 
         public ChartLineValue(X xValue, Y yValue)
         {
