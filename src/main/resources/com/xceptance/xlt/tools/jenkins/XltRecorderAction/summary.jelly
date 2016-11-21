@@ -1,112 +1,160 @@
-<j:jelly 
-	xmlns:j="jelly:core" 
-	xmlns:st="jelly:stapler" 
-	xmlns:d="jelly:define" 
-	xmlns:l="/lib/layout" 
-	xmlns:t="/lib/hudson" 
-	xmlns:f="/lib/form" 
-	xmlns:i="jelly:fmt" 
-	xmlns:local="local">
-        
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define"
+    xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form"
+    xmlns:i="jelly:fmt" xmlns:local="local">
+
     <style>
-    	dl{
-    		margin-left:20px;
-    	}
-    	dd{
-    		margin-left:20px;
-    	}
-    </style>    
+        dl{
+        margin-left:20px;
+        }
+        dd{
+        margin-left:20px;
+        }
+    </style>
     <tr>
-	    <td>
-	    	<img src="${resURL}/plugin/xlt-jenkins-plugin/logo.png" width="48"/>
-	    </td>
-	    <td>
-	    	<table>
-				<tr>
-					<td>
-			        	<div>
-			        		<a href="xltResult/report/${it.getBuilderID()}/report/${it.getBuildNumber()}/index.html">XLT Report</a>
-						</div>
-			        </td>
-			    </tr>
-			    <tr>
-					<td>
-						<j:if test="${it.getFailedTestCases().isEmpty() == false}">
-							<div>
-				        		<h3>Failed Test Cases</h3>
-				        		<dl>
-				        			<j:forEach var="testCase" items="${it.getFailedTestCases()}">
-				        				<dt>
-                                            <b>${testCase.getTestCaseName()}
-                                                <j:if test="testCase.getActionName() != null}">
+        <td>
+            <img src="${resURL}/plugin/xlt-jenkins-plugin/logo.png"
+                width="48" />
+        </td>
+        <td>
+            <table>
+                <tr>
+                    <td>
+                        <div>
+                            <a
+                                href="xltResult/report/${it.getBuilderID()}/report/${it.getBuildNumber()}/index.html">XLT Report</a>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <j:if
+                            test="${it.getFailedTestCases().isEmpty() == false}">
+                            <div>
+                                <h3>Failed Test Cases</h3>
+                                <dl>
+                                    <j:forEach var="testCase"
+                                        items="${it.getFailedTestCases()}">
+                                        <dt>
+                                            <b>
+                                                ${testCase.getTestCaseName()}
+                                                <j:if
+                                                    test="testCase.getActionName() != null}">
                                                     ${testCase.getActionName()}
                                                 </j:if>
                                             </b>
-                                        </dt>				        					
-	        							<dd>${testCase.getMessage()}</dd>
-				        			</j:forEach> 
-				        		</dl>
-							</div>
-						</j:if>
-                        <j:if test="${it.getFailedAlerts().isEmpty() == false}">
-                            <div>
-                                <h3>Failed Conditions</h3>
-                                <dl>
-                                    <j:forEach var="eachResult" items="${it.getFailedAlerts()}">
-                                        <dt><b>${eachResult.getMessage()}</b></dt>                                          
-                                        <j:if test="${eachResult.getCriterionID() != null}">
-                                            <dd>Criterion: ${eachResult.getCriterionID()}</dd>
-                                        </j:if>
-                                        <j:if test="${eachResult.getValue() != null}">
-                                            <dd>Value: ${eachResult.getValue()}</dd>
-                                        </j:if>
-                                        <j:if test="${eachResult.getCondition() != null}">
-                                            <dd>Condition: ${eachResult.getCondition()}</dd>
-                                        </j:if>
-                                        <j:if test="${eachResult.getXPath() != null}">
-                                            <dd>XPath: ${eachResult.getXPath()}</dd>
-                                        </j:if>                                             
-                                        <j:if test="${eachResult.getExceptionMessage() != null}">
-                                            <dd>Error: ${eachResult.setExceptionMessage()}</dd>
-                                        </j:if>
-                                        <j:if test="${eachResult.getCauseMessage() != null}">
-                                            <dd>Cause: ${eachResult.getCauseMessage()}</dd>
-                                        </j:if>
-                                    </j:forEach> 
+                                        </dt>
+                                        <dd>${testCase.getMessage()}
+                                        </dd>
+                                    </j:forEach>
                                 </dl>
                             </div>
                         </j:if>
-						<j:if test="${it.getErrorAlerts().isEmpty() == false}">
-							<div>
-				        		<h3>Errors</h3>
-				        		<dl>
-				        			<j:forEach var="eachResult" items="${it.getErrorAlerts()}">
-				        				<dt><b>${eachResult.getMessage()}</b></dt>				        					
-										<j:if test="${eachResult.getCriterionID() != null}">
-		        							<dd>Criterion: ${eachResult.getCriterionID()}</dd>
-		        						</j:if>
-										<j:if test="${eachResult.getValue() != null}">
-		        							<dd>Value: ${eachResult.getValue()}</dd>
-		        						</j:if>
-		        						<j:if test="${eachResult.getCondition() != null}">
-		        							<dd>Condition: ${eachResult.getCondition()}</dd>
-		        						</j:if>
-		        						<j:if test="${eachResult.getXPath() != null}">
-		        							<dd>XPath: ${eachResult.getXPath()}</dd>
-		        						</j:if>				        						
-		        						<j:if test="${eachResult.getExceptionMessage() != null}">
-		        							<dd>Error: ${eachResult.setExceptionMessage()}</dd>
-		        						</j:if>
-		        						<j:if test="${eachResult.getCauseMessage() != null}">
-		        							<dd>Cause: ${eachResult.getCauseMessage()}</dd>
-		        						</j:if>
-				        			</j:forEach> 
-				        		</dl>
-							</div>
-						</j:if>				        		
-			    	</td>
-			    </tr>
-	    	</table>
-	    </td>
+                        <j:if
+                            test="${it.getFailedAlerts().isEmpty() == false}">
+                            <div>
+                                <h3>Failed Conditions</h3>
+                                <dl>
+                                    <j:forEach var="eachResult"
+                                        items="${it.getFailedAlerts()}">
+                                        <dt>
+                                            <b>${eachResult.getMessage()}
+                                            </b>
+                                        </dt>
+                                        <j:if
+                                            test="${eachResult.getCriterionID() != null}">
+                                            <dd>Criterion:
+                                                ${eachResult.getCriterionID()}
+                                            </dd>
+                                        </j:if>
+                                        <j:if
+                                            test="${eachResult.getValue() != null}">
+                                            <dd>Value:
+                                                ${eachResult.getValue()}
+                                            </dd>
+                                        </j:if>
+                                        <j:if
+                                            test="${eachResult.getCondition() != null}">
+                                            <dd>Condition:
+                                                ${eachResult.getCondition()}
+                                            </dd>
+                                        </j:if>
+                                        <j:if
+                                            test="${eachResult.getXPath() != null}">
+                                            <dd>XPath:
+                                                ${eachResult.getXPath()}
+                                            </dd>
+                                        </j:if>
+                                        <j:if
+                                            test="${eachResult.getExceptionMessage() != null}">
+                                            <dd>Error:
+                                                ${eachResult.setExceptionMessage()}
+                                            </dd>
+                                        </j:if>
+                                        <j:if
+                                            test="${eachResult.getCauseMessage() != null}">
+                                            <dd>Cause:
+                                                ${eachResult.getCauseMessage()}
+                                            </dd>
+                                        </j:if>
+                                    </j:forEach>
+                                </dl>
+                            </div>
+                        </j:if>
+                        <j:if
+                            test="${it.getErrorAlerts().isEmpty() == false}">
+                            <div>
+                                <h3>Errors</h3>
+                                <dl>
+                                    <j:forEach var="eachResult"
+                                        items="${it.getErrorAlerts()}">
+                                        <dt>
+                                            <b>${eachResult.getMessage()}
+                                            </b>
+                                        </dt>
+                                        <j:if
+                                            test="${eachResult.getCriterionID() != null}">
+                                            <dd>Criterion:
+                                                ${eachResult.getCriterionID()}
+                                            </dd>
+                                        </j:if>
+                                        <j:if
+                                            test="${eachResult.getValue() != null}">
+                                            <dd>Value:
+                                                ${eachResult.getValue()}
+                                            </dd>
+                                        </j:if>
+                                        <j:if
+                                            test="${eachResult.getCondition() != null}">
+                                            <dd>Condition:
+                                                ${eachResult.getCondition()}
+                                            </dd>
+                                        </j:if>
+                                        <j:if
+                                            test="${eachResult.getXPath() != null}">
+                                            <dd>XPath:
+                                                ${eachResult.getXPath()}
+                                            </dd>
+                                        </j:if>
+                                        <j:if
+                                            test="${eachResult.getExceptionMessage() != null}">
+                                            <dd>Error:
+                                                ${eachResult.setExceptionMessage()}
+                                            </dd>
+                                        </j:if>
+                                        <j:if
+                                            test="${eachResult.getCauseMessage() != null}">
+                                            <dd>Cause:
+                                                ${eachResult.getCauseMessage()}
+                                            </dd>
+                                        </j:if>
+                                    </j:forEach>
+                                </dl>
+                            </div>
+                        </j:if>
+                    </td>
+                </tr>
+            </table>
+        </td>
     </tr>
 </j:jelly>

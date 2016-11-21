@@ -5,8 +5,12 @@
     <parent>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
-        <version>1.580.1</version><!-- which version of Jenkins is this plugin built against? v1.580 was released mid of Sep, 2014. -->
+        <version>2.11</version><!-- Jenkins Plugin Parent Version (Not the Jenkins version to build against) -->
     </parent>
+
+    <properties>
+        <jenkins.version>1.625.3</jenkins.version><!-- which version of Jenkins is this plugin built against? -->
+    </properties>
 
     <groupId>com.xceptance</groupId>
     <artifactId>xlt-jenkins-plugin</artifactId>
@@ -35,12 +39,12 @@
 
     <build>
         <plugins>
+            <!-- Disable the execution of Findbugs as configured in the parent POM. -->
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>findbugs-maven-plugin</artifactId>
                 <configuration>
-                    <source>1.6</source>
-                    <target>1.6</target>
+                    <skip>true</skip>
                 </configuration>
             </plugin>
         </plugins>
@@ -78,6 +82,32 @@
                                     </pluginExecutionFilter>
                                     <action>
                                         <ignore/>
+                                    </action>
+                                </pluginExecution>
+                                <pluginExecution>
+                                    <pluginExecutionFilter>
+                                        <groupId>org.apache.maven.plugins</groupId>
+                                        <artifactId>maven-javadoc-plugin</artifactId>
+                                        <versionRange>[2.10.1,)</versionRange>
+                                        <goals>
+                                            <goal>javadoc</goal>
+                                        </goals>
+                                    </pluginExecutionFilter>
+                                    <action>
+                                        <ignore></ignore>
+                                    </action>
+                                </pluginExecution>
+                                <pluginExecution>
+                                    <pluginExecutionFilter>
+                                        <groupId>org.jacoco</groupId>
+                                        <artifactId>jacoco-maven-plugin</artifactId>
+                                        <versionRange>[0.7.2.201409121644,)</versionRange>
+                                        <goals>
+                                            <goal>prepare-agent</goal>
+                                        </goals>
+                                    </pluginExecutionFilter>
+                                    <action>
+                                        <ignore></ignore>
                                     </action>
                                 </pluginExecution>
                             </pluginExecutions>

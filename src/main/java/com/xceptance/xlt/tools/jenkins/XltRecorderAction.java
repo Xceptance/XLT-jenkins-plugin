@@ -1,6 +1,8 @@
 package com.xceptance.xlt.tools.jenkins;
 
-import java.io.File;
+import hudson.model.Action;
+import hudson.model.AbstractBuild;
+
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.util.ArrayList;
@@ -10,10 +12,6 @@ import javax.servlet.ServletException;
 
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
-
-import hudson.FilePath;
-import hudson.model.Action;
-import hudson.model.AbstractBuild;
 
 public class XltRecorderAction implements Action
 {
@@ -129,8 +127,6 @@ public class XltRecorderAction implements Action
     public void doReport(StaplerRequest request, StaplerResponse response)
         throws MalformedURLException, ServletException, IOException, InterruptedException
     {
-        response.serveFile(request,
-                           new FilePath(new File(new File(build.getArtifactsDir().getAbsolutePath()), request.getRestOfPath())).toURI()
-                                                                                                                               .toURL());
+        response.serveFile(request, LoadTestBuilder.getArtifact(build, request.getRestOfPath()).toURI().toURL());
     }
 }

@@ -10,7 +10,6 @@ import hudson.model.ParameterValue;
 import hudson.model.Result;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
-import hudson.model.ParametersAction;
 import hudson.model.StringParameterValue;
 import hudson.security.ACL;
 import hudson.tasks.Builder;
@@ -25,6 +24,7 @@ import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.io.StringReader;
 import java.lang.Thread.UncaughtExceptionHandler;
+import java.net.URI;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -954,6 +954,16 @@ public class LoadTestBuilder extends Builder
         return null;
     }
 
+    private static URI getArtifactsDir(AbstractBuild<?, ?> build)
+    {
+        return build.getArtifactManager().root().toURI();
+    }
+
+    public static FilePath getArtifact(AbstractBuild<?, ?> build, String artifactPath)
+    {
+        return new FilePath(new File(new File(getArtifactsDir(build)), artifactPath));
+    }
+
     private FilePath getBuildResultConfigFolder(AbstractBuild<?, ?> build)
     {
         return new FilePath(getBuildResultFolder(build), "config");
@@ -961,13 +971,12 @@ public class LoadTestBuilder extends Builder
 
     private FilePath getBuildLogsFolder(AbstractBuild<?, ?> build)
     {
-        return new FilePath(new FilePath(build.getArtifactsDir()), builderID + "/log");
+        return getArtifact(build, builderID + "/log");
     }
 
     private FilePath getBuildReportFolder(AbstractBuild<?, ?> build)
     {
-        return new FilePath(new FilePath(build.getArtifactsDir()), builderID + "/" + FOLDER_NAMES.ARTIFACT_REPORT + "/" +
-                                                                   Integer.toString(build.getNumber()));
+        return getArtifact(build, builderID + "/" + FOLDER_NAMES.ARTIFACT_REPORT + "/" + Integer.toString(build.getNumber()));
     }
 
     private String getBuildReportURL(AbstractBuild<?, ?> build)
@@ -983,7 +992,7 @@ public class LoadTestBuilder extends Builder
 
     private FilePath getBuildResultFolder(AbstractBuild<?, ?> build)
     {
-        return new FilePath(new FilePath(build.getArtifactsDir()), builderID + "/" + FOLDER_NAMES.ARTIFACT_RESULT);
+        return getArtifact(build, builderID + "/" + FOLDER_NAMES.ARTIFACT_RESULT);
     }
 
     private FilePath getTrendReportFolder(AbstractProject<?, ?> project)
@@ -1329,33 +1338,14 @@ public class LoadTestBuilder extends Builder
         return true;
     }
 
-    public String getResourcePath(String fileName)
+    public static String getResourcePath(String fileName)
     {
         return "/plugin/" + Jenkins.getInstance().getPlugin(XltDescriptor.PLUGIN_NAME).getWrapper().getShortName() + "/" + fileName;
     }
 
     public void publishBuildParameters(AbstractBuild<?, ?> build)
     {
-        build.addAction(new ParametersAction(new ArrayList<ParameterValue>(buildParameterMap.values()))
-        {
-            @Override
-            public String getDisplayName()
-            {
-                return "XLT Parameters";
-            }
-
-            @Override
-            public String getUrlName()
-            {
-                return "xltParameters";
-            }
-
-            @Override
-            public String getIconFileName()
-            {
-                return getResourcePath("logo_24_24.png");
-            }
-        });
+        build.addAction(new XltParametersAction(new ArrayList<ParameterValue>(buildParameterMap.values())));
     }
 
     private void setBuildParameter(ENVIRONMENT_KEYS parameter, String value)

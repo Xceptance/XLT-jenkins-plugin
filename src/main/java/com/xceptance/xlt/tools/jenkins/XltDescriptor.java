@@ -12,7 +12,6 @@ import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 
 import java.io.File;
-import java.io.IOException;
 import java.net.URISyntaxException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
