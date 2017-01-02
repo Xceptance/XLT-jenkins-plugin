@@ -69,8 +69,10 @@ public class AgentControllerConfig
         FRIENDLY_REGION_NAMES.put("ap-south-1", "Asia Pacific - Mumbai");
         FRIENDLY_REGION_NAMES.put("ap-southeast-1", "Asia Pacific - Singapore");
         FRIENDLY_REGION_NAMES.put("ap-southeast-2", "Asia Pacific - Sydney");
+        FRIENDLY_REGION_NAMES.put("ca-central-1", "Canada - Central");
         FRIENDLY_REGION_NAMES.put("eu-central-1", "EU - Frankfurt");
         FRIENDLY_REGION_NAMES.put("eu-west-1", "EU - Ireland");
+        FRIENDLY_REGION_NAMES.put("eu-west-2", "EU - London");
         FRIENDLY_REGION_NAMES.put("sa-east-1", "South America - Sao Paulo");
         FRIENDLY_REGION_NAMES.put("us-east-1", "US East - North Virginia");
         FRIENDLY_REGION_NAMES.put("us-east-2", "US East - Ohio");
