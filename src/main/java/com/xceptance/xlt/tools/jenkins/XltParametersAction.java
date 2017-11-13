@@ -1,19 +1,19 @@
 package com.xceptance.xlt.tools.jenkins;
 
-import hudson.model.ParameterValue;
-import hudson.model.ParametersAction;
-
-import java.util.Collections;
 import java.util.List;
 
-public class XltParametersAction extends ParametersAction
+import hudson.model.ParameterValue;
+import hudson.model.ParametersAction;
+import hudson.model.Run;
+import jenkins.model.RunAction2;
+
+public class XltParametersAction extends ParametersAction implements RunAction2
 {
-    private final List<ParameterValue> parameters;
+    private transient Run<?,?> run;
 
     public XltParametersAction(List<ParameterValue> parameters)
     {
         super(parameters);
-        this.parameters = parameters;
     }
 
     @Override
@@ -34,10 +34,21 @@ public class XltParametersAction extends ParametersAction
         return LoadTestBuilder.getResourcePath("logo_24_24.png");
     }
 
-    @Override
-    public List<ParameterValue> getParameters()
-    {
-        return Collections.unmodifiableList(parameters);
-    }
 
+    @Override
+    public void onAttached(Run<?, ?> r)
+    {
+        run = r;
+    }
+    
+    @Override
+    public void onLoad(Run<?, ?> r)
+    {
+        run = r;
+    }
+    
+    public Run<?,?> getRun()
+    {
+        return run;
+    }
 }

@@ -6,18 +6,17 @@ import java.util.List;
 import com.xceptance.xlt.tools.jenkins.LoadTestBuilder.XLTBuilderAction;
 
 import hudson.Extension;
-import hudson.model.AbstractBuild;
-import hudson.model.AbstractProject;
+import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.model.listeners.RunListener;
 
 @Extension
-public class XltRunListener extends RunListener<AbstractBuild<?, ?>>
+public class XltRunListener extends RunListener<Run<?, ?>>
 {
-    private List<LoadTestBuilder> getLoadTestBuilder(AbstractBuild<?, ?> r)
+    private List<LoadTestBuilder> getLoadTestBuilder(Run<?, ?> r)
     {
-        AbstractProject<?, ?> project = r.getProject();
-        List<XLTBuilderAction> xltActions = project.getActions(LoadTestBuilder.XLTBuilderAction.class);
+
+        List<XLTBuilderAction> xltActions =  r.getParent().getActions(LoadTestBuilder.XLTBuilderAction.class);
         List<LoadTestBuilder> builders = new ArrayList<LoadTestBuilder>();
         for (XLTBuilderAction eachAction : xltActions)
         {
@@ -26,24 +25,21 @@ public class XltRunListener extends RunListener<AbstractBuild<?, ?>>
         return builders;
     }
 
+    
+    
     @Override
-    public void onDeleted(AbstractBuild<?, ?> r)
+    public void onDeleted(Run<?,?> r)
     {
         List<LoadTestBuilder> builders = getLoadTestBuilder(r);
         for (LoadTestBuilder eachBuilder : builders)
         {
-            eachBuilder.removeBuildFromCharts(r.getProject(), r);
+            eachBuilder.removeBuildFromCharts(r);
         }
     }
 
-    @Override
-    public void onStarted(AbstractBuild<?, ?> r, TaskListener listener)
-    {
-
-    }
 
     @Override
-    public void onCompleted(AbstractBuild<?, ?> r, TaskListener listener)
+    public void onCompleted(Run<?, ?> r, TaskListener listener)
     {
         List<LoadTestBuilder> builders = getLoadTestBuilder(r);
         for (LoadTestBuilder eachBuilder : builders)

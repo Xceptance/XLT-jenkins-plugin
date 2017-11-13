@@ -8,6 +8,8 @@ import hudson.model.User;
 import hudson.util.FormValidation;
 import hudson.util.Secret;
 
+import javax.annotation.CheckForNull;
+
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
@@ -21,7 +23,6 @@ import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
 import com.cloudbees.plugins.credentials.domains.Domain;
 import com.cloudbees.plugins.credentials.impl.BaseStandardCredentials;
 
-import edu.umd.cs.findbugs.annotations.CheckForNull;
 
 public class AwsCredentials extends BaseStandardCredentials implements StandardUsernameCredentials
 {

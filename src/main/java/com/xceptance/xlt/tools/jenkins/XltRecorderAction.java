@@ -1,42 +1,42 @@
 package com.xceptance.xlt.tools.jenkins;
 
-import hudson.model.Action;
-import hudson.model.AbstractBuild;
-
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import javax.servlet.ServletException;
 
+import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
 
-public class XltRecorderAction implements Action
+import hudson.model.Run;
+import jenkins.model.RunAction2;
+
+public class XltRecorderAction implements RunAction2
 {
-    public String reportPath;
+    private transient Run<?, ?> run;
 
-    public AbstractBuild<?, ?> build;
+    private final List<CriterionResult> failedAlerts;
 
-    private List<CriterionResult> failedAlerts;
+    private final List<TestCaseInfo> failedTestCases;
 
-    private List<TestCaseInfo> failedTestCases;
+    private final List<SlowRequestInfo> slowestRequests;
 
-    private List<SlowRequestInfo> slowestRequests;
+    private final String builderID;
 
-    private String builderID;
-
-    private String reportURL;
+    private final String reportURL;
 
     public static String URL_NAME = "xltResult";
 
     public static String RELATIVE_REPORT_URL = URL_NAME + "/report/";
 
-    public XltRecorderAction(AbstractBuild<?, ?> build, List<CriterionResult> failedAlerts, String builderID, String reportURL,
-                             List<TestCaseInfo> failedTestCases, List<SlowRequestInfo> slowestRequests)
+    @DataBoundConstructor
+    public XltRecorderAction(final String builderID, final String reportURL, final List<CriterionResult> failedAlerts,
+                             final List<TestCaseInfo> failedTestCases, final List<SlowRequestInfo> slowestRequests)
     {
-        this.build = build;
         this.failedAlerts = failedAlerts;
         this.builderID = builderID;
         this.reportURL = reportURL;
@@ -102,31 +102,38 @@ public class XltRecorderAction implements Action
 
     public List<TestCaseInfo> getFailedTestCases()
     {
-        return failedTestCases;
+        return Collections.unmodifiableList(failedTestCases);
     }
 
     public List<SlowRequestInfo> getSlowestRequests()
     {
-        return slowestRequests;
-    }
-
-    public String getBuildNumber()
-    {
-        return String.valueOf(build.number);
+        return Collections.unmodifiableList(slowestRequests);
     }
 
     public String getConditionMessage()
     {
-        String message = CriterionResult.getFormattedConditionMessage("Failed Conditions", getFailedAlerts());
-        message += "\n";
-        message += CriterionResult.getFormattedConditionMessage("Errors", getErrorAlerts());
+        final StringBuilder sb = new StringBuilder();
+        sb.append(CriterionResult.getFormattedConditionMessage("Failed Conditions", getFailedAlerts())).append('\n')
+          .append(CriterionResult.getFormattedConditionMessage("Errors", getErrorAlerts()));
 
-        return message;
+        return sb.toString();
     }
 
     public void doReport(StaplerRequest request, StaplerResponse response)
         throws MalformedURLException, ServletException, IOException, InterruptedException
     {
-        response.serveFile(request, LoadTestBuilder.getArtifact(build, request.getRestOfPath()).toURI().toURL());
+        response.serveFile(request, LoadTestBuilder.getArtifact(run, request.getRestOfPath()).toURI().toURL());
+    }
+
+    @Override
+    public void onAttached(Run<?, ?> r)
+    {
+        this.run = r;
+    }
+
+    @Override
+    public void onLoad(Run<?, ?> r)
+    {
+        onAttached(r);
     }
 }

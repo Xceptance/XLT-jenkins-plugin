@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
+import javax.annotation.Nonnull;
+
 import org.kohsuke.stapler.DataBoundConstructor;
 
 
@@ -160,11 +162,11 @@ public class AgentControllerConfig
     }
 
     @DataBoundConstructor
-    public AgentControllerConfig(String value, String urlList, String urlFile, String region, String amiId, String ec2Type,
+    public AgentControllerConfig(String type, String urlList, String urlFile, String region, String amiId, String ec2Type,
                                  String countMachines, String tagName, String awsCredentials, List<AWSSecurityGroup> securityGroups,
                                  String awsUserData)
     {
-        this.type = value;
+        this.type = type;
         this.urlList = urlList;
         this.urlFile = urlFile;
         this.region = region;
@@ -215,6 +217,12 @@ public class AgentControllerConfig
     public String getAwsUserData()
     {
         return awsUserData;
+    }
+    
+    @Nonnull
+    public String getType()
+    {
+        return type;
     }
 
     /**

@@ -1,9 +1,5 @@
 package com.xceptance.xlt.tools.jenkins;
 
-import hudson.FilePath;
-import hudson.model.Action;
-import hudson.model.AbstractProject;
-
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -14,7 +10,12 @@ import javax.servlet.ServletException;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
 
-public class XltChartAction implements Action
+import hudson.FilePath;
+import hudson.model.AbstractProject;
+import hudson.model.Run;
+import jenkins.model.RunAction2;
+
+public class XltChartAction implements RunAction2
 {
     private List<Chart<Integer, Double>> charts;
 
@@ -32,12 +33,11 @@ public class XltChartAction implements Action
 
     private boolean isSummaryReportEnabled;
 
-    private AbstractProject<?, ?> project;
+    private transient Run<?, ?> run;
 
-    public XltChartAction(AbstractProject<?, ?> project, List<Chart<Integer, Double>> charts, int plotWidth, int plotHeight, String title,
-                          String builderID, boolean isPlotVertical, boolean isTrendReportEnabled, boolean isSummaryReportEnabled)
+    public XltChartAction(List<Chart<Integer, Double>> charts, int plotWidth, int plotHeight, String title, String builderID,
+                          boolean isPlotVertical, boolean isTrendReportEnabled, boolean isSummaryReportEnabled)
     {
-        this.project = project;
         this.charts = charts;
         this.plotWidth = plotWidth;
         this.plotHeight = plotHeight;
@@ -68,11 +68,6 @@ public class XltChartAction implements Action
         return "xltChart" + builderID;
     }
 
-    public AbstractProject<?, ?> getProject()
-    {
-        return project;
-    }
-
     public String getTitle()
     {
         return title;
@@ -83,7 +78,7 @@ public class XltChartAction implements Action
     {
         return charts;
     }
-    
+
     public void setCharts(List<Chart<Integer, Double>> charts)
     {
         this.charts = charts;
@@ -116,8 +111,14 @@ public class XltChartAction implements Action
 
     public boolean isTrendReportAvailable() throws IOException, InterruptedException
     {
-        FilePath trendReportDirectory = new FilePath(new File(project.getRootDir() + "/trendreport/" + builderID));
-        if ( isTrendReportEnabled && trendReportDirectory.isDirectory() && trendReportDirectory.list().size() != 0)
+
+        FilePath trendReportDirectory = null;
+        if (run != null)
+        {
+            trendReportDirectory = new FilePath(new File(new File(run.getParent().getRootDir(), "trendreport"), builderID));
+        }
+        if (isTrendReportEnabled && trendReportDirectory != null && trendReportDirectory.isDirectory() &&
+            trendReportDirectory.list().size() != 0)
         {
             return true;
         }
@@ -127,20 +128,45 @@ public class XltChartAction implements Action
         }
     }
 
-    public void doTrendReport(StaplerRequest req, StaplerResponse rsp) throws MalformedURLException, ServletException, IOException, InterruptedException
+    public void doTrendReport(StaplerRequest req, StaplerResponse rsp)
+        throws MalformedURLException, ServletException, IOException, InterruptedException
     {
-        rsp.serveFile(req, new FilePath(new File(new File(project.getRootDir() + "/trendreport", builderID), req.getRestOfPath())).toURI().toURL());
+        rsp.serveFile(req, new FilePath(new File(new File(new File(run.getParent().getRootDir(), "trendreport"), builderID),
+                                                 req.getRestOfPath())).toURI().toURL());
     }
 
     public boolean isSummaryReportAvailable() throws IOException, InterruptedException
     {
-        FilePath summaryReport = new FilePath(new File(new File(project.getRootDir(), "summaryReport"), builderID));
-        return isSummaryReportEnabled && summaryReport.exists() && summaryReport.isDirectory() && summaryReport.list().size() > 0;
+        FilePath summaryReport = null;
+        if (run != null)
+        {
+            summaryReport = new FilePath(new File(new File(run.getParent().getRootDir(), "summaryReport"), builderID));
+        }
+        return isSummaryReportEnabled && summaryReport != null && summaryReport.exists() && summaryReport.isDirectory() &&
+               summaryReport.list().size() > 0;
     }
 
-    public void doSummaryReport(StaplerRequest req, StaplerResponse rsp) throws MalformedURLException, ServletException, IOException, InterruptedException
+    public void doSummaryReport(StaplerRequest req, StaplerResponse rsp)
+        throws MalformedURLException, ServletException, IOException, InterruptedException
     {
-        rsp.serveFile(req, new FilePath(new File( new File(new File(project.getRootDir(), "summaryReport"), builderID), req.getRestOfPath())).toURI()
-                                                                                                                              .toURL());
+        rsp.serveFile(req, new FilePath(new File(new File(new File(run.getParent().getRootDir(), "summaryReport"), builderID),
+                                                 req.getRestOfPath())).toURI().toURL());
+    }
+
+    @Override
+    public void onLoad(Run<?, ?> r)
+    {
+        run = r;
+    }
+
+    @Override
+    public void onAttached(Run<?, ?> r)
+    {
+        run = r;
+    }
+
+    public Run<?, ?> getRun()
+    {
+        return run;
     }
 }

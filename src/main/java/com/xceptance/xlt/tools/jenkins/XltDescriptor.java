@@ -1,16 +1,5 @@
 package com.xceptance.xlt.tools.jenkins;
 
-import hudson.Extension;
-import hudson.FilePath;
-import hudson.Util;
-import hudson.model.Item;
-import hudson.model.AbstractProject;
-import hudson.security.ACL;
-import hudson.tasks.BuildStepDescriptor;
-import hudson.tasks.Builder;
-import hudson.util.FormValidation;
-import hudson.util.ListBoxModel;
-
 import java.io.File;
 import java.net.URISyntaxException;
 import java.text.SimpleDateFormat;
@@ -28,25 +17,35 @@ import java.util.regex.Pattern;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 
-import jenkins.model.Jenkins;
-
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.jenkinsci.Symbol;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.QueryParameter;
 
-import com.cloudbees.plugins.credentials.CredentialsProvider;
+import com.cloudbees.plugins.credentials.CredentialsMatchers;
 import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
-import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import com.xceptance.xlt.tools.jenkins.LoadTestBuilder.CONFIG_PLOT_PARAMETER;
 import com.xceptance.xlt.tools.jenkins.LoadTestBuilder.CONFIG_SECTIONS_PARAMETER;
 import com.xceptance.xlt.tools.jenkins.LoadTestBuilder.CONFIG_VALUE_PARAMETER;
 import com.xceptance.xlt.tools.jenkins.logging.LOGGER;
 
+import hudson.Extension;
+import hudson.FilePath;
+import hudson.Util;
+import hudson.model.AbstractProject;
+import hudson.model.Item;
+import hudson.tasks.BuildStepDescriptor;
+import hudson.tasks.Builder;
+import hudson.util.FormValidation;
+import hudson.util.ListBoxModel;
+import jenkins.model.Jenkins;
+
 @Extension
+@Symbol("xlt")
 public class XltDescriptor extends BuildStepDescriptor<Builder>
 {
     /**
@@ -636,8 +635,6 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
 
     public ListBoxModel doFillAwsCredentialsItems(@AncestorInPath Item project)
     {
-        return new StandardListBoxModel().withEmptySelection().withAll(CredentialsProvider.lookupCredentials(AwsCredentials.class, project,
-                                                                                                             ACL.SYSTEM,
-                                                                                                             new DomainRequirement[0]));
+        return new StandardListBoxModel().includeEmptyValue().includeMatching(project, AwsCredentials.class, null, CredentialsMatchers.always());
     }
 }

@@ -1,49 +1,30 @@
 package com.xceptance.xlt.tools.jenkins;
 
-import hudson.FilePath;
-import hudson.Launcher;
-import hudson.Launcher.ProcStarter;
-import hudson.model.Action;
-import hudson.model.BuildListener;
-import hudson.model.InvisibleAction;
-import hudson.model.ParameterValue;
-import hudson.model.Result;
-import hudson.model.AbstractBuild;
-import hudson.model.AbstractProject;
-import hudson.model.StringParameterValue;
-import hudson.security.ACL;
-import hudson.tasks.Builder;
-import hudson.util.Secret;
-import hudson.util.StreamTaskListener;
-
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
-import java.io.PrintStream;
 import java.io.StringReader;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.net.URI;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import javax.annotation.CheckForNull;
+import javax.annotation.Nonnull;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
-
-import jenkins.model.Jenkins;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
@@ -54,6 +35,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -70,56 +52,78 @@ import com.xceptance.xlt.tools.jenkins.config.option.SummaryReportOption;
 import com.xceptance.xlt.tools.jenkins.config.option.TrendReportOption;
 import com.xceptance.xlt.tools.jenkins.logging.LOGGER;
 
+import hudson.FilePath;
+import hudson.Launcher;
+import hudson.Launcher.ProcStarter;
+import hudson.Util;
+import hudson.model.Computer;
+import hudson.model.InvisibleAction;
+import hudson.model.Job;
+import hudson.model.ParameterValue;
+import hudson.model.Result;
+import hudson.model.Run;
+import hudson.model.StringParameterValue;
+import hudson.model.TaskListener;
+import hudson.security.ACL;
+import hudson.tasks.Builder;
+import hudson.util.Secret;
+import jenkins.model.Jenkins;
+import jenkins.tasks.SimpleBuildStep;
+
 /**
  * Readout the configuration of XLT in Jenkins, perform load testing and plot build results on project page.
  * 
- * @author Michael Aleithe, Randolph Straub
+ * @author Randolph Straub
  */
-public class LoadTestBuilder extends Builder
+public class LoadTestBuilder extends Builder implements SimpleBuildStep
 {
-    private final String testPropertiesFile;
+    @CheckForNull
+    private String testPropertiesFile;
 
+    @Nonnull
     private AgentControllerConfig agentControllerConfig;
 
-    private int initialResponseTimeout;
+    @Nonnull
+    private Integer initialResponseTimeout;
 
-    private final String xltConfig;
+    @Nonnull
+    private String xltConfig;
 
+    @CheckForNull
     private final String xltTemplateDir;
 
-    private final String pathToTestSuite;
+    @CheckForNull
+    private String pathToTestSuite;
 
     transient private JSONObject config = new JSONObject();
 
-    private String timeFormatPattern = null;
+    @CheckForNull
+    private String timeFormatPattern;
 
     transient private SimpleDateFormat dateFormat;
 
     private boolean showBuildNumber;
 
-    private final int plotWidth;
+    private int plotWidth;
 
-    private final int plotHeight;
+    private int plotHeight;
 
-    private final String plotTitle;
+    @Nonnull
+    private String plotTitle;
 
-    private final String builderID;
+    @Nonnull
+    private String builderID;
 
-    private final boolean isPlotVertical;
+    private boolean plotVertical;
 
+    @CheckForNull
     private TrendReportOption trendReportOption;
 
-    private final boolean createTrendReport;
-
-    private final int numberOfBuildsForTrendReport;
-
+    @CheckForNull
     private SummaryReportOption summaryReportOption;
 
-    private final boolean createSummaryReport;
-
-    private final int numberOfBuildsForSummaryReport;
-
-    transient private static Map<String, String> loggerLookupMap = new HashMap<String, String>();
+    @CheckForNull
+    private MarkCriticalOption markCriticalOption;
 
     transient private List<Chart<Integer, Double>> charts = new ArrayList<Chart<Integer, Double>>();
 
@@ -127,34 +131,40 @@ public class LoadTestBuilder extends Builder
 
     transient private XltChartAction chartAction;
 
-    private MarkCriticalOption markCriticalOption;
-
-    private boolean markCriticalEnabled;
-
-    private int markCriticalConditionCount;
-
-    private int markCriticalBuildCount;
-
     private transient Map<ENVIRONMENT_KEYS, ParameterValue> buildParameterMap;
 
     public enum CONFIG_VALUE_PARAMETER
     {
-        id, xPath, condition, plotID, name
+     id,
+     xPath,
+     condition,
+     plotID,
+     name
     };
 
     public enum CONFIG_PLOT_PARAMETER
     {
-        id, title, buildCount, enabled, showNoValues
+     id,
+     title,
+     buildCount,
+     enabled,
+     showNoValues
     };
 
     public enum CONFIG_SECTIONS_PARAMETER
     {
-        values, plots
+     values,
+     plots
     };
 
     public enum ENVIRONMENT_KEYS
     {
-        XLT_RUN_FAILED, XLT_CONDITION_CRITICAL, XLT_CONDITION_FAILED, XLT_CONDITION_ERROR, XLT_REPORT_URL, XLT_CONDITION_MESSAGE
+     XLT_RUN_FAILED,
+     XLT_CONDITION_CRITICAL,
+     XLT_CONDITION_FAILED,
+     XLT_CONDITION_ERROR,
+     XLT_REPORT_URL,
+     XLT_CONDITION_MESSAGE
     };
 
     public static class FOLDER_NAMES
@@ -165,13 +175,10 @@ public class LoadTestBuilder extends Builder
     }
 
     @DataBoundConstructor
-    public LoadTestBuilder(String xltTemplateDir, String pathToTestSuite, String testPropertiesFile, String xltConfig, int plotWidth,
-                           int plotHeight, String plotTitle, String builderID, boolean isPlotVertical, TrendReportOption trendReportOption,
-                           SummaryReportOption summaryReportOption, int numberOfBuildsForSummaryReport,
-                           AgentControllerConfig agentControllerConfig, String timeFormatPattern, boolean showBuildNumber,
-                           MarkCriticalOption markCriticalOption, boolean markCriticalEnabled, Integer initialResponseTimeout)
+    public LoadTestBuilder(@Nonnull final String xltTemplateDir)
     {
         isSave = true;
+        this.xltTemplateDir = xltTemplateDir;
         Thread.currentThread().setUncaughtExceptionHandler(new UncaughtExceptionHandler()
         {
             public void uncaughtException(Thread t, Throwable e)
@@ -181,74 +188,20 @@ public class LoadTestBuilder extends Builder
         });
 
         // load test configuration
-        this.xltTemplateDir = StringUtils.defaultIfBlank(xltTemplateDir, null);
-        this.pathToTestSuite = StringUtils.defaultIfBlank(pathToTestSuite, null);
-        this.testPropertiesFile = StringUtils.defaultIfBlank(testPropertiesFile, null);
-        this.agentControllerConfig = (agentControllerConfig != null) ? agentControllerConfig : new AgentControllerConfig();
+        this.agentControllerConfig = new AgentControllerConfig();
 
-        this.initialResponseTimeout = initialResponseTimeout != null ? initialResponseTimeout
-                                                                    : getDescriptor().getDefaultInitialResponseTimeout();
+        this.initialResponseTimeout = getDescriptor().getDefaultInitialResponseTimeout();
 
         // plot/value configuration
-        this.xltConfig = StringUtils.defaultIfBlank(xltConfig, getDescriptor().getDefaultXltConfig());
+        this.xltConfig = getDescriptor().getDefaultXltConfig();
 
         // advanced plot configuration
-        this.plotWidth = (plotWidth > 0) ? plotWidth : getDescriptor().getDefaultPlotWidth();
-        this.plotHeight = (plotHeight > 0) ? plotHeight : getDescriptor().getDefaultPlotHeight();
-        this.plotTitle = StringUtils.defaultIfBlank(plotTitle, getDescriptor().getDefaultPlotTitle());
-        this.isPlotVertical = isPlotVertical;
-        this.timeFormatPattern = StringUtils.defaultIfBlank(timeFormatPattern, null);
-        this.showBuildNumber = showBuildNumber;
-
-        // criteria configuration
-        this.markCriticalOption = markCriticalOption;
-        if (markCriticalOption == null)
-        {
-            this.markCriticalEnabled = false;
-            this.markCriticalConditionCount = 0;
-            this.markCriticalBuildCount = 0;
-        }
-        else
-        {
-            this.markCriticalEnabled = true;
-            this.markCriticalConditionCount = markCriticalOption.getMarkCriticalConditionCount();
-            this.markCriticalBuildCount = (markCriticalConditionCount > 0 && markCriticalConditionCount > markCriticalOption.getMarkCriticalBuildCount())
-                                                                                                                                                         ? markCriticalConditionCount
-                                                                                                                                                         : markCriticalOption.getMarkCriticalBuildCount();
-        }
-
-        // trend report configuration
-        this.trendReportOption = trendReportOption;
-        if (trendReportOption == null)
-        {
-            this.createTrendReport = false;
-            this.numberOfBuildsForTrendReport = getDescriptor().getDefaultNumberOfBuildsForTrendReport();
-        }
-        else
-        {
-            this.createTrendReport = true;
-            this.numberOfBuildsForTrendReport = (trendReportOption.getNumberOfBuildsForTrendReport() > 0)
-                                                                                                         ? trendReportOption.getNumberOfBuildsForTrendReport()
-                                                                                                         : getDescriptor().getDefaultNumberOfBuildsForTrendReport();
-        }
-
-        // trend report configuration
-        this.summaryReportOption = summaryReportOption;
-        if (summaryReportOption == null)
-        {
-            this.createSummaryReport = false;
-            this.numberOfBuildsForSummaryReport = getDescriptor().getDefaultNumberOfBuildsForSummaryReport();
-        }
-        else
-        {
-            this.createSummaryReport = true;
-            this.numberOfBuildsForSummaryReport = (summaryReportOption.getNumberOfBuildsForSummaryReport() > 0)
-                                                                                                               ? summaryReportOption.getNumberOfBuildsForSummaryReport()
-                                                                                                               : getDescriptor().getDefaultNumberOfBuildsForSummaryReport();
-        }
+        this.plotWidth = getDescriptor().getDefaultPlotWidth();
+        this.plotHeight = getDescriptor().getDefaultPlotHeight();
+        this.plotTitle = getDescriptor().getDefaultPlotTitle();
 
         // misc.
-        this.builderID = StringUtils.defaultIfBlank(builderID, UUID.randomUUID().toString());
+        this.builderID = UUID.randomUUID().toString();
     }
 
     public class XLTBuilderAction extends InvisibleAction
@@ -257,11 +210,6 @@ public class LoadTestBuilder extends Builder
         {
             return LoadTestBuilder.this;
         }
-    }
-
-    public static String getLoggerLookup(String key)
-    {
-        return loggerLookupMap.get(key);
     }
 
     public List<AWSSecurityGroup> getSecurityGroups()
@@ -310,74 +258,160 @@ public class LoadTestBuilder extends Builder
         return StringUtils.split(agentControllerUrls, "\r\n\t|,; ");
     }
 
+    @Nonnull
     public AgentControllerConfig getAgentControllerConfig()
     {
         return agentControllerConfig;
     }
 
-    public int getInitialResponseTimeout()
+    @DataBoundSetter
+    public void setAgentControllerConfig(@Nonnull final AgentControllerConfig acConfig)
+    {
+        this.agentControllerConfig = acConfig;
+    }
+
+    @Nonnull
+    public Integer getInitialResponseTimeout()
     {
         return initialResponseTimeout;
     }
 
+    @DataBoundSetter
+    public void setInitialResponseTimeout(@Nonnull final Integer timeout)
+    {
+        initialResponseTimeout = timeout;
+    }
+
+    @CheckForNull
     public TrendReportOption getTrendReportOption()
     {
         return trendReportOption;
     }
 
+    @DataBoundSetter
+    public void setTrendReportOption(@CheckForNull final TrendReportOption opt)
+    {
+        this.trendReportOption = opt;
+    }
+
+    @CheckForNull
     public SummaryReportOption getSummaryReportOption()
     {
         return summaryReportOption;
     }
 
+    @DataBoundSetter
+    public void setSummaryReportOption(@CheckForNull final SummaryReportOption opt)
+    {
+        this.summaryReportOption = opt;
+    }
+
+    @CheckForNull
     public MarkCriticalOption getMarkCriticalOption()
     {
         return markCriticalOption;
     }
 
+    @DataBoundSetter
+    public void setMarkCriticalOption(@CheckForNull final MarkCriticalOption opt)
+    {
+        this.markCriticalOption = opt;
+    }
+
     public boolean getMarkCriticalEnabled()
     {
-        return this.markCriticalEnabled;
+        return markCriticalOption != null;
     }
 
     public int getMarkCriticalConditionCount()
     {
-        return markCriticalConditionCount;
+        if (markCriticalOption == null)
+        {
+            return 0;
+        }
+
+        return markCriticalOption.getMarkCriticalConditionCount();
     }
 
     public int getMarkCriticalBuildCount()
     {
-        return markCriticalBuildCount;
+        if (markCriticalOption == null)
+        {
+            return 0;
+        }
+
+        final int mcCondCount = markCriticalOption.getMarkCriticalConditionCount();
+        final int mcBuildCount = markCriticalOption.getMarkCriticalBuildCount();
+        return mcCondCount > 0 ? Math.max(mcCondCount, mcBuildCount) : mcBuildCount;
     }
 
+    @CheckForNull
     public String getPathToTestSuite()
     {
         return pathToTestSuite;
     }
 
+    @DataBoundSetter
+    public void setPathToTestSuite(@CheckForNull final String path)
+    {
+        this.pathToTestSuite = Util.fixNull(path);
+    }
+
+    @CheckForNull
     public String getTestPropertiesFile()
     {
         return testPropertiesFile;
     }
 
+    @DataBoundSetter
+    public void setTestPropertiesFile(@CheckForNull final String propertyFilePath)
+    {
+        this.testPropertiesFile = Util.fixNull(propertyFilePath);
+    }
+
+    @Nonnull
     public String getXltConfig()
     {
         return xltConfig;
     }
 
+    @DataBoundSetter
+    public void setXltConfig(@Nonnull final String config)
+    {
+        if (StringUtils.isNotBlank(config))
+        {
+            this.xltConfig = config;
+        }
+    }
+
+    @Nonnull
     public String getXltTemplateDir()
     {
         return xltTemplateDir;
     }
 
+    @CheckForNull
     public String getTimeFormatPattern()
     {
         return timeFormatPattern;
     }
 
-    public boolean getShowBuildNumber()
+    @DataBoundSetter
+    public void setTimeFormatPattern(@CheckForNull final String timeFormatPattern)
+    {
+        this.timeFormatPattern = Util.fixEmptyAndTrim(timeFormatPattern);
+        dateFormat = null;
+    }
+
+    public boolean isShowBuildNumber()
     {
         return showBuildNumber;
+    }
+
+    @DataBoundSetter
+    public void setShowBuildNumber(final boolean showBuildNumber)
+    {
+        this.showBuildNumber = showBuildNumber;
     }
 
     public int getPlotWidth()
@@ -385,44 +419,89 @@ public class LoadTestBuilder extends Builder
         return plotWidth;
     }
 
+    @DataBoundSetter
+    public void setPlotWidth(final int plotWidth)
+    {
+        if (plotWidth > 0)
+        {
+            this.plotWidth = plotWidth;
+        }
+    }
+
     public int getPlotHeight()
     {
         return plotHeight;
     }
 
+    @DataBoundSetter
+    public void setPlotHeight(final int plotHeight)
+    {
+        if (plotHeight > 0)
+        {
+            this.plotHeight = plotHeight;
+        }
+    }
+
+    @Nonnull
     public String getPlotTitle()
     {
         return plotTitle;
     }
 
+    @DataBoundSetter
+    public void setPlotTitle(@Nonnull final String title)
+    {
+        if (StringUtils.isNotBlank(title))
+        {
+            this.plotTitle = title;
+        }
+    }
+
+    @Nonnull
     public String getBuilderID()
     {
         return builderID;
     }
 
-    public boolean getIsPlotVertical()
+    public void setBuilderID(@Nonnull final String buildId)
     {
-        return isPlotVertical;
+        if (StringUtils.isNotBlank(buildId))
+        {
+            this.builderID = buildId;
+        }
+    }
+
+    public boolean isPlotVertical()
+    {
+        return plotVertical;
+    }
+
+    @DataBoundSetter
+    public void setPlotVertical(boolean isPlotVertical)
+    {
+        this.plotVertical = isPlotVertical;
     }
 
     public boolean getCreateTrendReport()
     {
-        return createTrendReport;
+        return trendReportOption != null;
     }
 
     public boolean getCreateSummaryReport()
     {
-        return createSummaryReport;
+        return summaryReportOption != null;
     }
 
     public int getNumberOfBuildsForTrendReport()
     {
-        return numberOfBuildsForTrendReport;
+        final int nbBuilds = trendReportOption != null ? trendReportOption.getNumberOfBuildsForTrendReport() : -1;
+        return nbBuilds > 0 ? nbBuilds : getDescriptor().getDefaultNumberOfBuildsForTrendReport();
     }
 
     public int getNumberOfBuildsForSummaryReport()
     {
-        return numberOfBuildsForSummaryReport;
+        final int nbBuilds = summaryReportOption != null ? summaryReportOption.getNumberOfBuildsForSummaryReport() : -1;
+        return nbBuilds > 0 ? nbBuilds : getDescriptor().getDefaultNumberOfBuildsForSummaryReport();
     }
 
     private Chart<Integer, Double> getChart(String plotID)
@@ -452,9 +531,9 @@ public class LoadTestBuilder extends Builder
         return enabledCharts;
     }
 
-    private void loadCharts(AbstractProject<?, ?> project, AbstractBuild<?, ?>... excludeBuilds)
+    private void loadCharts(Run<?, ?> run, Run<?, ?>... excludeBuilds)
     {
-        List<? extends AbstractBuild<?, ?>> allBuilds = project.getBuilds();
+        List<Run<?, ?>> allBuilds = new ArrayList<Run<?, ?>>(run.getParent().getBuilds());
         if (allBuilds.isEmpty())
             return;
 
@@ -486,7 +565,7 @@ public class LoadTestBuilder extends Builder
                 }
             }
 
-            List<? extends AbstractBuild<?, ?>> builds = getBuilds(project, 0, largestBuildCount);
+            List<Run<?, ?>> builds = getRuns(run, 0, largestBuildCount);
             builds.removeAll(Arrays.asList(excludeBuilds));
 
             addBuildsToCharts(builds);
@@ -505,9 +584,11 @@ public class LoadTestBuilder extends Builder
      *            < 0 means all builds up to end
      * @return
      */
-    private List<? extends AbstractBuild<?, ?>> getBuilds(AbstractProject<?, ?> project, int startFrom, int count)
+    private List<Run<?, ?>> getRuns(Run<?, ?> currentRun, int startFrom, int count)
     {
-        List<? extends AbstractBuild<?, ?>> allBuilds = project.getBuilds();
+        Job<?, ?> job = currentRun.getParent();
+
+        List<Run<?, ?>> allBuilds = new ArrayList<Run<?, ?>>(job.getBuilds());
         int maxBuilds = allBuilds.size();
         int to = Math.min(startFrom + count, maxBuilds);
         if (to < 0 || to > maxBuilds)
@@ -518,7 +599,7 @@ public class LoadTestBuilder extends Builder
         return allBuilds.subList(startFrom, to);
     }
 
-    private Document getDataDocument(AbstractBuild<?, ?> build) throws IOException, InterruptedException
+    private Document getDataDocument(Run<?, ?> build) throws IOException, InterruptedException
     {
         FilePath testDataFile = getTestReportDataFile(build);
         if (testDataFile.exists())
@@ -548,18 +629,16 @@ public class LoadTestBuilder extends Builder
         return null;
     }
 
-    public void addBuildToCharts(AbstractBuild<?, ?> build)
+    public void addBuildToCharts(Run<?, ?> build)
     {
-        List<AbstractBuild<?, ?>> builds = new ArrayList<AbstractBuild<?, ?>>();
-        builds.add(build);
-        addBuildsToCharts(builds);
+        addBuildsToCharts(Arrays.<Run<?,?>>asList(build));
     }
 
-    private void addBuildsToCharts(List<? extends AbstractBuild<?, ?>> builds)
+    private void addBuildsToCharts(List<Run<?, ?>> builds)
     {
         for (int i = builds.size() - 1; i > -1; i--)
         {
-            AbstractBuild<?, ?> eachBuild = builds.get(i);
+            Run<?, ?> eachBuild = builds.get(i);
             Document dataXml = null;
             try
             {
@@ -607,8 +686,8 @@ public class LoadTestBuilder extends Builder
                                     String xPath = getvalueConfigValue(eachValueID, CONFIG_VALUE_PARAMETER.xPath);
                                     try
                                     {
-                                        Double number = (Double) XPathFactory.newInstance().newXPath()
-                                                                             .evaluate(xPath, dataXml, XPathConstants.NUMBER);
+                                        Double number = (Double) XPathFactory.newInstance().newXPath().evaluate(xPath, dataXml,
+                                                                                                                XPathConstants.NUMBER);
 
                                         if (number.isNaN())
                                         {
@@ -659,7 +738,7 @@ public class LoadTestBuilder extends Builder
         }
     }
 
-    private void addChartLineValue(ChartLine<Integer, Double> chartLine, AbstractBuild<?, ?> build, int xIndex, double dataValue)
+    private void addChartLineValue(ChartLine<Integer, Double> chartLine, Run<?, ?> build, int xIndex, double dataValue)
     {
         ChartLineValue<Integer, Double> lineValue = new ChartLineValue<Integer, Double>(xIndex, dataValue);
 
@@ -669,15 +748,11 @@ public class LoadTestBuilder extends Builder
         chartLine.addLineValue(lineValue);
     }
 
-    private Chart<Integer, Double> createChart(String plotID) throws JSONException
+    private Chart<Integer, Double> createChart(final String plotID) throws JSONException
     {
-        String chartTitle = getOptionalPlotConfigValue(plotID, CONFIG_PLOT_PARAMETER.title);
-        if (chartTitle == null)
-        {
-            chartTitle = "";
-        }
+        final String chartTitle = Util.fixNull(getOptionalPlotConfigValue(plotID, CONFIG_PLOT_PARAMETER.title));
+        final String buildCountValue = getOptionalPlotConfigValue(plotID, CONFIG_PLOT_PARAMETER.buildCount);
 
-        String buildCountValue = getOptionalPlotConfigValue(plotID, CONFIG_PLOT_PARAMETER.buildCount);
         int maxCount = Integer.MAX_VALUE;
         if (StringUtils.isNotBlank(buildCountValue))
         {
@@ -692,7 +767,7 @@ public class LoadTestBuilder extends Builder
         }
 
         boolean showNoValues = false;
-        String showNoValuesValue = getOptionalPlotConfigValue(plotID, CONFIG_PLOT_PARAMETER.showNoValues);
+        final String showNoValuesValue = getOptionalPlotConfigValue(plotID, CONFIG_PLOT_PARAMETER.showNoValues);
         if (showNoValuesValue != null)
         {
             if (StringUtils.isNotBlank(showNoValuesValue) && "yes".equals(showNoValuesValue))
@@ -705,15 +780,11 @@ public class LoadTestBuilder extends Builder
             LOGGER.info("Plot config parameter \"showNoValues\" is undefined (plotID: \"" + plotID + "\")");
         }
 
-        Chart<Integer, Double> chart = new Chart<Integer, Double>(plotID, chartTitle);
-        for (String eachValueID : getValueConfigIDs(plotID))
+        final Chart<Integer, Double> chart = new Chart<Integer, Double>(plotID, chartTitle);
+        for (final String eachValueID : getValueConfigIDs(plotID))
         {
-            String lineName = getOptionalValueConfigValue(eachValueID, CONFIG_VALUE_PARAMETER.name);
-            if (lineName == null)
-            {
-                lineName = "";
-            }
-            ChartLine<Integer, Double> line = new ChartLine<Integer, Double>(eachValueID, lineName, maxCount, showNoValues);
+            final String lineName = Util.fixNull(getOptionalValueConfigValue(eachValueID, CONFIG_VALUE_PARAMETER.name));
+            final ChartLine<Integer, Double> line = new ChartLine<Integer, Double>(eachValueID, lineName, maxCount, showNoValues);
             chart.getLines().add(line);
         }
         return chart;
@@ -734,28 +805,7 @@ public class LoadTestBuilder extends Builder
         }
     }
 
-    @Override
-    public Collection<? extends Action> getProjectActions(AbstractProject<?, ?> project)
-    {
-        ArrayList<Action> actions = new ArrayList<Action>();
-        if (isSave || chartAction == null)
-        {
-            isSave = false;
-
-            updateConfig();
-
-            reloadCharts(project);
-
-            chartAction = new XltChartAction(project, getEnabledCharts(), plotWidth, plotHeight, plotTitle, builderID, isPlotVertical,
-                                             createTrendReport, createSummaryReport);
-        }
-        actions.add(chartAction);
-        actions.add(new XLTBuilderAction());
-
-        return actions;
-    }
-
-    private void reloadCharts(AbstractProject<?, ?> project, AbstractBuild<?, ?>... exludeBuilds)
+    private void reloadCharts(Run<?, ?> run, Run<?, ?>... exludeBuilds)
     {
         if (charts == null)
         {
@@ -775,7 +825,7 @@ public class LoadTestBuilder extends Builder
             LOGGER.error("Failed to initialize charts", e);
         }
 
-        loadCharts(project, exludeBuilds);
+        loadCharts(run, exludeBuilds);
 
         if (chartAction != null)
         {
@@ -783,9 +833,9 @@ public class LoadTestBuilder extends Builder
         }
     }
 
-    public void removeBuildFromCharts(AbstractProject<?, ?> project, AbstractBuild<?, ?> build)
+    public void removeBuildFromCharts(Run<?, ?> run)
     {
-        reloadCharts(project, build);
+        reloadCharts(run, run);
     }
 
     private void updateConfig()
@@ -915,24 +965,25 @@ public class LoadTestBuilder extends Builder
         return plotIDs;
     }
 
-    private FilePath getTestReportDataFile(AbstractBuild<?, ?> build)
+    private FilePath getTestReportDataFile(Run<?, ?> build)
     {
         return new FilePath(getBuildReportFolder(build), "testreport.xml");
     }
 
-    private FilePath getXltResultFolder(AbstractBuild<?, ?> build) throws BuildNodeGoneException
+    private FilePath getXltResultFolder(Run<?, ?> build, Launcher launcher) throws BuildNodeGoneException
     {
-        return new FilePath(getTemporaryXltFolder(build), FOLDER_NAMES.ARTIFACT_RESULT);
+        return new FilePath(getTemporaryXltFolder(build, launcher), FOLDER_NAMES.ARTIFACT_RESULT);
     }
 
-    private FilePath getXltLogFolder(AbstractBuild<?, ?> build) throws BuildNodeGoneException
+    private FilePath getXltLogFolder(Run<?, ?> build, Launcher launcher) throws BuildNodeGoneException
     {
-        return new FilePath(getTemporaryXltFolder(build), "log");
+        return new FilePath(getTemporaryXltFolder(build, launcher), "log");
     }
 
-    private FilePath getXltReportFolder(AbstractBuild<?, ?> build) throws BuildNodeGoneException
+    private FilePath getXltReportFolder(Run<?, ?> build, Launcher launcher) throws BuildNodeGoneException
     {
-        return new FilePath(getTemporaryXltFolder(build), FOLDER_NAMES.ARTIFACT_REPORT + "/" + Integer.toString(build.getNumber()));
+        return new FilePath(getTemporaryXltFolder(build, launcher),
+                            FOLDER_NAMES.ARTIFACT_REPORT + "/" + Integer.toString(build.getNumber()));
     }
 
     private FilePath getFirstSubFolder(FilePath dir) throws IOException, InterruptedException
@@ -954,32 +1005,32 @@ public class LoadTestBuilder extends Builder
         return null;
     }
 
-    private static URI getArtifactsDir(AbstractBuild<?, ?> build)
+    private static URI getArtifactsDir(Run<?, ?> build)
     {
         return build.getArtifactManager().root().toURI();
     }
 
-    public static FilePath getArtifact(AbstractBuild<?, ?> build, String artifactPath)
+    public static FilePath getArtifact(Run<?, ?> build, String artifactPath)
     {
         return new FilePath(new File(new File(getArtifactsDir(build)), artifactPath));
     }
 
-    private FilePath getBuildResultConfigFolder(AbstractBuild<?, ?> build)
+    private FilePath getBuildResultConfigFolder(Run<?, ?> build)
     {
         return new FilePath(getBuildResultFolder(build), "config");
     }
 
-    private FilePath getBuildLogsFolder(AbstractBuild<?, ?> build)
+    private FilePath getBuildLogsFolder(Run<?, ?> build)
     {
         return getArtifact(build, builderID + "/log");
     }
 
-    private FilePath getBuildReportFolder(AbstractBuild<?, ?> build)
+    private FilePath getBuildReportFolder(Run<?, ?> build)
     {
         return getArtifact(build, builderID + "/" + FOLDER_NAMES.ARTIFACT_REPORT + "/" + Integer.toString(build.getNumber()));
     }
 
-    private String getBuildReportURL(AbstractBuild<?, ?> build)
+    private String getBuildReportURL(Run<?, ?> build)
     {
         String jenkinsURL = Jenkins.getInstance().getRootUrl();
         if (jenkinsURL == null)
@@ -990,55 +1041,55 @@ public class LoadTestBuilder extends Builder
                build.getNumber() + "/index.html";
     }
 
-    private FilePath getBuildResultFolder(AbstractBuild<?, ?> build)
+    private FilePath getBuildResultFolder(Run<?, ?> build)
     {
         return getArtifact(build, builderID + "/" + FOLDER_NAMES.ARTIFACT_RESULT);
     }
 
-    private FilePath getTrendReportFolder(AbstractProject<?, ?> project)
+    private FilePath getTrendReportFolder(Job<?, ?> project)
     {
         return new FilePath(new FilePath(project.getRootDir()), "trendreport/" + builderID);
     }
 
-    private FilePath getSummaryReportFolder(AbstractProject<?, ?> project)
+    private FilePath getSummaryReportFolder(Job<?, ?> project)
     {
         return new FilePath(new File(project.getRootDir(), "summaryReport/" + builderID));
     }
 
-    private FilePath getSummaryResultsFolder(AbstractProject<?, ?> project)
+    private FilePath getSummaryResultsFolder(Job<?, ?> project)
     {
         return new FilePath(new File(project.getRootDir(), "summaryResults/" + builderID));
     }
 
-    private FilePath getSummaryResultsConfigFolder(AbstractProject<?, ?> project)
+    private FilePath getSummaryResultsConfigFolder(Job<?, ?> project)
     {
         return new FilePath(getSummaryResultsFolder(project), "config");
     }
 
-    private FilePath getTemporaryXltBaseFolder(AbstractBuild<?, ?> build) throws BuildNodeGoneException
+    private FilePath getTemporaryXltBaseFolder(Run<?, ?> run, Launcher launcher) throws BuildNodeGoneException
     {
-        hudson.model.Node node = getBuildNodeIfOnlineOrFail(build);
-        FilePath base = new FilePath(build.getParent().getRootDir());
-        if (node != Jenkins.getInstance())
+        hudson.model.Node node = getBuildNodeIfOnlineOrFail(launcher);
+        FilePath base = new FilePath(run.getParent().getRootDir());
+        if (node != null && node != Jenkins.getActiveInstance())
         {
-            base = build.getBuiltOn().getRootPath();
+            base = node.getRootPath();
         }
         return new FilePath(base, "tmp-xlt");
     }
 
-    private FilePath getTemporaryXltProjectFolder(AbstractBuild<?, ?> build) throws BuildNodeGoneException
+    private FilePath getTemporaryXltProjectFolder(Run<?, ?> run, Launcher launcher) throws BuildNodeGoneException
     {
-        return new FilePath(getTemporaryXltBaseFolder(build), build.getProject().getName());
+        return new FilePath(getTemporaryXltBaseFolder(run, launcher), run.getParent().getName());
     }
 
-    private FilePath getTemporaryXltBuildFolder(AbstractBuild<?, ?> build) throws BuildNodeGoneException
+    private FilePath getTemporaryXltBuildFolder(Run<?, ?> run, Launcher launcher) throws BuildNodeGoneException
     {
-        return new FilePath(getTemporaryXltProjectFolder(build), "" + build.getNumber());
+        return new FilePath(getTemporaryXltProjectFolder(run, launcher), "" + run.getNumber());
     }
 
-    private FilePath getTemporaryXltFolder(AbstractBuild<?, ?> build) throws BuildNodeGoneException
+    private FilePath getTemporaryXltFolder(Run<?, ?> run, Launcher launcher) throws BuildNodeGoneException
     {
-        return new FilePath(new FilePath(getTemporaryXltBuildFolder(build), getBuilderID()), "xlt");
+        return new FilePath(new FilePath(getTemporaryXltBuildFolder(run, launcher), getBuilderID()), "xlt");
     }
 
     private FilePath getXltTemplateFilePath()
@@ -1046,9 +1097,9 @@ public class LoadTestBuilder extends Builder
         return XltDescriptor.resolvePath(getXltTemplateDir());
     }
 
-    private FilePath getXltBinFolder(AbstractBuild<?, ?> build) throws BuildNodeGoneException
+    private FilePath getXltBinFolder(Run<?, ?> run, Launcher launcher) throws BuildNodeGoneException
     {
-        return new FilePath(getTemporaryXltFolder(build), "bin");
+        return new FilePath(getTemporaryXltFolder(run, launcher), "bin");
     }
 
     private FilePath getXltBinFolderOnMaster()
@@ -1056,16 +1107,16 @@ public class LoadTestBuilder extends Builder
         return new FilePath(getXltTemplateFilePath(), "bin");
     }
 
-    private FilePath getXltConfigFolder(AbstractBuild<?, ?> build) throws BuildNodeGoneException
+    private FilePath getXltConfigFolder(Run<?, ?> run, Launcher launcher) throws BuildNodeGoneException
     {
-        return new FilePath(getTemporaryXltFolder(build), "config");
+        return new FilePath(getTemporaryXltFolder(run, launcher), "config");
     }
 
-    private List<CriterionResult> getFailedCriteria(AbstractBuild<?, ?> build, BuildListener listener, Document dataXml)
+    private List<CriterionResult> getFailedCriteria(Run<?, ?> build, TaskListener listener, Document dataXml)
         throws IOException, InterruptedException
     {
-        listener.getLogger().println("-----------------------------------------------------------------\n"
-                                         + "Checking success criteria ...\n");
+        listener.getLogger()
+                .println("-----------------------------------------------------------------\n" + "Checking success criteria ...\n");
 
         List<CriterionResult> failedAlerts = new ArrayList<CriterionResult>();
 
@@ -1157,20 +1208,20 @@ public class LoadTestBuilder extends Builder
         return failedAlerts;
     }
 
-    private void validateCriteria(AbstractBuild<?, ?> build, BuildListener listener) throws IOException, InterruptedException
+    private void validateCriteria(Run<?, ?> run, TaskListener listener) throws IOException, InterruptedException
     {
         // get the test report document
-        final Document dataXml = getDataDocument(build);
+        final Document dataXml = getDataDocument(run);
 
         // process the test report
-        final List<CriterionResult> failedAlerts = getFailedCriteria(build, listener, dataXml);
-        final List<TestCaseInfo> failedTestCases = determineFailedTestCases(build, listener, dataXml);
-        final List<SlowRequestInfo> slowestRequests = determineSlowestRequests(build, listener, dataXml);
+        final List<CriterionResult> failedAlerts = getFailedCriteria(run, listener, dataXml);
+        final List<TestCaseInfo> failedTestCases = determineFailedTestCases(run, listener, dataXml);
+        final List<SlowRequestInfo> slowestRequests = determineSlowestRequests(run, listener, dataXml);
 
         // create the action with all the collected data
-        XltRecorderAction recorderAction = new XltRecorderAction(build, failedAlerts, builderID, getBuildReportURL(build), failedTestCases,
+        XltRecorderAction recorderAction = new XltRecorderAction(builderID, getBuildReportURL(run), failedAlerts, failedTestCases,
                                                                  slowestRequests);
-        build.addAction(recorderAction);
+        run.addAction(recorderAction);
 
         // log failed criteria to the build's console
         if (!failedAlerts.isEmpty())
@@ -1182,7 +1233,7 @@ public class LoadTestBuilder extends Builder
             }
             listener.getLogger().println();
             listener.getLogger().println("Set state to UNSTABLE");
-            build.setResult(Result.UNSTABLE);
+            run.setResult(Result.UNSTABLE);
         }
 
         // set build parameters
@@ -1191,7 +1242,7 @@ public class LoadTestBuilder extends Builder
             if (!recorderAction.getFailedAlerts().isEmpty())
             {
                 setBuildParameterXLT_CONDITION_FAILED(true);
-                checkForCritical(build);
+                checkForCritical(run);
             }
 
             if (!recorderAction.getErrorAlerts().isEmpty())
@@ -1202,16 +1253,14 @@ public class LoadTestBuilder extends Builder
         setBuildParameterXLT_CONDITION_MESSAGE(recorderAction.getConditionMessage());
     }
 
-    private void checkForCritical(AbstractBuild<?, ?> currentBuild)
+    private void checkForCritical(Run<?, ?> currentBuild)
     {
-        if (markCriticalEnabled &&
-            (markCriticalBuildCount > 0 && markCriticalConditionCount > 0 && markCriticalBuildCount >= markCriticalConditionCount))
+        final int mcBuildCount = getMarkCriticalBuildCount();
+        final int mcCondCount = getMarkCriticalConditionCount();
+        if (getMarkCriticalEnabled() && (mcBuildCount > 0 && mcCondCount > 0 && mcBuildCount >= mcCondCount))
         {
-            List<AbstractBuild<?, ?>> builds = new ArrayList<AbstractBuild<?, ?>>();
-            builds.addAll(getBuilds(currentBuild.getParent(), 0, markCriticalBuildCount));
-
             int failedCriterionBuilds = 0;
-            for (AbstractBuild<?, ?> eachBuild : builds)
+            for (Run<?, ?> eachBuild : getRuns(currentBuild, 0, mcBuildCount))
             {
                 XltRecorderAction recorderAction = eachBuild.getAction(XltRecorderAction.class);
                 if (recorderAction != null)
@@ -1219,7 +1268,7 @@ public class LoadTestBuilder extends Builder
                     if (!recorderAction.getFailedAlerts().isEmpty())
                     {
                         failedCriterionBuilds++;
-                        if (failedCriterionBuilds == markCriticalConditionCount)
+                        if (failedCriterionBuilds == mcCondCount)
                         {
                             setBuildParameterXLT_CONDITION_CRITICAL(true);
                             break;
@@ -1241,7 +1290,7 @@ public class LoadTestBuilder extends Builder
      * @throws IOException
      * @throws InterruptedException
      */
-    private List<TestCaseInfo> determineFailedTestCases(AbstractBuild<?, ?> build, BuildListener listener, Document dataXml)
+    private List<TestCaseInfo> determineFailedTestCases(Run<?, ?> build, TaskListener listener, Document dataXml)
         throws IOException, InterruptedException
     {
         List<TestCaseInfo> failedTestCases = new ArrayList<TestCaseInfo>();
@@ -1292,7 +1341,7 @@ public class LoadTestBuilder extends Builder
      * @throws IOException
      * @throws InterruptedException
      */
-    private List<SlowRequestInfo> determineSlowestRequests(AbstractBuild<?, ?> build, BuildListener listener, Document dataXml)
+    private List<SlowRequestInfo> determineSlowestRequests(Run<?, ?> build, TaskListener listener, Document dataXml)
         throws IOException, InterruptedException
     {
         List<SlowRequestInfo> slowestRequests = new ArrayList<SlowRequestInfo>();
@@ -1332,20 +1381,14 @@ public class LoadTestBuilder extends Builder
         return (XltDescriptor) super.getDescriptor();
     }
 
-    @Override
-    public boolean prebuild(AbstractBuild<?, ?> build, BuildListener listener)
-    {
-        return true;
-    }
-
     public static String getResourcePath(String fileName)
     {
         return "/plugin/" + Jenkins.getInstance().getPlugin(XltDescriptor.PLUGIN_NAME).getWrapper().getShortName() + "/" + fileName;
     }
 
-    public void publishBuildParameters(AbstractBuild<?, ?> build)
+    public void publishBuildParameters(Run<?, ?> run)
     {
-        build.addAction(new XltParametersAction(new ArrayList<ParameterValue>(buildParameterMap.values())));
+        run.addAction(new XltParametersAction(new ArrayList<ParameterValue>(buildParameterMap.values())));
     }
 
     private void setBuildParameter(ENVIRONMENT_KEYS parameter, String value)
@@ -1394,79 +1437,28 @@ public class LoadTestBuilder extends Builder
         setBuildParameterXLT_CONDITION_MESSAGE("");
     }
 
-    @Override
-    public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener)
-    {
-        initializeBuildParameter();
-
-        try
-        {
-            initialCleanUp(build, listener);
-        }
-        catch (Exception e)
-        {
-            listener.getLogger().println("Cleanup failed: " + e);
-            LOGGER.error("Cleanup failed: ", e);
-        }
-
-        boolean artifactsSaved = false;
-        try
-        {
-            copyXlt(build, listener);
-
-            String[] agentControllerProperties = configureAgentController(build, listener);
-            runMasterController(build, listener, agentControllerProperties);
-            createReport(build, listener);
-            saveArtifacts(build, listener);
-            artifactsSaved = true;
-
-            validateCriteria(build, listener);
-        }
-        catch (InterruptedException e)
-        {
-            build.setResult(build.getExecutor().abortResult());
-        }
-        catch (Exception e)
-        {
-            build.setResult(Result.FAILURE);
-            listener.getLogger().println("Build failed: " + e);
-            LOGGER.error("Build failed", e);
-        }
-        finally
-        {
-            performPostTestSteps(build, listener, artifactsSaved);
-
-            if (build.getResult() == Result.FAILURE)
-            {
-                setBuildParameterXLT_RUN_FAILED(true);
-            }
-            publishBuildParameters(build);
-        }
-        return true;
-    }
-
-    private void performPostTestSteps(AbstractBuild<?, ?> build, BuildListener listener, boolean artifactsSaved)
+    private void performPostTestSteps(Run<?, ?> run, Launcher launcher, TaskListener listener, boolean artifactsSaved)
     {
         // terminate Amazon's EC2 instances
         if (isEC2UsageEnabled())
         {
             try
             {
-                terminateEc2Machine(build, listener);
+                terminateEc2Machine(run, launcher, listener);
             }
             catch (Exception e)
             {
                 listener.getLogger().println("Could not terminate Amazon EC2 instances! " + e);
                 LOGGER.error("Could not terminate Amazon EC2 instances!", e);
-                build.setResult(Result.FAILURE);
+                run.setResult(Result.FAILURE);
             }
         }
 
-        if (createSummaryReport && artifactsSaved)
+        if (getCreateSummaryReport() && artifactsSaved)
         {
             try
             {
-                createSummaryReport(build, listener);
+                createSummaryReport(run, launcher, listener);
             }
             catch (Exception e)
             {
@@ -1475,11 +1467,11 @@ public class LoadTestBuilder extends Builder
             }
         }
 
-        if (createTrendReport && artifactsSaved)
+        if (getCreateTrendReport() && artifactsSaved)
         {
             try
             {
-                createTrendReport(build, listener);
+                createTrendReport(run, launcher, listener);
             }
             catch (Exception e)
             {
@@ -1492,7 +1484,7 @@ public class LoadTestBuilder extends Builder
         // save logs
         try
         {
-            saveArtifact(getXltLogFolder(build), getBuildLogsFolder(build));
+            saveArtifact(getXltLogFolder(run, launcher), getBuildLogsFolder(run));
         }
         catch (Exception e)
         {
@@ -1504,10 +1496,10 @@ public class LoadTestBuilder extends Builder
         // delete any temporary directory with local XLT
         try
         {
-            FilePath tempProjectFolder = getTemporaryXltProjectFolder(build);
+            FilePath tempProjectFolder = getTemporaryXltProjectFolder(run, launcher);
             tempProjectFolder.deleteRecursive();
 
-            FilePath tempFolder = getTemporaryXltBaseFolder(build);
+            FilePath tempFolder = getTemporaryXltBaseFolder(run, launcher);
             if (tempFolder.exists() || tempFolder.list() == null || tempFolder.list().isEmpty())
             {
                 tempFolder.delete();
@@ -1527,10 +1519,10 @@ public class LoadTestBuilder extends Builder
         return agentControllerConfig.type.equals(AgentControllerConfig.TYPE.ec2.toString());
     }
 
-    private String[] configureAgentController(AbstractBuild<?, ?> build, BuildListener listener) throws Exception
+    private String[] configureAgentController(Run<?, ?> run, FilePath workspace, Launcher launcher, TaskListener listener) throws Exception
     {
-        listener.getLogger().println("-----------------------------------------------------------------\n"
-                                         + "Configuring agent controllers ...\n");
+        listener.getLogger()
+                .println("-----------------------------------------------------------------\n" + "Configuring agent controllers ...\n");
 
         String[] agentControllerUrls = new String[0];
         if (agentControllerConfig.type.equals(AgentControllerConfig.TYPE.embedded.toString()))
@@ -1546,7 +1538,7 @@ public class LoadTestBuilder extends Builder
             }
             else if (agentControllerConfig.type.equals(AgentControllerConfig.TYPE.file.toString()))
             {
-                FilePath file = new FilePath(getTestSuiteConfigFolder(build), agentControllerConfig.urlFile);
+                FilePath file = new FilePath(getTestSuiteConfigFolder(workspace), agentControllerConfig.urlFile);
 
                 listener.getLogger().printf("Read agent controller URLs from file %s:\n\n", file);
 
@@ -1558,7 +1550,7 @@ public class LoadTestBuilder extends Builder
             // run Amazon's EC2 machine
             else if (isEC2UsageEnabled())
             {
-                agentControllerUrls = startEc2Machine(build, listener);
+                agentControllerUrls = startEc2Machine(run, launcher, listener);
             }
 
             if (ArrayUtils.isEmpty(agentControllerUrls))
@@ -1589,23 +1581,23 @@ public class LoadTestBuilder extends Builder
         return expandedUrls;
     }
 
-    private String[] startEc2Machine(AbstractBuild<?, ?> build, BuildListener listener) throws Exception
+    private String[] startEc2Machine(Run<?, ?> build, Launcher launcher, TaskListener listener) throws Exception
     {
         listener.getLogger()
                 .println("-----------------------------------------------------------------\nStarting agent controller with EC2 admin tool ...\n");
 
         // build the EC2 admin command line
-        List<String> commandLine = new ArrayList<String>();
+        final List<String> commandLine = new ArrayList<String>();
 
-        if (isBuildOnWindows(build))
+        if (launcher.isUnix())
+        {
+            commandLine.add("./ec2_admin.sh");
+        }
+        else
         {
             commandLine.add("cmd.exe");
             commandLine.add("/c");
             commandLine.add("ec2_admin.cmd");
-        }
-        else
-        {
-            commandLine.add("./ec2_admin.sh");
         }
         commandLine.add("run");
         commandLine.add(agentControllerConfig.getRegion());
@@ -1614,32 +1606,32 @@ public class LoadTestBuilder extends Builder
         commandLine.add(agentControllerConfig.getCountMachines());
         commandLine.add(agentControllerConfig.getTagName());
 
-        String securityGroupsParameter = getSecurityGroupParameter();
+        final String securityGroupsParameter = getSecurityGroupParameter();
         if (StringUtils.isNotBlank(securityGroupsParameter))
         {
             commandLine.add("-s");
             commandLine.add(securityGroupsParameter);
         }
 
-        String awsUserData = agentControllerConfig.getAwsUserData();
+        final String awsUserData = agentControllerConfig.getAwsUserData();
         if (StringUtils.isNotBlank(awsUserData))
         {
-            FilePath userData = new FilePath(getXltConfigFolder(build), "userData.txt");
+            FilePath userData = new FilePath(getXltConfigFolder(build, launcher), "userData.txt");
             userData.write(awsUserData, null);
 
             commandLine.add("-uf");
             commandLine.add(userData.absolutize().getRemote());
         }
 
-        FilePath acUrlFile = new FilePath(getXltConfigFolder(build), "acUrls.properties");
+        final FilePath acUrlFile = new FilePath(getXltConfigFolder(build, launcher), "acUrls.properties");
         commandLine.add("-o");
         commandLine.add(acUrlFile.absolutize().getRemote());
 
-        appendEc2Properties(build, listener);
+        appendEc2Properties(build, launcher, listener);
 
         // run the EC2 admin tool
-        FilePath workingDirectory = getXltBinFolder(build);
-        int commandResult = executeCommand(getBuildNodeIfOnlineOrFail(build), workingDirectory, commandLine, listener.getLogger());
+        FilePath workingDirectory = getXltBinFolder(build, launcher);
+        int commandResult = executeCommand(launcher, workingDirectory, commandLine, listener);
         listener.getLogger().println("EC2 admin tool returned with exit code: " + commandResult);
 
         if (commandResult != 0)
@@ -1687,11 +1679,11 @@ public class LoadTestBuilder extends Builder
         return StringUtils.isNotBlank(securityGroupsParameter) ? securityGroupsParameter : null;
     }
 
-    private void appendEc2Properties(AbstractBuild<?, ?> build, BuildListener listener) throws Exception
+    private void appendEc2Properties(Run<?, ?> build, Launcher launcher, TaskListener listener) throws Exception
     {
         // append properties to the end of the file
         // the last properties will win so this would overwrite the original properties
-        FilePath ec2PropertiesFile = new FilePath(getXltConfigFolder(build), "ec2_admin.properties");
+        FilePath ec2PropertiesFile = new FilePath(getXltConfigFolder(build, launcher), "ec2_admin.properties");
         BufferedWriter writer = null;
         try
         {
@@ -1719,8 +1711,8 @@ public class LoadTestBuilder extends Builder
                 else
                 {
                     LOGGER.warn("Credentials no longer available. (id: \"" + agentControllerConfig.getAwsCredentials() + "\")");
-                    listener.getLogger().println("Credentials no longer available. (id: \"" + agentControllerConfig.getAwsCredentials() +
-                                                     "\")");
+                    listener.getLogger()
+                            .println("Credentials no longer available. (id: \"" + agentControllerConfig.getAwsCredentials() + "\")");
                     throw new Exception("Credentials no longer available.");
                 }
             }
@@ -1735,7 +1727,7 @@ public class LoadTestBuilder extends Builder
         }
     }
 
-    private void terminateEc2Machine(AbstractBuild<?, ?> build, BuildListener listener) throws Exception
+    private void terminateEc2Machine(Run<?, ?> build, Launcher launcher, TaskListener listener) throws Exception
     {
         listener.getLogger()
                 .println("-----------------------------------------------------------------\nTerminating agent controller with EC2 admin tool ...\n");
@@ -1743,23 +1735,23 @@ public class LoadTestBuilder extends Builder
         // build the EC2 admin command line
         List<String> commandLine = new ArrayList<String>();
 
-        if (isBuildOnWindows(build))
+        if (launcher.isUnix())
+        {
+            commandLine.add("./ec2_admin.sh");
+        }
+        else
         {
             commandLine.add("cmd.exe");
             commandLine.add("/c");
             commandLine.add("ec2_admin.cmd");
-        }
-        else
-        {
-            commandLine.add("./ec2_admin.sh");
         }
         commandLine.add("terminate");
         commandLine.add(agentControllerConfig.getRegion());
         commandLine.add(agentControllerConfig.getTagName());
 
         // run the EC2 admin tool
-        FilePath workingDirectory = getXltBinFolder(build);
-        int commandResult = executeCommand(getBuildNodeIfOnlineOrFail(build), workingDirectory, commandLine, listener.getLogger());
+        FilePath workingDirectory = getXltBinFolder(build, launcher);
+        int commandResult = executeCommand(launcher, workingDirectory, commandLine, listener);
         listener.getLogger().println("EC2 admin tool returned with exit code: " + commandResult);
 
         if (commandResult != 0)
@@ -1768,24 +1760,24 @@ public class LoadTestBuilder extends Builder
         }
     }
 
-    private FilePath getTestSuiteFolder(AbstractBuild<?, ?> build)
+    private FilePath getTestSuiteFolder(FilePath workspace)
     {
         if (StringUtils.isBlank(pathToTestSuite))
         {
-            return build.getModuleRoot();
+            return workspace;
         }
         else
         {
-            return new FilePath(build.getModuleRoot(), pathToTestSuite);
+            return new FilePath(workspace, pathToTestSuite);
         }
     }
 
-    private FilePath getTestSuiteConfigFolder(AbstractBuild<?, ?> build)
+    private FilePath getTestSuiteConfigFolder(FilePath workspace)
     {
-        return new FilePath(getTestSuiteFolder(build), "config");
+        return new FilePath(getTestSuiteFolder(workspace), "config");
     }
 
-    private FilePath getTestPropertiesFile(AbstractBuild<?, ?> build)
+    private FilePath getTestPropertiesFile(FilePath workspace)
     {
         if (StringUtils.isBlank(testPropertiesFile))
         {
@@ -1793,22 +1785,22 @@ public class LoadTestBuilder extends Builder
         }
         else
         {
-            return new FilePath(getTestSuiteConfigFolder(build), testPropertiesFile);
+            return new FilePath(getTestSuiteConfigFolder(workspace), testPropertiesFile);
         }
     }
 
-    private void initialCleanUp(AbstractBuild<?, ?> build, BuildListener listener)
+    private void initialCleanUp(Run<?, ?> run, Launcher launcher, TaskListener listener)
         throws IOException, InterruptedException, BuildNodeGoneException
     {
-        listener.getLogger().println("-----------------------------------------------------------------\n"
-                                         + "Cleaning up project directory ...\n");
+        listener.getLogger()
+                .println("-----------------------------------------------------------------\n" + "Cleaning up project directory ...\n");
 
-        getTemporaryXltProjectFolder(build).deleteRecursive();
+        getTemporaryXltProjectFolder(run, launcher).deleteRecursive();
 
         listener.getLogger().println("\nFinished");
     }
 
-    private void copyXlt(AbstractBuild<?, ?> build, BuildListener listener) throws Exception
+    private void copyXlt(Run<?, ?> run, Launcher launcher, TaskListener listener) throws Exception
     {
         listener.getLogger().println("-----------------------------------------------------------------\nCopying XLT ...\n");
 
@@ -1836,7 +1828,7 @@ public class LoadTestBuilder extends Builder
         }
 
         // the target directory in the project folder
-        FilePath destDir = getTemporaryXltFolder(build);
+        FilePath destDir = getTemporaryXltFolder(run, launcher);
         listener.getLogger().println("Target directory: " + destDir.getRemote());
 
         // copy XLT to a remote directory
@@ -1849,7 +1841,7 @@ public class LoadTestBuilder extends Builder
         }
 
         // make XLT start scripts executable
-        FilePath workingDirectory = getXltBinFolder(build);
+        FilePath workingDirectory = getXltBinFolder(run, launcher);
 
         for (FilePath child : workingDirectory.list())
         {
@@ -1859,22 +1851,24 @@ public class LoadTestBuilder extends Builder
         listener.getLogger().println("\nFinished");
     }
 
-    private void runMasterController(AbstractBuild<?, ?> build, BuildListener listener, String[] agentControllerUrls) throws Exception
+    private void runMasterController(Run<?, ?> run, Launcher launcher, FilePath workspace, TaskListener listener,
+                                     String[] agentControllerUrls)
+        throws Exception
     {
         listener.getLogger().println("-----------------------------------------------------------------\nRunning master controller ...\n");
 
         // build the master controller command line
         List<String> commandLine = new ArrayList<String>();
 
-        if (isBuildOnWindows(build))
+        if (launcher.isUnix())
+        {
+            commandLine.add("./mastercontroller.sh");
+        }
+        else
         {
             commandLine.add("cmd.exe");
             commandLine.add("/c");
             commandLine.add("mastercontroller.cmd");
-        }
-        else
-        {
-            commandLine.add("./mastercontroller.sh");
         }
 
         if (agentControllerConfig.type.equals(AgentControllerConfig.TYPE.embedded.toString()))
@@ -1901,18 +1895,18 @@ public class LoadTestBuilder extends Builder
 
         if (StringUtils.isNotBlank(testPropertiesFile))
         {
-            validateTestPropertiesFile(build);
+            validateTestPropertiesFile(launcher, workspace);
             commandLine.add("-testPropertiesFile");
             commandLine.add(testPropertiesFile);
         }
 
-        validateTestSuiteDirectory(build);
-        commandLine.add("-Dcom.xceptance.xlt.mastercontroller.testSuitePath=" + getTestSuiteFolder(build).getRemote());
-        commandLine.add("-Dcom.xceptance.xlt.mastercontroller.results=" + getXltResultFolder(build).getRemote());
+        validateTestSuiteDirectory(workspace);
+        commandLine.add("-Dcom.xceptance.xlt.mastercontroller.testSuitePath=" + getTestSuiteFolder(workspace).getRemote());
+        commandLine.add("-Dcom.xceptance.xlt.mastercontroller.results=" + getXltResultFolder(run, launcher).getRemote());
 
         // run the master controller
-        FilePath workingDirectory = getXltBinFolder(build);
-        int commandResult = executeCommand(getBuildNodeIfOnlineOrFail(build), workingDirectory, commandLine, listener.getLogger());
+        FilePath workingDirectory = getXltBinFolder(run, launcher);
+        int commandResult = executeCommand(launcher, workingDirectory, commandLine, listener);
         listener.getLogger().println("Master controller returned with exit code: " + commandResult);
 
         if (commandResult != 0)
@@ -1921,24 +1915,15 @@ public class LoadTestBuilder extends Builder
         }
     }
 
-    public static boolean isBuildOnWindows(AbstractBuild<?, ?> build) throws BuildNodeGoneException
+
+    public static boolean isBuildNodeOnline(Launcher launcher)
     {
-        return !isBuildOnUnix(build);
+        return getBuildNode(launcher) != null;
     }
 
-    public static boolean isBuildOnUnix(AbstractBuild<?, ?> build) throws BuildNodeGoneException
+    public static hudson.model.Node getBuildNodeIfOnlineOrFail(Launcher launcher) throws BuildNodeGoneException
     {
-        return getBuildNodeIfOnlineOrFail(build).createLauncher(null).isUnix();
-    }
-
-    public static boolean isBuildNodeOnline(AbstractBuild<?, ?> build)
-    {
-        return getBuildNode(build) != null;
-    }
-
-    public static hudson.model.Node getBuildNodeIfOnlineOrFail(AbstractBuild<?, ?> build) throws BuildNodeGoneException
-    {
-        hudson.model.Node node = getBuildNode(build);
+        hudson.model.Node node = getBuildNode(launcher);
         if (node != null)
         {
             return node;
@@ -1946,19 +1931,24 @@ public class LoadTestBuilder extends Builder
         throw new BuildNodeGoneException("Build node is not available");
     }
 
-    public static hudson.model.Node getBuildNode(AbstractBuild<?, ?> build)
+    public static hudson.model.Node getBuildNode(Launcher launcher)
     {
-        hudson.model.Node node = build.getBuiltOn();
-        if (node != null && node.toComputer() != null && node.toComputer().isOnline())
+        hudson.model.Node node = null;
+        for (final Computer c : Jenkins.getActiveInstance().getComputers())
         {
-            return node;
+            if (c.getChannel() == launcher.getChannel() && c.isOnline())
+            {
+                node = c.getNode();
+                break;
+            }
         }
-        return null;
+
+        return node;
     }
 
-    public static boolean isRelativeFilePathOnNode(AbstractBuild<?, ?> build, String filePath) throws BuildNodeGoneException
+    public static boolean isRelativeFilePathOnNode(Launcher launcher, String filePath) throws BuildNodeGoneException
     {
-        if (isBuildOnUnix(build) && (filePath.startsWith("/") || filePath.startsWith("~")))
+        if (launcher.isUnix() && (filePath.startsWith("/") || filePath.startsWith("~")))
         {
             return false;
         }
@@ -1969,33 +1959,34 @@ public class LoadTestBuilder extends Builder
         return true;
     }
 
-    private void validateTestPropertiesFile(AbstractBuild<?, ?> build) throws Exception
+    private void validateTestPropertiesFile(Launcher launcher, FilePath workspace) throws Exception
     {
         if (StringUtils.isBlank(testPropertiesFile))
         {
             return;
         }
 
-        if (!isRelativeFilePathOnNode(build, testPropertiesFile))
+        if (!isRelativeFilePathOnNode(launcher, testPropertiesFile))
         {
             throw new Exception("The test properties file path must be relative to the \"<testSuite>/config/\" directory. (" +
                                 testPropertiesFile + ")");
         }
 
-        FilePath testProperties = getTestPropertiesFile(build);
+        FilePath testProperties = getTestPropertiesFile(workspace);
         if (testProperties == null || !testProperties.exists())
         {
             throw new Exception("The test properties file does not exists. (" + testProperties.getRemote() + ")");
         }
         else if (testProperties.isDirectory())
         {
-            throw new Exception("The test properties file path  must specify a file, not a directory. (" + testProperties.getRemote() + ")");
+            throw new Exception("The test properties file path  must specify a file, not a directory. (" + testProperties.getRemote() +
+                                ")");
         }
     }
 
-    private void validateTestSuiteDirectory(AbstractBuild<?, ?> build) throws Exception
+    private void validateTestSuiteDirectory(FilePath workspace) throws Exception
     {
-        FilePath testSuiteDirectory = getTestSuiteFolder(build);
+        FilePath testSuiteDirectory = getTestSuiteFolder(workspace);
         if (!testSuiteDirectory.exists())
         {
             throw new Exception("The test suite path does not exists. (" + testSuiteDirectory.getRemote() + ")");
@@ -2010,41 +2001,41 @@ public class LoadTestBuilder extends Builder
         }
     }
 
-    private void createReport(AbstractBuild<?, ?> build, BuildListener listener) throws Exception
+    private void createReport(Run<?, ?> run, Launcher launcher, TaskListener listener) throws Exception
     {
         listener.getLogger().println("-----------------------------------------------------------------\nRunning report generator ...\n");
 
-        FilePath resultSubFolder = getFirstSubFolder(getXltResultFolder(build));
+        FilePath resultSubFolder = getFirstSubFolder(getXltResultFolder(run, launcher));
         if (resultSubFolder == null || resultSubFolder.list() == null || resultSubFolder.list().isEmpty())
         {
-            throw new Exception("No results found at: " + getXltResultFolder(build).getRemote());
+            throw new Exception("No results found at: " + getXltResultFolder(run, launcher).getRemote());
         }
-        resultSubFolder.moveAllChildrenTo(getXltResultFolder(build));
+        resultSubFolder.moveAllChildrenTo(getXltResultFolder(run, launcher));
 
         // build the master controller command line
         List<String> commandLine = new ArrayList<String>();
 
-        if (isBuildOnWindows(build))
+        if (launcher.isUnix())
+        {
+            commandLine.add("./create_report.sh");
+        }
+        else
         {
             commandLine.add("cmd.exe");
             commandLine.add("/c");
             commandLine.add("create_report.cmd");
         }
-        else
-        {
-            commandLine.add("./create_report.sh");
-        }
 
         commandLine.add("-o");
-        commandLine.add(getXltReportFolder(build).getRemote());
+        commandLine.add(getXltReportFolder(run, launcher).getRemote());
         commandLine.add("-linkToResults");
         commandLine.add("yes");
-        commandLine.add(getXltResultFolder(build).getRemote());
+        commandLine.add(getXltResultFolder(run, launcher).getRemote());
         commandLine.add("-Dmonitoring.trackSlowestRequests=true");
 
         // run the report generator
-        FilePath workingDirectory = getXltBinFolder(build);
-        int commandResult = executeCommand(getBuildNodeIfOnlineOrFail(build), workingDirectory, commandLine, listener.getLogger());
+        FilePath workingDirectory = getXltBinFolder(run, launcher);
+        int commandResult = executeCommand(launcher, workingDirectory, commandLine, listener);
         listener.getLogger().println("Report generator returned with exit code: " + commandResult);
 
         if (commandResult != 0)
@@ -2053,15 +2044,15 @@ public class LoadTestBuilder extends Builder
         }
     }
 
-    private void saveArtifacts(AbstractBuild<?, ?> build, BuildListener listener)
+    private void saveArtifacts(Run<?, ?> run, Launcher launcher, TaskListener listener)
         throws IOException, InterruptedException, BuildNodeGoneException
     {
         listener.getLogger()
                 .println("\n\n-----------------------------------------------------------------\nArchive results and report...\n");
         // save load test results and report (copy from node)
-        saveArtifact(getXltResultFolder(build), getBuildResultFolder(build));
-        saveArtifact(getXltReportFolder(build), getBuildReportFolder(build));
-        setBuildParameterXLT_REPORT_URL(getBuildReportURL(build));
+        saveArtifact(getXltResultFolder(run, launcher), getBuildResultFolder(run));
+        saveArtifact(getXltReportFolder(run, launcher), getBuildReportFolder(run));
+        setBuildParameterXLT_REPORT_URL(getBuildReportURL(run));
     }
 
     private void saveArtifact(FilePath srcFolder, FilePath destFolder) throws IOException, InterruptedException
@@ -2074,13 +2065,9 @@ public class LoadTestBuilder extends Builder
         }
     }
 
-    private int executeCommand(hudson.model.Node buildNode, FilePath workingDirectory, List<String> commandLine, PrintStream logger)
+    private int executeCommand(Launcher launcher, FilePath workingDirectory, List<String> commandLine, TaskListener logger)
         throws IOException, InterruptedException
     {
-        StreamTaskListener streamListener = new StreamTaskListener((OutputStream) logger);
-
-        Launcher launcher = buildNode.createLauncher(streamListener);
-        launcher.decorateFor(buildNode);
 
         ProcStarter starter = launcher.launch();
         starter.pwd(workingDirectory);
@@ -2092,34 +2079,34 @@ public class LoadTestBuilder extends Builder
         return starter.join();
     }
 
-    private void createSummaryReport(AbstractBuild<?, ?> build, BuildListener listener) throws Exception
+    private void createSummaryReport(Run<?, ?> build, Launcher launcher, TaskListener listener) throws Exception
     {
         listener.getLogger().println("-----------------------------------------------------------------\nCreating summary report ...\n");
 
         // copy the results of the last n builds to the summary results directory
-        copyResults(build, listener);
+        copyResults(build, launcher, listener);
 
         // build report generator command line
         List<String> commandLine = new ArrayList<String>();
 
-        if (SystemUtils.IS_OS_WINDOWS)
+        if (launcher.isUnix())
+        {
+            commandLine.add("./create_report.sh");
+        }
+        else
         {
             commandLine.add("cmd.exe");
             commandLine.add("/c");
             commandLine.add("create_report.cmd");
         }
-        else
-        {
-            commandLine.add("./create_report.sh");
-        }
 
-        FilePath outputFolder = getSummaryReportFolder(build.getProject());
+        FilePath outputFolder = getSummaryReportFolder(build.getParent());
         commandLine.add("-o");
         commandLine.add(outputFolder.getRemote());
 
-        commandLine.add(getSummaryResultsFolder(build.getProject()).getRemote());
+        commandLine.add(getSummaryResultsFolder(build.getParent()).getRemote());
         // run the report generator on the master
-        int commandResult = executeCommand(Jenkins.getInstance(), getXltBinFolderOnMaster(), commandLine, listener.getLogger());
+        int commandResult = executeCommand(launcher, getXltBinFolderOnMaster(), commandLine, listener);
         listener.getLogger().println("Load report generator returned with exit code: " + commandResult);
         if (commandResult != 0)
         {
@@ -2127,27 +2114,27 @@ public class LoadTestBuilder extends Builder
         }
     }
 
-    private void copyResults(AbstractBuild<?, ?> currentBuild, BuildListener listener) throws InterruptedException, IOException
+    private void copyResults(Run<?, ?> currentBuild, Launcher launcher, TaskListener listener) throws InterruptedException, IOException
     {
         // recreate a fresh summary results directory
-        FilePath summaryResultsFolder = getSummaryResultsFolder(currentBuild.getProject());
+        FilePath summaryResultsFolder = getSummaryResultsFolder(currentBuild.getParent());
 
         summaryResultsFolder.deleteRecursive();
         summaryResultsFolder.mkdirs();
 
         // copy config from the current build's results
         FilePath configFolder = getBuildResultConfigFolder(currentBuild);
-        FilePath summaryConfigFolder = getSummaryResultsConfigFolder(currentBuild.getProject());
+        FilePath summaryConfigFolder = getSummaryResultsConfigFolder(currentBuild.getParent());
 
         configFolder.copyRecursiveTo(summaryConfigFolder);
 
         // copy timer data from the last n builds
-        List<AbstractBuild<?, ?>> builds = new ArrayList<AbstractBuild<?, ?>>(
-                                                                              currentBuild.getPreviousBuildsOverThreshold(numberOfBuildsForSummaryReport - 1,
-                                                                                                                          Result.UNSTABLE));
+
+        List<Run<?, ?>> builds = new ArrayList<Run<?, ?>>(currentBuild.getPreviousBuildsOverThreshold(getNumberOfBuildsForSummaryReport() -
+                                                                                                      1, Result.UNSTABLE));
         builds.add(0, currentBuild);
 
-        for (AbstractBuild<?, ?> build : builds)
+        for (Run<?, ?> build : builds)
         {
             FilePath resultsFolder = getBuildResultFolder(build);
             if (resultsFolder.isDirectory())
@@ -2185,37 +2172,36 @@ public class LoadTestBuilder extends Builder
         }
     }
 
-    private void createTrendReport(AbstractBuild<?, ?> build, BuildListener listener) throws Exception
+    private void createTrendReport(Run<?, ?> build, Launcher launcher, TaskListener listener) throws Exception
     {
         listener.getLogger().println("-----------------------------------------------------------------\nCreating trend report ...\n");
 
         List<String> commandLine = new ArrayList<String>();
 
-        if (SystemUtils.IS_OS_WINDOWS)
+        if (launcher.isUnix())
+        {
+            commandLine.add("./create_trend_report.sh");
+        }
+        else
         {
             commandLine.add("cmd.exe");
             commandLine.add("/c");
             commandLine.add("create_trend_report.cmd");
         }
-        else
-        {
-            commandLine.add("./create_trend_report.sh");
-        }
 
-        FilePath trendReportDest = getTrendReportFolder(build.getProject());
+        FilePath trendReportDest = getTrendReportFolder(build.getParent());
         commandLine.add("-o");
         commandLine.add(trendReportDest.getRemote());
 
         // get some previous builds that were either UNSTABLE or SUCCESS
-        List<AbstractBuild<?, ?>> builds = new ArrayList<AbstractBuild<?, ?>>(
-                                                                              build.getPreviousBuildsOverThreshold(numberOfBuildsForTrendReport - 1,
-                                                                                                                   Result.UNSTABLE));
+        List<Run<?, ?>> builds = new ArrayList<Run<?, ?>>(build.getPreviousBuildsOverThreshold(getNumberOfBuildsForTrendReport() - 1,
+                                                                                               Result.UNSTABLE));
         // add the current build
         builds.add(build);
 
         // add the report directories
         int numberOfBuildsWithReports = 0;
-        for (AbstractBuild<?, ?> eachBuild : builds)
+        for (Run<?, ?> eachBuild : builds)
         {
             FilePath reportDirectory = getBuildReportFolder(eachBuild);
             if (reportDirectory.isDirectory())
@@ -2229,7 +2215,7 @@ public class LoadTestBuilder extends Builder
         if (numberOfBuildsWithReports >= 2)
         {
             // run trend report generator on master
-            int commandResult = executeCommand(Jenkins.getInstance(), getXltBinFolderOnMaster(), commandLine, listener.getLogger());
+            int commandResult = executeCommand(launcher, getXltBinFolderOnMaster(), commandLine, listener);
             listener.getLogger().println("Trend report generator returned with exit code: " + commandResult);
             if (commandResult != 0)
             {
@@ -2240,5 +2226,58 @@ public class LoadTestBuilder extends Builder
         {
             listener.getLogger().println("Cannot create trend report because no previous reports available!");
         }
+    }
+
+    @Override
+    public void perform(Run<?, ?> run, FilePath workspace, Launcher launcher, TaskListener listener)
+        throws InterruptedException, IOException
+    {
+        listener.getLogger().println("workspace: " + workspace + ", haveLauncher: " + (launcher != null));
+        initializeBuildParameter();
+
+        try
+        {
+            initialCleanUp(run, launcher, listener);
+        }
+        catch (Exception e)
+        {
+            listener.getLogger().println("Cleanup failed: " + e);
+            LOGGER.error("Cleanup failed: ", e);
+        }
+
+        boolean artifactsSaved = false;
+        try
+        {
+            copyXlt(run, launcher, listener);
+
+            String[] agentControllerProperties = configureAgentController(run, workspace, launcher, listener);
+            runMasterController(run, launcher, workspace, listener, agentControllerProperties);
+            createReport(run, launcher, listener);
+            saveArtifacts(run, launcher, listener);
+            artifactsSaved = true;
+
+            validateCriteria(run, listener);
+        }
+        catch (InterruptedException e)
+        {
+            run.setResult(run.getExecutor().abortResult());
+        }
+        catch (Exception e)
+        {
+            run.setResult(Result.FAILURE);
+            listener.getLogger().println("Build failed: " + e);
+            LOGGER.error("Build failed", e);
+        }
+        finally
+        {
+            performPostTestSteps(run, launcher, listener, artifactsSaved);
+
+            if (run.getResult() == Result.FAILURE)
+            {
+                setBuildParameterXLT_RUN_FAILED(true);
+            }
+            publishBuildParameters(run);
+        }
+
     }
 }
