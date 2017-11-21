@@ -105,7 +105,7 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
         }
         catch (Exception e)
         {
-            LOGGER.error("", e);
+            LOGGER.error("Failed to read default XLT config", e);
         }
         return null;
     }

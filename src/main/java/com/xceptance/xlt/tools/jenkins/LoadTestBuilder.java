@@ -11,9 +11,9 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
@@ -94,7 +94,7 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
     @CheckForNull
     private String pathToTestSuite;
 
-    transient private JSONObject config = new JSONObject();
+    private transient JSONObject config;
 
     @CheckForNull
     private String timeFormatPattern;
@@ -126,7 +126,6 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
     private MarkCriticalOption markCriticalOption;
 
     transient private List<Chart<Integer, Double>> charts = new ArrayList<Chart<Integer, Double>>();
-
 
     private transient Map<ENVIRONMENT_KEYS, ParameterValue> buildParameterMap;
 
@@ -192,7 +191,7 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
         // misc.
         this.stepId = stepId;
     }
-    
+
     public List<AWSSecurityGroup> getSecurityGroups()
     {
         return agentControllerConfig.getSecurityGroups();
@@ -450,7 +449,7 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
     {
         return getStepId();
     }
-    
+
     public boolean isPlotVertical()
     {
         return plotVertical;
@@ -609,10 +608,10 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
         return null;
     }
 
-    public void addBuildToCharts(Run<?, ?> build)
-    {
-        addBuildsToCharts(Arrays.<Run<?, ?>>asList(build));
-    }
+//    public void addBuildToCharts(Run<?, ?> build)
+//    {
+//        addBuildsToCharts(Arrays.<Run<?, ?>>asList(build));
+//    }
 
     private void addBuildsToCharts(List<Run<?, ?>> builds)
     {
@@ -787,7 +786,6 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
 
     private void publishChartData(final Run<?, ?> run)
     {
-        updateConfig();
         reloadCharts(run);
 
         run.addAction(new XltChartAction(getEnabledCharts(), plotWidth, plotHeight, plotTitle, stepId, plotVertical, getCreateTrendReport(),
@@ -818,16 +816,16 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
 
     }
 
-
     private void updateConfig()
     {
         try
         {
             config = new JSONObject(xltConfig);
         }
-        catch (JSONException e)
+        catch (final JSONException e)
         {
-            LOGGER.error("", e);
+            LOGGER.error("Failed to parse XLT config as JSON object", e);
+            config = null;
         }
     }
 
@@ -887,6 +885,11 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
 
     private ArrayList<String> getValueConfigIDs() throws JSONException
     {
+        return getValueConfigIDs(null);
+    }
+
+    private ArrayList<String> getValueConfigIDs(String plotID) throws JSONException
+    {
         ArrayList<String> valueList = new ArrayList<String>();
 
         if (config != null)
@@ -894,37 +897,24 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
             JSONArray valuesSection = config.getJSONArray(CONFIG_SECTIONS_PARAMETER.values.name());
             for (int i = 0; i < valuesSection.length(); i++)
             {
-                JSONObject each = valuesSection.getJSONObject(i);
-                valueList.add(each.getString(CONFIG_VALUE_PARAMETER.id.name()));
-            }
-        }
-        return valueList;
-    }
-
-    private ArrayList<String> getValueConfigIDs(String plotID) throws JSONException
-    {
-        ArrayList<String> valueList = new ArrayList<String>();
-
-        JSONArray valuesSection = config.getJSONArray(CONFIG_SECTIONS_PARAMETER.values.name());
-        for (int i = 0; i < valuesSection.length(); i++)
-        {
-            String valueID = null;
-            try
-            {
-                JSONObject each = valuesSection.getJSONObject(i);
-                valueID = each.getString(CONFIG_VALUE_PARAMETER.id.name());
-                if (plotID.equals(each.getString(CONFIG_VALUE_PARAMETER.plotID.name())))
+                String valueID = null;
+                try
                 {
-                    valueList.add(valueID);
+                    JSONObject each = valuesSection.getJSONObject(i);
+                    valueID = each.getString(CONFIG_VALUE_PARAMETER.id.name());
+                    if (plotID == null || plotID.equals(each.getString(CONFIG_VALUE_PARAMETER.plotID.name())))
+                    {
+                        valueList.add(valueID);
+                    }
                 }
-            }
-            catch (JSONException e)
-            {
-                String message = "";
-                if (valueID != null)
-                    message = "valueID: \"" + valueID + "\"";
+                catch (JSONException e)
+                {
+                    String message = "";
+                    if (valueID != null)
+                        message = "valueID: \"" + valueID + "\"";
 
-                LOGGER.error("Failed to get plot id for value. (index: " + i + " " + message + ")", e);
+                    LOGGER.error("Failed to get plot id for value. (index: " + i + " " + message + ")", e);
+                }
             }
         }
         return valueList;
@@ -932,8 +922,7 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
 
     private ArrayList<String> getPlotConfigIDs() throws JSONException
     {
-        ArrayList<String> plotIDs = new ArrayList<String>();
-
+        final ArrayList<String> plotIDs = new ArrayList<String>();
         if (config != null)
         {
             JSONArray plotSection = config.getJSONArray(CONFIG_SECTIONS_PARAMETER.plots.name());
@@ -1014,8 +1003,12 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
 
     private String getBuildReportURL(Run<?, ?> build)
     {
-        return XltRecorderAction.RELATIVE_REPORT_URL + stepId + "/" + FOLDER_NAMES.ARTIFACT_REPORT + "/index.html";
+        final StringBuilder sb = new StringBuilder();
 
+        sb.append(StringUtils.defaultString(Jenkins.getActiveInstance().getRootUrl(), "/")).append(build.getUrl())
+          .append(XltRecorderAction.RELATIVE_REPORT_URL).append(stepId).append('/').append(FOLDER_NAMES.ARTIFACT_REPORT)
+          .append("/index.html");
+        return sb.toString();
     }
 
     private FilePath getBuildResultFolder(Run<?, ?> build)
@@ -1400,18 +1393,20 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
 
     private void setBuildParameterXLT_REPORT_URL(String reportURL)
     {
-        setBuildParameter(ENVIRONMENT_KEYS.XLT_REPORT_URL, reportURL != null ? reportURL : "");
+        setBuildParameter(ENVIRONMENT_KEYS.XLT_REPORT_URL, StringUtils.defaultString(reportURL));
     }
 
-    public void initializeBuildParameter()
+    protected void init()
     {
-        buildParameterMap = new Hashtable<ENVIRONMENT_KEYS, ParameterValue>();
+        buildParameterMap = new TreeMap<ENVIRONMENT_KEYS, ParameterValue>();
         setBuildParameterXLT_RUN_FAILED(false);
         setBuildParameterXLT_CONDITION_FAILED(false);
         setBuildParameterXLT_CONDITION_ERROR(false);
         setBuildParameterXLT_CONDITION_CRITICAL(false);
         setBuildParameterXLT_REPORT_URL(null);
         setBuildParameterXLT_CONDITION_MESSAGE("");
+
+        updateConfig();
     }
 
     private void performPostTestSteps(Run<?, ?> run, Launcher launcher, TaskListener listener, boolean artifactsSaved)
@@ -1892,11 +1887,6 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
         }
     }
 
-    public static boolean isBuildNodeOnline(Launcher launcher)
-    {
-        return getBuildNode(launcher) != null;
-    }
-
     public static hudson.model.Node getBuildNodeIfOnlineOrFail(Launcher launcher) throws BuildNodeGoneException
     {
         hudson.model.Node node = getBuildNode(launcher);
@@ -2025,6 +2015,8 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
     {
         listener.getLogger()
                 .println("\n\n-----------------------------------------------------------------\nArchive results and report...\n");
+
+        run.pickArtifactManager();
         // save load test results and report (copy from node)
         saveArtifact(getXltResultFolder(run, launcher), getBuildResultFolder(run));
         saveArtifact(getXltReportFolder(run, launcher), getBuildReportFolder(run));
@@ -2188,7 +2180,7 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
         }
 
         // check whether we have enough builds with reports to create a trend report
-        if (numberOfBuildsWithReports >= 2)
+        if (numberOfBuildsWithReports > 1)
         {
             // run trend report generator on master
             int commandResult = executeCommand(launcher, getXltBinFolderOnMaster(), commandLine, listener);
@@ -2224,7 +2216,7 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
             throw new AbortException("Cannot run without a workspace");
         }
 
-        initializeBuildParameter();
+        init();
 
         try
         {
