@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -159,6 +160,11 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
     {
         return 360;
     }
+    
+    public String getDefaultStepId()
+    {
+        return UUID.randomUUID().toString();
+    }
 
     /**
      * Performs on-the-fly validation of the form field 'testPropertiesFile'.
@@ -209,6 +215,21 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
         return FormValidation.ok();
     }
 
+    public FormValidation doCheckStepId(@QueryParameter String value)
+    {
+        if(StringUtils.isBlank(value))
+        {
+            return FormValidation.validateRequired(value);
+        }
+        
+        if(Pattern.matches("^[a-zA-Z0-9_\\-]+$", value))
+        {
+            return FormValidation.ok();
+        }
+        
+        return FormValidation.error("Step identifier must not contain characters other than 'a'-'z', 'A'-'Z', '0'-'9', '-' and '_'.");
+    }
+    
     /**
      * Performs on-the-fly validation of the form field 'urlFile'.
      */

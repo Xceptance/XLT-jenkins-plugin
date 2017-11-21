@@ -17,6 +17,12 @@
     <f:entry title="Path to XLT Template" field="xltTemplateDir">
         <f:textbox />
     </f:entry>
+    
+    <f:entry title="Step Identifier (must be unique across entire job)" field="stepId" >
+        <f:textbox field="stepId" default="${descriptor.getDefaultStepId()}" />
+    </f:entry>
+
+    
 
     <!-- ===================================================================== -->
 
@@ -180,9 +186,5 @@
     </f:advanced>
 
     <!-- ===================================================================== -->
-
-    <f:invisibleEntry>
-        <f:textbox field="builderID" value="${it.getBuilderID()}" />
-    </f:invisibleEntry>
 
 </j:jelly>

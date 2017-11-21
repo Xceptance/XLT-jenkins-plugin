@@ -22,7 +22,7 @@
                     <td>
                         <div>
                             <a
-                                href="xltResult/report/${it.getBuilderID()}/report/${it.getBuildNumber()}/index.html">XLT Report</a>
+                                href="${it.getReportURL()}">XLT Report</a>
                         </div>
                     </td>
                 </tr>

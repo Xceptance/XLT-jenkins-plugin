@@ -6,7 +6,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.StringReader;
-import java.lang.Thread.UncaughtExceptionHandler;
 import java.net.URI;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -15,7 +14,6 @@ import java.util.Collections;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
@@ -30,7 +28,6 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.SystemUtils;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -45,6 +42,7 @@ import org.xml.sax.SAXException;
 import com.cloudbees.plugins.credentials.CredentialsMatchers;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
+import com.thoughtworks.xstream.annotations.XStreamAlias;
 import com.xceptance.xlt.tools.jenkins.Chart.ChartLine;
 import com.xceptance.xlt.tools.jenkins.Chart.ChartLineValue;
 import com.xceptance.xlt.tools.jenkins.config.option.MarkCriticalOption;
@@ -52,12 +50,12 @@ import com.xceptance.xlt.tools.jenkins.config.option.SummaryReportOption;
 import com.xceptance.xlt.tools.jenkins.config.option.TrendReportOption;
 import com.xceptance.xlt.tools.jenkins.logging.LOGGER;
 
+import hudson.AbortException;
 import hudson.FilePath;
 import hudson.Launcher;
 import hudson.Launcher.ProcStarter;
 import hudson.Util;
 import hudson.model.Computer;
-import hudson.model.InvisibleAction;
 import hudson.model.Job;
 import hudson.model.ParameterValue;
 import hudson.model.Result;
@@ -69,6 +67,7 @@ import hudson.tasks.Builder;
 import hudson.util.Secret;
 import jenkins.model.Jenkins;
 import jenkins.tasks.SimpleBuildStep;
+import jenkins.util.VirtualFile;
 
 /**
  * Readout the configuration of XLT in Jenkins, perform load testing and plot build results on project page.
@@ -112,7 +111,8 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
     private String plotTitle;
 
     @Nonnull
-    private String builderID;
+    @XStreamAlias("builderID")
+    private final String stepId;
 
     private boolean plotVertical;
 
@@ -127,9 +127,6 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
 
     transient private List<Chart<Integer, Double>> charts = new ArrayList<Chart<Integer, Double>>();
 
-    transient private boolean isSave = false;
-
-    transient private XltChartAction chartAction;
 
     private transient Map<ENVIRONMENT_KEYS, ParameterValue> buildParameterMap;
 
@@ -175,17 +172,9 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
     }
 
     @DataBoundConstructor
-    public LoadTestBuilder(@Nonnull final String xltTemplateDir)
+    public LoadTestBuilder(@Nonnull final String stepId, @Nonnull final String xltTemplateDir)
     {
-        isSave = true;
         this.xltTemplateDir = xltTemplateDir;
-        Thread.currentThread().setUncaughtExceptionHandler(new UncaughtExceptionHandler()
-        {
-            public void uncaughtException(Thread t, Throwable e)
-            {
-                LOGGER.error("Uncaught exception", e);
-            }
-        });
 
         // load test configuration
         this.agentControllerConfig = new AgentControllerConfig();
@@ -201,17 +190,9 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
         this.plotTitle = getDescriptor().getDefaultPlotTitle();
 
         // misc.
-        this.builderID = UUID.randomUUID().toString();
+        this.stepId = stepId;
     }
-
-    public class XLTBuilderAction extends InvisibleAction
-    {
-        public LoadTestBuilder getLoadTestBuilder()
-        {
-            return LoadTestBuilder.this;
-        }
-    }
-
+    
     public List<AWSSecurityGroup> getSecurityGroups()
     {
         return agentControllerConfig.getSecurityGroups();
@@ -458,19 +439,18 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
     }
 
     @Nonnull
+    public String getStepId()
+    {
+        return stepId;
+    }
+
+    @Nonnull
+    @Deprecated
     public String getBuilderID()
     {
-        return builderID;
+        return getStepId();
     }
-
-    public void setBuilderID(@Nonnull final String buildId)
-    {
-        if (StringUtils.isNotBlank(buildId))
-        {
-            this.builderID = buildId;
-        }
-    }
-
+    
     public boolean isPlotVertical()
     {
         return plotVertical;
@@ -631,7 +611,7 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
 
     public void addBuildToCharts(Run<?, ?> build)
     {
-        addBuildsToCharts(Arrays.<Run<?,?>>asList(build));
+        addBuildsToCharts(Arrays.<Run<?, ?>>asList(build));
     }
 
     private void addBuildsToCharts(List<Run<?, ?>> builds)
@@ -805,6 +785,15 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
         }
     }
 
+    private void publishChartData(final Run<?, ?> run)
+    {
+        updateConfig();
+        reloadCharts(run);
+
+        run.addAction(new XltChartAction(getEnabledCharts(), plotWidth, plotHeight, plotTitle, stepId, plotVertical, getCreateTrendReport(),
+                                         getCreateSummaryReport()));
+    }
+
     private void reloadCharts(Run<?, ?> run, Run<?, ?>... exludeBuilds)
     {
         if (charts == null)
@@ -827,16 +816,8 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
 
         loadCharts(run, exludeBuilds);
 
-        if (chartAction != null)
-        {
-            chartAction.setCharts(getEnabledCharts());
-        }
     }
 
-    public void removeBuildFromCharts(Run<?, ?> run)
-    {
-        reloadCharts(run, run);
-    }
 
     private void updateConfig()
     {
@@ -967,23 +948,22 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
 
     private FilePath getTestReportDataFile(Run<?, ?> build)
     {
-        return new FilePath(getBuildReportFolder(build), "testreport.xml");
+        return getBuildReportFolder(build).child("testreport.xml");
     }
 
     private FilePath getXltResultFolder(Run<?, ?> build, Launcher launcher) throws BuildNodeGoneException
     {
-        return new FilePath(getTemporaryXltFolder(build, launcher), FOLDER_NAMES.ARTIFACT_RESULT);
+        return getTemporaryXltFolder(build, launcher).child(FOLDER_NAMES.ARTIFACT_RESULT);
     }
 
     private FilePath getXltLogFolder(Run<?, ?> build, Launcher launcher) throws BuildNodeGoneException
     {
-        return new FilePath(getTemporaryXltFolder(build, launcher), "log");
+        return getTemporaryXltFolder(build, launcher).child("log");
     }
 
     private FilePath getXltReportFolder(Run<?, ?> build, Launcher launcher) throws BuildNodeGoneException
     {
-        return new FilePath(getTemporaryXltFolder(build, launcher),
-                            FOLDER_NAMES.ARTIFACT_REPORT + "/" + Integer.toString(build.getNumber()));
+        return getTemporaryXltFolder(build, launcher).child(FOLDER_NAMES.ARTIFACT_REPORT);
     }
 
     private FilePath getFirstSubFolder(FilePath dir) throws IOException, InterruptedException
@@ -1007,7 +987,9 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
 
     private static URI getArtifactsDir(Run<?, ?> build)
     {
-        return build.getArtifactManager().root().toURI();
+        final VirtualFile artiDir = build.getArtifactManager().root();
+        LOGGER.warn("ArtifactsDir: " + artiDir.toString());
+        return artiDir.toURI();
     }
 
     public static FilePath getArtifact(Run<?, ?> build, String artifactPath)
@@ -1022,43 +1004,38 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
 
     private FilePath getBuildLogsFolder(Run<?, ?> build)
     {
-        return getArtifact(build, builderID + "/log");
+        return getArtifact(build, stepId + "/log");
     }
 
     private FilePath getBuildReportFolder(Run<?, ?> build)
     {
-        return getArtifact(build, builderID + "/" + FOLDER_NAMES.ARTIFACT_REPORT + "/" + Integer.toString(build.getNumber()));
+        return getArtifact(build, stepId + "/" + FOLDER_NAMES.ARTIFACT_REPORT);
     }
 
     private String getBuildReportURL(Run<?, ?> build)
     {
-        String jenkinsURL = Jenkins.getInstance().getRootUrl();
-        if (jenkinsURL == null)
-        {
-            jenkinsURL = "";
-        }
-        return jenkinsURL + build.getUrl() + XltRecorderAction.RELATIVE_REPORT_URL + builderID + "/" + FOLDER_NAMES.ARTIFACT_REPORT + "/" +
-               build.getNumber() + "/index.html";
+        return XltRecorderAction.RELATIVE_REPORT_URL + stepId + "/" + FOLDER_NAMES.ARTIFACT_REPORT + "/index.html";
+
     }
 
     private FilePath getBuildResultFolder(Run<?, ?> build)
     {
-        return getArtifact(build, builderID + "/" + FOLDER_NAMES.ARTIFACT_RESULT);
+        return getArtifact(build, stepId + "/" + FOLDER_NAMES.ARTIFACT_RESULT);
     }
 
     private FilePath getTrendReportFolder(Job<?, ?> project)
     {
-        return new FilePath(new FilePath(project.getRootDir()), "trendreport/" + builderID);
+        return new FilePath(project.getRootDir()).child("trendreport").child(stepId);
     }
 
     private FilePath getSummaryReportFolder(Job<?, ?> project)
     {
-        return new FilePath(new File(project.getRootDir(), "summaryReport/" + builderID));
+        return new FilePath(project.getRootDir()).child("summaryReport").child(stepId);
     }
 
     private FilePath getSummaryResultsFolder(Job<?, ?> project)
     {
-        return new FilePath(new File(project.getRootDir(), "summaryResults/" + builderID));
+        return new FilePath(project.getRootDir()).child("summaryResults").child(stepId);
     }
 
     private FilePath getSummaryResultsConfigFolder(Job<?, ?> project)
@@ -1070,7 +1047,7 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
     {
         hudson.model.Node node = getBuildNodeIfOnlineOrFail(launcher);
         FilePath base = new FilePath(run.getParent().getRootDir());
-        if (node != null && node != Jenkins.getActiveInstance())
+        if (node != Jenkins.getInstance())
         {
             base = node.getRootPath();
         }
@@ -1089,7 +1066,7 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
 
     private FilePath getTemporaryXltFolder(Run<?, ?> run, Launcher launcher) throws BuildNodeGoneException
     {
-        return new FilePath(new FilePath(getTemporaryXltBuildFolder(run, launcher), getBuilderID()), "xlt");
+        return new FilePath(new FilePath(getTemporaryXltBuildFolder(run, launcher), getStepId()), "xlt");
     }
 
     private FilePath getXltTemplateFilePath()
@@ -1219,7 +1196,7 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
         final List<SlowRequestInfo> slowestRequests = determineSlowestRequests(run, listener, dataXml);
 
         // create the action with all the collected data
-        XltRecorderAction recorderAction = new XltRecorderAction(builderID, getBuildReportURL(run), failedAlerts, failedTestCases,
+        XltRecorderAction recorderAction = new XltRecorderAction(stepId, getBuildReportURL(run), failedAlerts, failedTestCases,
                                                                  slowestRequests);
         run.addAction(recorderAction);
 
@@ -1915,7 +1892,6 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
         }
     }
 
-
     public static boolean isBuildNodeOnline(Launcher launcher)
     {
         return getBuildNode(launcher) != null;
@@ -1952,7 +1928,7 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
         {
             return false;
         }
-        else if (filePath.startsWith("\\") || filePath.startsWith("\\") || filePath.contains(":"))
+        else if (filePath.startsWith("\\") || filePath.contains(":"))
         {
             return false;
         }
@@ -1972,7 +1948,7 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
                                 testPropertiesFile + ")");
         }
 
-        FilePath testProperties = getTestPropertiesFile(workspace);
+        final FilePath testProperties = getTestPropertiesFile(workspace);
         if (testProperties == null || !testProperties.exists())
         {
             throw new Exception("The test properties file does not exists. (" + testProperties.getRemote() + ")");
@@ -2232,7 +2208,22 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
     public void perform(Run<?, ?> run, FilePath workspace, Launcher launcher, TaskListener listener)
         throws InterruptedException, IOException
     {
-        listener.getLogger().println("workspace: " + workspace + ", haveLauncher: " + (launcher != null));
+
+        if (StringUtils.isBlank(stepId))
+        {
+            throw new AbortException("Parameter 'stepId' must not be blank");
+        }
+
+        if (StringUtils.isBlank(xltTemplateDir))
+        {
+            throw new AbortException("Parameter 'xltTemplateDir' must not be blank");
+        }
+
+        if (workspace == null)
+        {
+            throw new AbortException("Cannot run without a workspace");
+        }
+
         initializeBuildParameter();
 
         try
@@ -2252,6 +2243,7 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
 
             String[] agentControllerProperties = configureAgentController(run, workspace, launcher, listener);
             runMasterController(run, launcher, workspace, listener, agentControllerProperties);
+
             createReport(run, launcher, listener);
             saveArtifacts(run, launcher, listener);
             artifactsSaved = true;
@@ -2271,12 +2263,16 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
         finally
         {
             performPostTestSteps(run, launcher, listener, artifactsSaved);
-
+            LOGGER.info("BuilderID: " + stepId);
             if (run.getResult() == Result.FAILURE)
             {
                 setBuildParameterXLT_RUN_FAILED(true);
             }
             publishBuildParameters(run);
+            if (artifactsSaved)
+            {
+                publishChartData(run);
+            }
         }
 
     }

@@ -1,21 +1,17 @@
 package com.xceptance.xlt.tools.jenkins;
 
-import java.io.File;
-import java.io.IOException;
-import java.net.MalformedURLException;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
-import javax.servlet.ServletException;
-
-import org.kohsuke.stapler.StaplerRequest;
-import org.kohsuke.stapler.StaplerResponse;
-
-import hudson.FilePath;
-import hudson.model.AbstractProject;
+import hudson.model.Action;
+import hudson.model.InvisibleAction;
+import hudson.model.Job;
 import hudson.model.Run;
 import jenkins.model.RunAction2;
+import jenkins.tasks.SimpleBuildStep.LastBuildAction;
 
-public class XltChartAction implements RunAction2
+public class XltChartAction extends InvisibleAction implements RunAction2, LastBuildAction
 {
     private List<Chart<Integer, Double>> charts;
 
@@ -25,7 +21,7 @@ public class XltChartAction implements RunAction2
 
     private String title;
 
-    private String builderID;
+    private String stepId;
 
     private boolean isPlotVertical;
 
@@ -35,37 +31,22 @@ public class XltChartAction implements RunAction2
 
     private transient Run<?, ?> run;
 
-    public XltChartAction(List<Chart<Integer, Double>> charts, int plotWidth, int plotHeight, String title, String builderID,
+    public XltChartAction(List<Chart<Integer, Double>> charts, int plotWidth, int plotHeight, String title, String stepId,
                           boolean isPlotVertical, boolean isTrendReportEnabled, boolean isSummaryReportEnabled)
     {
         this.charts = charts;
         this.plotWidth = plotWidth;
         this.plotHeight = plotHeight;
         this.title = title;
-        this.builderID = builderID;
+        this.stepId = stepId;
         this.isPlotVertical = isPlotVertical;
         this.isTrendReportEnabled = isTrendReportEnabled;
         this.isSummaryReportEnabled = isSummaryReportEnabled;
     }
 
-    public String getBuilderID()
+    public String getStepId()
     {
-        return builderID;
-    }
-
-    public String getDisplayName()
-    {
-        return "XLT Chart - " + title; // no link to action page
-    }
-
-    public String getIconFileName()
-    {
-        return null; // no link to action page
-    }
-
-    public String getUrlName()
-    {
-        return "xltChart" + builderID;
+        return stepId;
     }
 
     public String getTitle()
@@ -109,64 +90,24 @@ public class XltChartAction implements RunAction2
         return isSummaryReportEnabled;
     }
 
-    public boolean isTrendReportAvailable() throws IOException, InterruptedException
-    {
 
-        FilePath trendReportDirectory = null;
-        if (run != null)
-        {
-            trendReportDirectory = new FilePath(new File(new File(run.getParent().getRootDir(), "trendreport"), builderID));
-        }
-        if (isTrendReportEnabled && trendReportDirectory != null && trendReportDirectory.isDirectory() &&
-            trendReportDirectory.list().size() != 0)
-        {
-            return true;
-        }
-        else
-        {
-            return false;
-        }
-    }
-
-    public void doTrendReport(StaplerRequest req, StaplerResponse rsp)
-        throws MalformedURLException, ServletException, IOException, InterruptedException
+    @Override
+    public void onAttached(Run<?, ?> r)
     {
-        rsp.serveFile(req, new FilePath(new File(new File(new File(run.getParent().getRootDir(), "trendreport"), builderID),
-                                                 req.getRestOfPath())).toURI().toURL());
-    }
-
-    public boolean isSummaryReportAvailable() throws IOException, InterruptedException
-    {
-        FilePath summaryReport = null;
-        if (run != null)
-        {
-            summaryReport = new FilePath(new File(new File(run.getParent().getRootDir(), "summaryReport"), builderID));
-        }
-        return isSummaryReportEnabled && summaryReport != null && summaryReport.exists() && summaryReport.isDirectory() &&
-               summaryReport.list().size() > 0;
-    }
-
-    public void doSummaryReport(StaplerRequest req, StaplerResponse rsp)
-        throws MalformedURLException, ServletException, IOException, InterruptedException
-    {
-        rsp.serveFile(req, new FilePath(new File(new File(new File(run.getParent().getRootDir(), "summaryReport"), builderID),
-                                                 req.getRestOfPath())).toURI().toURL());
+        this.run = r;
     }
 
     @Override
     public void onLoad(Run<?, ?> r)
     {
-        run = r;
+        onAttached(r);
     }
 
     @Override
-    public void onAttached(Run<?, ?> r)
+    public Collection<? extends Action> getProjectActions()
     {
-        run = r;
+        final Job<?, ?> job = run.getParent();
+        return Collections.singletonList(new XltChartProjectAction(job, getStepId()));
     }
 
-    public Run<?, ?> getRun()
-    {
-        return run;
-    }
 }

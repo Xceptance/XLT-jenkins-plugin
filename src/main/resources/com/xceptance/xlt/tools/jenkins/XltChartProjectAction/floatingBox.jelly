@@ -1,22 +1,24 @@
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
-		<j:set var="width" value="${from.getPlotWidth()}"/>
-		<j:set var="height" value="${from.getPlotHeight()}"/>
-		<j:set var="builderID" value="${from.getBuilderID()}"/>
+		<j:set var="action" value="${from.getLastBuildAction()}" />
+<j:if test="${action != null}">
+        <j:set var="width" value="${action.getPlotWidth()}"/>
+		<j:set var="height" value="${action.getPlotHeight()}"/>
+		<j:set var="stepId" value="${action.getStepId()}"/>
 		
 		<j:set var="imgDivStyle" value="display:inline-block;"/>
-		<j:if test="${from.isPlotVertical()}">
+		<j:if test="${action.isPlotVertical()}">
 			<j:set var="imgDivStyle" value=""/>
 		</j:if>		
 		
 		<style>
-			div[chart-id='${builderID}'] .flotr-grid-label-y{
+			div[chart-id='${stepId}'] .flotr-grid-label-y{
 				text-align:left !important;
 				left:auto !important;
 				right:${width+5}px !important;				
 			}	
 			
-			div[chart-id='${builderID}'] .flotr-grid-label-x{
+			div[chart-id='${stepId}'] .flotr-grid-label-x{
 				/*direction: rtl;*/
 				text-align: left !important;
     			transform: translate(50%, 0%) rotate(25deg);
@@ -33,10 +35,10 @@
 			}
 		</style>
 				
-		<div align="left" style="margin:10px;" chart-id="${builderID}">					
+		<div align="left" style="margin:10px;" chart-id="${stepId}">
 			<br/>
 			<div align="left">
-				<div align="right"><b>${from.getTitle()}</b></div><hr/>			
+				<div align="right"><b>${action.getTitle()}</b></div><hr/>			
 				<img src="${resURL}/plugin/xlt-jenkins-plugin/logo.png" height="16"/>
 				<j:if test="${from.isTrendReportAvailable()}">
 					<a style="margin-left:20px" href="${from.getUrlName()}/trendReport/index.html">
@@ -50,14 +52,15 @@
 				</j:if>
 			</div>	
 			
-			<j:if test="${from.getCharts().isEmpty() == false}">
+            <j:set var="charts" value="${action.getCharts()}" />
+			<j:if test="${charts.isEmpty() == false}">
 				<!-- Chart Section -->		
 					
 				<div>			
 					<script type="text/javascript" src="${resURL}/plugin/xlt-jenkins-plugin/flotr2.min.js"></script>
-					<j:forEach var="eachChart" items="${from.getCharts()}" varStatus="loopStat">
+					<j:forEach var="eachChart" items="${charts}" varStatus="loopStat">
 						
-						<j:set var="plotContainerID" value="$plotContainer-${eachChart.getChartID()}-${builderID}" />
+						<j:set var="plotContainerID" value="$plotContainer-${eachChart.getChartID()}-${stepId}" />
 	
 						<div style="${imgDivStyle}width:${width+100}px;height:${height+100}px;margin:0 0 50px 0;}">
 							<center>
@@ -195,4 +198,5 @@
 				</div>
 			</j:if>
 		</div>
+        </j:if>
 </j:jelly>

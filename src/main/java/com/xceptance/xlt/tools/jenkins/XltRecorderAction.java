@@ -12,6 +12,9 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
 
+import com.xceptance.xlt.tools.jenkins.logging.LOGGER;
+
+import hudson.FilePath;
 import hudson.model.Run;
 import jenkins.model.RunAction2;
 
@@ -122,7 +125,9 @@ public class XltRecorderAction implements RunAction2
     public void doReport(StaplerRequest request, StaplerResponse response)
         throws MalformedURLException, ServletException, IOException, InterruptedException
     {
-        response.serveFile(request, LoadTestBuilder.getArtifact(run, request.getRestOfPath()).toURI().toURL());
+        final FilePath reportPath =  LoadTestBuilder.getArtifact(run, request.getRestOfPath());
+        LOGGER.warn("reportPath: " + reportPath);
+        response.serveFile(request,reportPath.toURI().toURL());
     }
 
     @Override
