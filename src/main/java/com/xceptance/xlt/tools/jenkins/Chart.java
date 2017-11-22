@@ -93,18 +93,52 @@ public class Chart<X, Y>
         return data;
     }
 
+    public Chart<X, Y> clone()
+    {
+        final Chart<X, Y> c = new Chart<>(chartID, title);
+        for (final ChartLine<X, Y> line : lines)
+        {
+            c.lines.add(line.clone());
+        }
+
+        return c;
+    }
+
+    @Override
+    public String toString()
+    {
+        final StringBuilder sb = new StringBuilder();
+        sb.append("ID: ").append(chartID).append(", title: ").append(title).append(", values: [");
+        boolean first = true;
+        for (final ChartLine<X, Y> line : lines)
+        {
+            if (first)
+            {
+                first = false;
+            }
+            else
+            {
+                sb.append(", ");
+            }
+            sb.append(line);
+        }
+        sb.append("]");
+
+        return sb.toString();
+    }
+
     public static class ChartLine<X, Y>
     {
 
-        private List<ChartLineValue<X, Y>> values = new ArrayList<Chart.ChartLineValue<X, Y>>(20);
+        private final List<ChartLineValue<X, Y>> values = new ArrayList<Chart.ChartLineValue<X, Y>>(20);
 
-        private String lineID;
+        private final String lineID;
 
-        private int maxCount;
+        private final int maxCount;
 
-        private String name;
+        private final String name;
 
-        private boolean showNoValues;
+        private final boolean showNoValues;
 
         public ChartLine(String lineID, String name, int maxCount, boolean showNoValues)
         {
@@ -172,16 +206,55 @@ public class Chart<X, Y>
                 values.remove(0);
             }
         }
+
+        public String getName()
+        {
+            return name;
+        }
+
+        public ChartLine<X, Y> clone()
+        {
+            final ChartLine<X, Y> line = new ChartLine<>(lineID, name, maxCount, showNoValues);
+            for (final ChartLineValue<X, Y> val : values)
+            {
+                line.values.add(val.clone());
+            }
+
+            return line;
+        }
+        
+        @Override
+        public String toString()
+        {
+            final StringBuilder sb = new StringBuilder();
+            sb.append("lineID: ").append(lineID).append(", name: ").append(name).append(", values: [");
+            boolean first = true;
+            for(final ChartLineValue<X, Y> val : values)
+            {
+                if(first)
+                {
+                    first = false;
+                }
+                else
+                {
+                    sb.append(", ");
+                }
+                sb.append(val.getDataString());
+            }
+            sb.append("]");
+
+            return sb.toString();
+        }
     }
 
     public static class ChartLineValue<X, Y>
     {
 
-        private X xValue;
+        private final X xValue;
 
-        private Y yValue;
+        private final Y yValue;
 
-        private Map<String, String> dataObjectValues = new LinkedHashMap<String, String>();
+        private final Map<String, String> dataObjectValues = new LinkedHashMap<String, String>();
 
         public ChartLineValue(X xValue, Y yValue)
         {
@@ -212,6 +285,27 @@ public class Chart<X, Y>
         public String getDataString()
         {
             return "[" + String.valueOf(xValue) + "," + String.valueOf(yValue) + "]";
+        }
+
+        public Y getYValue()
+        {
+            return yValue;
+        }
+
+        public ChartLineValue<X, Y> clone()
+        {
+            final ChartLineValue<X, Y> val = new ChartLineValue<>(xValue, yValue);
+            val.dataObjectValues.putAll(dataObjectValues);
+
+            return val;
+        }
+
+        public ChartLineValue<X, Y> clone(final X newX)
+        {
+            final ChartLineValue<X, Y> val = new ChartLineValue<>(newX, yValue);
+            val.dataObjectValues.putAll(dataObjectValues);
+
+            return val;
         }
     }
 }

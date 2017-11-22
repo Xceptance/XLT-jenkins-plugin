@@ -1,7 +1,7 @@
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
 		<j:set var="action" value="${from.getLastBuildAction()}" />
-<j:if test="${action != null}">
+        <j:if test="${action != null}">
         <j:set var="width" value="${action.getPlotWidth()}"/>
 		<j:set var="height" value="${action.getPlotHeight()}"/>
 		<j:set var="stepId" value="${action.getStepId()}"/>
@@ -52,7 +52,7 @@
 				</j:if>
 			</div>	
 			
-            <j:set var="charts" value="${action.getCharts()}" />
+            <j:set var="charts" value="${action.getAllCharts()}" />
 			<j:if test="${charts.isEmpty() == false}">
 				<!-- Chart Section -->		
 					

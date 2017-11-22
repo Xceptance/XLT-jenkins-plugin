@@ -510,51 +510,6 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
         return enabledCharts;
     }
 
-    private void loadCharts(Run<?, ?> run, Run<?, ?>... excludeBuilds)
-    {
-        List<Run<?, ?>> allBuilds = new ArrayList<Run<?, ?>>(run.getParent().getBuilds());
-        if (allBuilds.isEmpty())
-            return;
-
-        try
-        {
-            int largestBuildCount = -1;
-            for (String eachPlotID : getPlotConfigIDs())
-            {
-                String buildCountValue = getOptionalPlotConfigValue(eachPlotID, CONFIG_PLOT_PARAMETER.buildCount);
-                if (StringUtils.isNotBlank(buildCountValue))
-                {
-                    try
-                    {
-                        int buildCount = Integer.parseInt(buildCountValue);
-                        if (buildCount > largestBuildCount)
-                        {
-                            largestBuildCount = buildCount;
-                        }
-                    }
-                    catch (NumberFormatException e)
-                    {
-                        LOGGER.error("Build count is not a number (plotID: \"" + eachPlotID + "\")", e);
-                    }
-                }
-                else
-                {
-                    largestBuildCount = -1;
-                    break;
-                }
-            }
-
-            List<Run<?, ?>> builds = getRuns(run, 0, largestBuildCount);
-            builds.removeAll(Arrays.asList(excludeBuilds));
-
-            addBuildsToCharts(builds);
-        }
-        catch (JSONException e)
-        {
-            LOGGER.error("Failed to config section.", e);
-        }
-    }
-
     /**
      * @param project
      * @param startFrom
@@ -608,113 +563,105 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
         return null;
     }
 
-//    public void addBuildToCharts(Run<?, ?> build)
-//    {
-//        addBuildsToCharts(Arrays.<Run<?, ?>>asList(build));
-//    }
-
-    private void addBuildsToCharts(List<Run<?, ?>> builds)
+    private void addBuildToCharts(Run<?, ?> build)
     {
-        for (int i = builds.size() - 1; i > -1; i--)
+        Document dataXml = null;
+        try
         {
-            Run<?, ?> eachBuild = builds.get(i);
-            Document dataXml = null;
-            try
-            {
-                dataXml = getDataDocument(eachBuild);
-            }
-            catch (Exception e)
-            {
-                LOGGER.error("Failed to read test data xml", e);
-                return;
-            }
+            dataXml = getDataDocument(build);
+        }
+        catch (Exception e)
+        {
+            LOGGER.error("Failed to read test data xml", e);
+            return;
+        }
 
-            try
+        try
+        {
+            for (String eachPlotID : getPlotConfigIDs())
             {
-                for (String eachPlotID : getPlotConfigIDs())
+                Chart<Integer, Double> chart = getChart(eachPlotID);
+                if (chart == null)
                 {
-                    Chart<Integer, Double> chart = getChart(eachPlotID);
-                    if (chart == null)
-                    {
-                        LOGGER.debug("No chart found for plot. (build: \"" + eachBuild.number + "\" plotID: \"" + eachPlotID + "\")");
-                        continue;
-                    }
-                    boolean addedValueToChart = false;
+                    LOGGER.debug("No chart found for plot. (build: \"" + build.number + "\" plotID: \"" + eachPlotID + "\")");
+                    continue;
+                }
+                boolean addedValueToChart = false;
 
-                    try
+                try
+                {
+                    for (String eachValueID : getValueConfigIDs(eachPlotID))
                     {
-                        for (String eachValueID : getValueConfigIDs(eachPlotID))
+                        ChartLine<Integer, Double> line = chart.getLine(eachValueID);
+                        if (line == null)
                         {
-                            ChartLine<Integer, Double> line = chart.getLine(eachValueID);
-                            if (line == null)
-                            {
-                                LOGGER.debug("No line found for value. (build: \"" + eachBuild.number + "\" valueID: \"" + eachValueID +
-                                             "\" chartID:\"" + chart.getChartID() + "\")");
-                                continue;
-                            }
+                            LOGGER.debug("No line found for value. (build: \"" + build.number + "\" valueID: \"" + eachValueID +
+                                         "\" chartID:\"" + chart.getChartID() + "\")");
+                            continue;
+                        }
 
-                            boolean addedValueToLine = false;
-                            if (dataXml == null)
+                        boolean addedValueToLine = false;
+                        if (dataXml == null)
+                        {
+                            LOGGER.info("No test data found for build. (build: \"" + build.number + "\")");
+                        }
+                        else
+                        {
+                            try
                             {
-                                LOGGER.info("No test data found for build. (build: \"" + eachBuild.number + "\")");
-                            }
-                            else
-                            {
+                                String xPath = getvalueConfigValue(eachValueID, CONFIG_VALUE_PARAMETER.xPath);
                                 try
                                 {
-                                    String xPath = getvalueConfigValue(eachValueID, CONFIG_VALUE_PARAMETER.xPath);
-                                    try
-                                    {
-                                        Double number = (Double) XPathFactory.newInstance().newXPath().evaluate(xPath, dataXml,
-                                                                                                                XPathConstants.NUMBER);
+                                    Double number = (Double) XPathFactory.newInstance().newXPath().evaluate(xPath, dataXml,
+                                                                                                            XPathConstants.NUMBER);
 
-                                        if (number.isNaN())
-                                        {
-                                            LOGGER.warn("Value is not a number. (build: \"" + eachBuild.number + "\" valueID: \"" +
-                                                        eachValueID + "\" XPath: \"" + xPath + "\"");
-                                        }
-                                        else
-                                        {
-                                            addChartLineValue(line, eachBuild, chart.getXIndex(), number.doubleValue());
-                                            addedValueToLine = true;
-                                            addedValueToChart = true;
-                                        }
-                                    }
-                                    catch (XPathExpressionException e)
+                                    if (number.isNaN())
                                     {
-                                        LOGGER.error("Invalid XPath. (build: \"" + eachBuild.number + "\" valueID: \"" + eachValueID +
-                                                     "\" XPath: \"" + xPath + "\")", e);
+                                        LOGGER.warn("Value is not a number. (build: \"" + build.number + "\" valueID: \"" + eachValueID +
+                                                    "\" XPath: \"" + xPath + "\"");
+                                    }
+                                    else
+                                    {
+                                        addChartLineValue(line, build, chart.getXIndex(), number.doubleValue());
+                                        addedValueToLine = true;
+                                        addedValueToChart = true;
                                     }
                                 }
-                                catch (JSONException e)
+                                catch (XPathExpressionException e)
                                 {
-                                    LOGGER.error("Failed to get config section. (build: \"" + eachBuild.number + "\" valueID: \"" +
-                                                 eachValueID + "\")", e);
+                                    LOGGER.error("Invalid XPath. (build: \"" + build.number + "\" valueID: \"" + eachValueID +
+                                                 "\" XPath: \"" + xPath + "\")", e);
                                 }
                             }
-                            if (addedValueToLine == false && line.getShowNoValues())
+                            catch (JSONException e)
                             {
-                                addChartLineValue(line, eachBuild, chart.getXIndex(), 0);
-                                addedValueToChart = true;
+                                LOGGER.error("Failed to get config section. (build: \"" + build.number + "\" valueID: \"" + eachValueID +
+                                             "\")", e);
                             }
                         }
-                    }
-                    catch (JSONException e)
-                    {
-                        LOGGER.error("Failed to get config section. (build: \"" + eachBuild.number + "\")", e);
-                    }
-
-                    if (addedValueToChart)
-                    {
-                        chart.nextXIndex();
+                        if (addedValueToLine == false && line.getShowNoValues())
+                        {
+                            addChartLineValue(line, build, chart.getXIndex(), 0);
+                            addedValueToChart = true;
+                        }
                     }
                 }
-            }
-            catch (JSONException e)
-            {
-                LOGGER.error("Failed to get config section. (build: \"" + eachBuild.number + "\")", e);
+                catch (JSONException e)
+                {
+                    LOGGER.error("Failed to get config section. (build: \"" + build.number + "\")", e);
+                }
+
+                if (addedValueToChart)
+                {
+                    chart.nextXIndex();
+                }
             }
         }
+        catch (JSONException e)
+        {
+            LOGGER.error("Failed to get config section. (build: \"" + build.number + "\")", e);
+        }
+
     }
 
     private void addChartLineValue(ChartLine<Integer, Double> chartLine, Run<?, ?> build, int xIndex, double dataValue)
@@ -784,15 +731,50 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
         }
     }
 
+    private int getMaxBuildCount()
+    {
+        int maxBuildCount = 1;
+        if (config != null)
+        {
+            JSONArray plotsArray = config.optJSONArray(CONFIG_SECTIONS_PARAMETER.plots.name());
+            if (plotsArray != null)
+            {
+                for (int i = 0; i < plotsArray.length(); i++)
+                {
+                    final JSONObject plot = plotsArray.optJSONObject(i);
+                    if (plot != null)
+                    {
+                        final String s = plot.optString(CONFIG_PLOT_PARAMETER.buildCount.name());
+                        if (s != null)
+                        {
+                            try
+                            {
+                                final int buildCount = Integer.parseInt(s);
+                                maxBuildCount = Math.max(maxBuildCount, buildCount);
+                            }
+                            catch (NumberFormatException nfe)
+                            {
+                                LOGGER.error("Failed to parse '" + s + "' as integer", nfe);
+                            }
+                        }
+                    }
+
+                }
+            }
+        }
+
+        return maxBuildCount;
+    }
+
     private void publishChartData(final Run<?, ?> run)
     {
         reloadCharts(run);
 
-        run.addAction(new XltChartAction(getEnabledCharts(), plotWidth, plotHeight, plotTitle, stepId, plotVertical, getCreateTrendReport(),
-                                         getCreateSummaryReport()));
+        run.addAction(new XltChartAction(getEnabledCharts(), plotWidth, plotHeight, plotTitle, stepId, getMaxBuildCount(), plotVertical,
+                                         getCreateTrendReport(), getCreateSummaryReport()));
     }
 
-    private void reloadCharts(Run<?, ?> run, Run<?, ?>... exludeBuilds)
+    private void reloadCharts(Run<?, ?> run)
     {
         if (charts == null)
         {
@@ -812,7 +794,8 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
             LOGGER.error("Failed to initialize charts", e);
         }
 
-        loadCharts(run, exludeBuilds);
+        addBuildToCharts(run);
+        // loadCharts(run, exludeBuilds);
 
     }
 
@@ -1358,7 +1341,7 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
 
     public void publishBuildParameters(Run<?, ?> run)
     {
-        run.addAction(new XltParametersAction(new ArrayList<ParameterValue>(buildParameterMap.values())));
+        run.addAction(new XltParametersAction(new ArrayList<ParameterValue>(buildParameterMap.values()), stepId));
     }
 
     private void setBuildParameter(ENVIRONMENT_KEYS parameter, String value)
@@ -2255,12 +2238,13 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
         finally
         {
             performPostTestSteps(run, launcher, listener, artifactsSaved);
-            LOGGER.info("BuilderID: " + stepId);
+
             if (run.getResult() == Result.FAILURE)
             {
                 setBuildParameterXLT_RUN_FAILED(true);
             }
             publishBuildParameters(run);
+
             if (artifactsSaved)
             {
                 publishChartData(run);

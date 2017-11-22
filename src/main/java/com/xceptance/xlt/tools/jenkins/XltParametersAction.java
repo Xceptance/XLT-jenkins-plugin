@@ -2,6 +2,8 @@ package com.xceptance.xlt.tools.jenkins;
 
 import java.util.List;
 
+import org.apache.commons.lang3.StringUtils;
+
 import hudson.model.ParameterValue;
 import hudson.model.ParametersAction;
 import hudson.model.Run;
@@ -11,21 +13,24 @@ public class XltParametersAction extends ParametersAction implements RunAction2
 {
     private transient Run<?,?> run;
 
-    public XltParametersAction(List<ParameterValue> parameters)
+    private final String stepId;
+    
+    public XltParametersAction(List<ParameterValue> parameters, final String stepId)
     {
         super(parameters);
+        this.stepId = stepId;
     }
 
     @Override
     public String getDisplayName()
     {
-        return "XLT Parameters";
+        return "XLT Parameters (" + StringUtils.abbreviate(stepId, 12) + ")";
     }
 
     @Override
     public String getUrlName()
     {
-        return "xltParameters";
+        return "xltParameters_" + stepId;
     }
 
     @Override
