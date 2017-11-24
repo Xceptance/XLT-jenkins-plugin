@@ -11,10 +11,10 @@ import jenkins.model.RunAction2;
 
 public class XltParametersAction extends ParametersAction implements RunAction2
 {
-    private transient Run<?,?> run;
+    private transient Run<?, ?> run;
 
     private final String stepId;
-    
+
     public XltParametersAction(List<ParameterValue> parameters, final String stepId)
     {
         super(parameters);
@@ -24,13 +24,24 @@ public class XltParametersAction extends ParametersAction implements RunAction2
     @Override
     public String getDisplayName()
     {
-        return "XLT Parameters (" + StringUtils.abbreviate(stepId, 12) + ")";
+        final StringBuilder sb = new StringBuilder("XLT Parameters");
+        if (StringUtils.isNotBlank(stepId))
+        {
+            sb.append(" (").append(StringUtils.abbreviate(stepId, 12)).append(")");
+        }
+        return sb.toString();
     }
 
     @Override
     public String getUrlName()
     {
-        return "xltParameters_" + stepId;
+        final StringBuilder sb = new StringBuilder("xltParameters");
+        if (StringUtils.isNotBlank(stepId))
+        {
+            sb.append('_').append(stepId);
+        }
+
+        return sb.toString();
     }
 
     @Override
@@ -39,20 +50,19 @@ public class XltParametersAction extends ParametersAction implements RunAction2
         return LoadTestBuilder.getResourcePath("logo_24_24.png");
     }
 
-
     @Override
     public void onAttached(Run<?, ?> r)
     {
         run = r;
     }
-    
+
     @Override
     public void onLoad(Run<?, ?> r)
     {
         run = r;
     }
-    
-    public Run<?,?> getRun()
+
+    public Run<?, ?> getRun()
     {
         return run;
     }

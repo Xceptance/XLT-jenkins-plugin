@@ -1172,8 +1172,7 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
         final List<SlowRequestInfo> slowestRequests = determineSlowestRequests(run, listener, dataXml);
 
         // create the action with all the collected data
-        XltRecorderAction recorderAction = new XltRecorderAction(stepId, getBuildReportURL(run), failedAlerts, failedTestCases,
-                                                                 slowestRequests);
+        XltRecorderAction recorderAction = new XltRecorderAction(getBuildReportURL(run), failedAlerts, failedTestCases, slowestRequests);
         run.addAction(recorderAction);
 
         // log failed criteria to the build's console
@@ -2207,7 +2206,7 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
         }
         catch (Exception e)
         {
-            listener.getLogger().println("Cleanup failed: " + e);
+            listener.getLogger().println("Cleanup failed: " + e.getMessage());
             LOGGER.error("Cleanup failed: ", e);
         }
 
@@ -2232,7 +2231,7 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
         catch (Exception e)
         {
             run.setResult(Result.FAILURE);
-            listener.getLogger().println("Build failed: " + e);
+            listener.getLogger().println("Build failed: " + e.getMessage());
             LOGGER.error("Build failed", e);
         }
         finally

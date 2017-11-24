@@ -12,8 +12,6 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
 
-import com.xceptance.xlt.tools.jenkins.logging.LOGGER;
-
 import hudson.FilePath;
 import hudson.model.Run;
 import jenkins.model.RunAction2;
@@ -28,8 +26,6 @@ public class XltRecorderAction implements RunAction2
 
     private final List<SlowRequestInfo> slowestRequests;
 
-    private final String builderID;
-
     private final String reportURL;
 
     public static String URL_NAME = "xltResult";
@@ -37,11 +33,10 @@ public class XltRecorderAction implements RunAction2
     public static String RELATIVE_REPORT_URL = URL_NAME + "/report/";
 
     @DataBoundConstructor
-    public XltRecorderAction(final String builderID, final String reportURL, final List<CriterionResult> failedAlerts,
+    public XltRecorderAction(final String reportURL, final List<CriterionResult> failedAlerts,
                              final List<TestCaseInfo> failedTestCases, final List<SlowRequestInfo> slowestRequests)
     {
         this.failedAlerts = failedAlerts;
-        this.builderID = builderID;
         this.reportURL = reportURL;
         this.failedTestCases = failedTestCases;
         this.slowestRequests = slowestRequests;
@@ -65,11 +60,6 @@ public class XltRecorderAction implements RunAction2
     public String getReportURL()
     {
         return reportURL;
-    }
-
-    public String getBuilderID()
-    {
-        return builderID;
     }
 
     public List<CriterionResult> getAlerts()
@@ -125,9 +115,8 @@ public class XltRecorderAction implements RunAction2
     public void doReport(StaplerRequest request, StaplerResponse response)
         throws MalformedURLException, ServletException, IOException, InterruptedException
     {
-        final FilePath reportPath =  LoadTestBuilder.getArtifact(run, request.getRestOfPath());
-        LOGGER.warn("reportPath: " + reportPath);
-        response.serveFile(request,reportPath.toURI().toURL());
+        final FilePath reportPath = LoadTestBuilder.getArtifact(run, request.getRestOfPath());
+        response.serveFile(request, reportPath.toURI().toURL());
     }
 
     @Override
