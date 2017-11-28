@@ -223,7 +223,7 @@ public class AgentControllerConfig
     }
 
     @Nonnull
-    public String getType()
+    public String getValue()
     {
         return type;
     }
