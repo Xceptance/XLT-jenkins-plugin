@@ -10,7 +10,6 @@ import javax.annotation.Nonnull;
 
 import org.kohsuke.stapler.DataBoundConstructor;
 
-
 public class AgentControllerConfig
 {
     /**
@@ -18,28 +17,28 @@ public class AgentControllerConfig
      */
     private enum InstanceType
     {
-        M3Large("m3.large"),
-        M3Xlarge("m3.xlarge"),
-        M32xlarge("m3.2xlarge"),
-        M4Large("m4.large"),
-        M4Xlarge("m4.xlarge"),
-        M42xlarge("m4.2xlarge"),
-        M44xlarge("m4.4xlarge"),
-        C1Xlarge("c1.xlarge"),
-        C3Large("c3.large"),
-        C3Xlarge("c3.xlarge"),
-        C32xlarge("c3.2xlarge"),
-        C34xlarge("c3.4xlarge"),
-        C38xlarge("c3.8xlarge"),
-        C4Large("c4.large"),
-        C4Xlarge("c4.xlarge"),
-        C42xlarge("c4.2xlarge"),
-        C44xlarge("c4.4xlarge"),
-        R3Large("r3.large"),
-        R3Xlarge("r3.xlarge"),
-        R32xlarge("r3.2xlarge"),
-        R34xlarge("r3.4xlarge"),
-        R38xlarge("r3.8xlarge");
+     M3Large("m3.large"),
+     M3Xlarge("m3.xlarge"),
+     M32xlarge("m3.2xlarge"),
+     M4Large("m4.large"),
+     M4Xlarge("m4.xlarge"),
+     M42xlarge("m4.2xlarge"),
+     M44xlarge("m4.4xlarge"),
+     C1Xlarge("c1.xlarge"),
+     C3Large("c3.large"),
+     C3Xlarge("c3.xlarge"),
+     C32xlarge("c3.2xlarge"),
+     C34xlarge("c3.4xlarge"),
+     C38xlarge("c3.8xlarge"),
+     C4Large("c4.large"),
+     C4Xlarge("c4.xlarge"),
+     C42xlarge("c4.2xlarge"),
+     C44xlarge("c4.4xlarge"),
+     R3Large("r3.large"),
+     R3Xlarge("r3.xlarge"),
+     R32xlarge("r3.2xlarge"),
+     R34xlarge("r3.4xlarge"),
+     R38xlarge("r3.8xlarge");
 
         private final String value;
 
@@ -55,9 +54,13 @@ public class AgentControllerConfig
         }
 
     }
+
     public enum TYPE
     {
-        embedded, list, file, ec2
+     embedded,
+     list,
+     file,
+     ec2
     };
 
     /**
@@ -162,11 +165,11 @@ public class AgentControllerConfig
     }
 
     @DataBoundConstructor
-    public AgentControllerConfig(String type, String urlList, String urlFile, String region, String amiId, String ec2Type,
+    public AgentControllerConfig(String value, String urlList, String urlFile, String region, String amiId, String ec2Type,
                                  String countMachines, String tagName, String awsCredentials, List<AWSSecurityGroup> securityGroups,
                                  String awsUserData)
     {
-        this.type = type;
+        this.type = value;
         this.urlList = urlList;
         this.urlFile = urlFile;
         this.region = region;
@@ -218,7 +221,7 @@ public class AgentControllerConfig
     {
         return awsUserData;
     }
-    
+
     @Nonnull
     public String getType()
     {
