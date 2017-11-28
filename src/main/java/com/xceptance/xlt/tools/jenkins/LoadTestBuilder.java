@@ -247,7 +247,10 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
     @DataBoundSetter
     public void setAgentControllerConfig(@Nonnull final AgentControllerConfig acConfig)
     {
-        this.agentControllerConfig = acConfig;
+        if (acConfig != null)
+        {
+            this.agentControllerConfig = acConfig;
+        }
     }
 
     @Nonnull
