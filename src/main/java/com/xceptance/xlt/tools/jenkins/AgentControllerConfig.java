@@ -1,6 +1,5 @@
 package com.xceptance.xlt.tools.jenkins;
 
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -154,8 +153,8 @@ public class AgentControllerConfig
     private final String tagName;
 
     private String awsCredentials;
-
-    private List<AWSSecurityGroup> securityGroups;
+    // TODO #2339: ec2_admin does not support security groups for now
+    // private List<AWSSecurityGroup> securityGroups;
 
     private String awsUserData;
 
@@ -164,7 +163,6 @@ public class AgentControllerConfig
         this(TYPE.embedded.toString(), null, null, null, null, null, null, null, null, null, null);
     }
 
-    @DataBoundConstructor
     public AgentControllerConfig(String value, String urlList, String urlFile, String region, String amiId, String ec2Type,
                                  String countMachines, String tagName, String awsCredentials, List<AWSSecurityGroup> securityGroups,
                                  String awsUserData)
@@ -178,8 +176,16 @@ public class AgentControllerConfig
         this.countMachines = countMachines;
         this.tagName = tagName;
         this.awsCredentials = awsCredentials;
-        this.securityGroups = securityGroups != null ? securityGroups : new ArrayList<AWSSecurityGroup>();
+        // TODO #2339: ec2_admin does not support security groups for now
+        // this.securityGroups = securityGroups;
         this.awsUserData = awsUserData;
+    }
+
+    @DataBoundConstructor
+    public AgentControllerConfig(String value, String urlList, String urlFile, String region, String amiId, String ec2Type,
+                                 String countMachines, String tagName, String awsCredentials, String awsUserData)
+    {
+        this(value, urlList, urlFile, region, amiId, ec2Type, countMachines, tagName, awsCredentials, null, awsUserData);
     }
 
     public String getRegion()
@@ -214,7 +220,9 @@ public class AgentControllerConfig
 
     public List<AWSSecurityGroup> getSecurityGroups()
     {
-        return securityGroups;
+        // TODO #2339: ec2_admin does not support security groups for now
+        // return securityGroups;
+        return null;
     }
 
     public String getAwsUserData()
