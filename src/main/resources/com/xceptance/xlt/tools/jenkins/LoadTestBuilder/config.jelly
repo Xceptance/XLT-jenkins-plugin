@@ -39,68 +39,10 @@
     </f:entry>
 
     <f:entry title="Agent Controller Configuration">
-        <f:radioBlock name="agentControllerConfig" value="embedded"
-            title="Use a single embedded agent controller"
-            checked="${instance.agentControllerConfig == null || instance.agentControllerConfig.type == 'embedded'}">
-        </f:radioBlock>
 
-        <f:radioBlock name="agentControllerConfig" value="list"
-            title="Specify agent controller URLs" checked="${instance.agentControllerConfig.type == 'list'}">
-            <f:entry field="urlList">
-                <f:textarea value="${instance.agentControllerConfig.urlList}" />
-            </f:entry>
-        </f:radioBlock>
+         <f:dropdownDescriptorSelector field="agentControllerConfig" title="Configuration Variant" default="${descriptor.defaultAgentControllerConfig}" />
 
-        <f:radioBlock name="agentControllerConfig" value="file"
-            title="Specify a file with agent controller URLs" checked="${instance.agentControllerConfig.type == 'file'}">
-            <f:entry field="urlFile">
-                <f:textbox value="${instance.agentControllerConfig.urlFile}" />
-            </f:entry>
-        </f:radioBlock>
 
-        <f:radioBlock name="agentControllerConfig" value="ec2"
-            title="Start agent machines in Amazon's EC2" checked="${instance.agentControllerConfig.type == 'ec2'}">
-            <!-- select credentials -->
-            <f:entry field="awsCredentials" title="AWS Credentials">
-                <c:select field="awsCredentials"
-                    value="${instance.agentControllerConfig.awsCredentials}"></c:select>
-            </f:entry>
-            <!-- select region -->
-            <f:entry field="region" title="Region">
-                <f:select default="${instance.agentControllerConfig.region}" />
-            </f:entry>
-            <!-- specify AMI ID -->
-            <f:entry field="amiId" title="AMI ID">
-                <f:textbox field="amiId"
-                    value="${instance.agentControllerConfig.amiId}" />
-            </f:entry>
-            <!-- select machine type -->
-            <f:entry field="ec2Type" title="Machine Type">
-                <f:select default="${instance.agentControllerConfig.ec2Type}" />
-            </f:entry>
-            <!-- specify count of machines -->
-            <f:entry field="countMachines" title="Number of Machines">
-                <f:textbox field="countMachines"
-                    value="${instance.agentControllerConfig.countMachines}" />
-            </f:entry>
-            <!-- specify a tag name -->
-            <f:entry field="tagName" title="Tag Name">
-                <f:textbox field="tagName"
-                    value="${instance.agentControllerConfig.tagName}" />
-            </f:entry>
-            <!-- temporarily disabled until ec2_admin supports these settings 
-                as well <f:advanced> <f:entry title="Security Groups" field="securityGroups"> 
-                <f:repeatableProperty field="securityGroups" /> </f:entry> <f:entry title 
-                ="User Data" field="awsUserData"> <f:textarea field="awsUserData"/> </f:entry> 
-                </f:advanced> -->
-        </f:radioBlock>
-
-        <f:advanced>
-            <f:entry title="AC Start-up Timeout [s]" field="initialResponseTimeout">
-                <f:textbox field="initialResponseTimeout"
-                    default="${descriptor.getDefaultInitialResponseTimeout()}" />
-            </f:entry>
-        </f:advanced>
     </f:entry>
 
     <!-- ===================================================================== -->

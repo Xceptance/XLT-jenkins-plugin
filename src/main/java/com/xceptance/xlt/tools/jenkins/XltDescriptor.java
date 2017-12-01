@@ -1,18 +1,17 @@
 package com.xceptance.xlt.tools.jenkins;
 
+import static com.xceptance.xlt.tools.jenkins.util.ValidationUtils.validateNumber;
+
 import java.io.File;
 import java.net.URISyntaxException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Date;
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.UUID;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.xml.xpath.XPathExpressionException;
@@ -27,22 +26,21 @@ import org.json.JSONObject;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.QueryParameter;
 
-import com.cloudbees.plugins.credentials.CredentialsMatchers;
-import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
 import com.xceptance.xlt.tools.jenkins.LoadTestBuilder.CONFIG_PLOT_PARAMETER;
 import com.xceptance.xlt.tools.jenkins.LoadTestBuilder.CONFIG_SECTIONS_PARAMETER;
 import com.xceptance.xlt.tools.jenkins.LoadTestBuilder.CONFIG_VALUE_PARAMETER;
+import com.xceptance.xlt.tools.jenkins.config.AgentControllerConfig;
+import com.xceptance.xlt.tools.jenkins.config.Embedded;
 import com.xceptance.xlt.tools.jenkins.logging.LOGGER;
+import com.xceptance.xlt.tools.jenkins.util.ValidationUtils.Flags;
 
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Util;
 import hudson.model.AbstractProject;
-import hudson.model.Item;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
 import hudson.util.FormValidation;
-import hudson.util.ListBoxModel;
 import jenkins.model.Jenkins;
 
 @Extension
@@ -166,6 +164,10 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
         return UUID.randomUUID().toString();
     }
 
+    public AgentControllerConfig getDefaultAgentControllerConfig()
+    {
+        return Embedded.INSTANCE;
+    }
     /**
      * Performs on-the-fly validation of the form field 'testPropertiesFile'.
      */
@@ -187,33 +189,7 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
         return FormValidation.ok();
     }
 
-    /**
-     * Performs on-the-fly validation of the form field 'urlList'.
-     */
-    public FormValidation doCheckUrlList(@QueryParameter String value)
-    {
-        if (StringUtils.isBlank(value))
-        {
-            return FormValidation.validateRequired(value);
-        }
 
-        // create a check pattern
-        String regex = "^https://([a-z\\d\\.-]+?)(:\\d+)?$";
-        Pattern p = Pattern.compile(regex);
-
-        // test each URL
-        String[] urls = LoadTestBuilder.parseAgentControllerUrls(value);
-        for (String url : urls)
-        {
-            Matcher matcher = p.matcher(url);
-            if (!matcher.matches())
-            {
-                return FormValidation.error("Invalid agent controller URL found: " + url);
-            }
-        }
-
-        return FormValidation.ok();
-    }
 
     public FormValidation doCheckStepId(@QueryParameter String value)
     {
@@ -228,14 +204,6 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
         }
         
         return FormValidation.error("Step identifier must not contain characters other than 'a'-'z', 'A'-'Z', '0'-'9', '-' and '_'.");
-    }
-    
-    /**
-     * Performs on-the-fly validation of the form field 'urlFile'.
-     */
-    public FormValidation doCheckUrlFile(@QueryParameter String value)
-    {
-        return FormValidation.validateRequired(value);
     }
 
     /**
@@ -393,12 +361,12 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
 
     public FormValidation doCheckPlotWidth(@QueryParameter String value)
     {
-        return validateNumber(value, 0, null, VALIDATION.IGNORE_BLANK_VALUE, VALIDATION.IGNORE_MAX, VALIDATION.IS_INTEGER);
+        return validateNumber(value, 0, null, Flags.IGNORE_BLANK_VALUE, Flags.IGNORE_MAX, Flags.IS_INTEGER);
     }
 
     public FormValidation doCheckPlotHeight(@QueryParameter String value)
     {
-        return validateNumber(value, 0, null, VALIDATION.IGNORE_BLANK_VALUE, VALIDATION.IGNORE_MAX, VALIDATION.IS_INTEGER);
+        return validateNumber(value, 0, null, Flags.IGNORE_BLANK_VALUE, Flags.IGNORE_MAX, Flags.IS_INTEGER);
     }
 
     public FormValidation doCheckTimeFormatPattern(@QueryParameter String value)
@@ -500,129 +468,15 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
         return filePath;
     }
 
-    public static enum VALIDATION
-    {
-        IGNORE_BLANK_VALUE, IGNORE_MIN, IGNORE_MAX, IS_INTEGER
-    }
 
-    /**
-     * Check if given string is valid number.
-     * 
-     * @param value
-     *            - the string to test, can be null or empty
-     * @param min
-     *            - the lowest allowed number
-     * @param max
-     *            - the highest allowed number
-     * @param flags
-     *            - optional VALIDATION flags to skip some checks. If no flag is given then all checks will be done.
-     * @return a FormValidation.OK if the value is a valid number within the bounds of min and max otherwise return a
-     *         FormValidation.ERROR
-     */
-    public static FormValidation validateNumber(String value, Number min, Number max, VALIDATION... flags)
-    {
-        EnumSet<VALIDATION> flagSet = EnumSet.copyOf(Arrays.asList(flags));
-        if (StringUtils.isBlank(value))
-        {
-            if (flagSet.contains(VALIDATION.IGNORE_BLANK_VALUE))
-                return FormValidation.ok();
-            else
-                return FormValidation.error("Please enter a number");
-        }
 
-        double number = -1;
-        try
-        {
-            number = Double.valueOf(value);
-        }
-        catch (NumberFormatException e)
-        {
-            return FormValidation.error("Please enter a number");
-        }
-        if (flagSet.contains(VALIDATION.IS_INTEGER) &&
-            (number != (int) number || !StringUtils.trimToEmpty(value).equals(Integer.toString((int) number))))
-        {
-            return FormValidation.error("Please enter an integer");
-        }
-        if (!flagSet.contains(VALIDATION.IGNORE_MIN))
-        {
-            if (min == null)
-                return FormValidation.error("Min value is not defined.");
-
-            if (number < min.doubleValue())
-                return FormValidation.error("Please enter a valid number greater than or equal to " + min);
-        }
-        if (!flagSet.contains(VALIDATION.IGNORE_MAX))
-        {
-            if (max == null)
-                return FormValidation.error("Max value is not defined.");
-
-            if (number > max.doubleValue())
-                return FormValidation.error("Please enter a valid number lower than or equal to " + max);
-        }
-        return FormValidation.ok();
-    }
-
-    /**
-     * Fills the region select box.
-     * 
-     * @return A {@link ListBoxModel} with the available regions.
-     */
-    public ListBoxModel doFillRegionItems()
-    {
-        ListBoxModel items = new ListBoxModel();
-        for (String region : AgentControllerConfig.getAllRegions().keySet())
-        {
-            items.add(region + " - " + AgentControllerConfig.getAllRegions().get(region), region);
-        }
-        return items;
-    }
-
-    /**
-     * Fills the machine type select box.
-     * 
-     * @return A {@link ListBoxModel} with the available machine types.
-     */
-    public ListBoxModel doFillEc2TypeItems()
-    {
-        ListBoxModel items = new ListBoxModel();
-        for (String type : AgentControllerConfig.getAllTypes().keySet())
-        {
-            items.add(type + " - " + AgentControllerConfig.getAllTypes().get(type), type);
-        }
-        return items;
-    }
-
-    /**
-     * Performs on-the-fly validation of the form field 'amiId'.
-     */
-    public FormValidation doCheckAmiId(@QueryParameter String value)
-    {
-        return FormValidation.validateRequired(value);
-    }
-
-    /**
-     * Performs on-the-fly validation of the form field 'countMachines'.
-     */
-    public FormValidation doCheckCountMachines(@QueryParameter String value)
-    {
-        return validateNumber(value, 1, null, VALIDATION.IGNORE_MAX, VALIDATION.IS_INTEGER);
-    }
-
-    /**
-     * Performs on-the-fly validation of the form field 'tagName'.
-     */
-    public FormValidation doCheckTagName(@QueryParameter String value)
-    {
-        return FormValidation.validateRequired(value);
-    }
 
     /**
      * Performs on-the-fly validation of the form field 'markCriticalConditionCount'.
      */
     public FormValidation doCheckMarkCriticalConditionCount(@QueryParameter String value)
     {
-        return validateNumber(value, 0, null, VALIDATION.IGNORE_BLANK_VALUE, VALIDATION.IGNORE_MAX, VALIDATION.IS_INTEGER);
+        return validateNumber(value, 0, null, Flags.IGNORE_BLANK_VALUE, Flags.IGNORE_MAX, Flags.IS_INTEGER);
     }
 
     /**
@@ -630,7 +484,7 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
      */
     public FormValidation doCheckMarkCriticalBuildCount(@QueryParameter String value)
     {
-        return validateNumber(value, 0, null, VALIDATION.IGNORE_BLANK_VALUE, VALIDATION.IGNORE_MAX, VALIDATION.IS_INTEGER);
+        return validateNumber(value, 0, null, Flags.IGNORE_BLANK_VALUE, Flags.IGNORE_MAX, Flags.IS_INTEGER);
     }
 
     /**
@@ -638,7 +492,7 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
      */
     public FormValidation doCheckNumberOfBuildsForTrendReport(@QueryParameter String value)
     {
-        return validateNumber(value, 2, null, VALIDATION.IGNORE_MAX, VALIDATION.IGNORE_BLANK_VALUE, VALIDATION.IS_INTEGER);
+        return validateNumber(value, 2, null, Flags.IGNORE_MAX, Flags.IGNORE_BLANK_VALUE, Flags.IS_INTEGER);
     }
 
     /**
@@ -646,16 +500,13 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
      */
     public FormValidation doCheckNumberOfBuildsForSummaryReport(@QueryParameter String value)
     {
-        return validateNumber(value, 2, null, VALIDATION.IGNORE_MAX, VALIDATION.IGNORE_BLANK_VALUE, VALIDATION.IS_INTEGER);
+        return validateNumber(value, 2, null, Flags.IGNORE_MAX, Flags.IGNORE_BLANK_VALUE, Flags.IS_INTEGER);
     }
 
     public FormValidation doCheckInitialResponseTimeout(@QueryParameter String value)
     {
-        return validateNumber(value, 0, null, VALIDATION.IGNORE_BLANK_VALUE, VALIDATION.IGNORE_MAX, VALIDATION.IS_INTEGER);
+        return validateNumber(value, 0, null, Flags.IGNORE_BLANK_VALUE, Flags.IGNORE_MAX, Flags.IS_INTEGER);
     }
 
-    public ListBoxModel doFillAwsCredentialsItems(@AncestorInPath Item project)
-    {
-        return new StandardListBoxModel().includeEmptyValue().includeMatching(project, AwsCredentials.class, null, CredentialsMatchers.always());
-    }
+    
 }
