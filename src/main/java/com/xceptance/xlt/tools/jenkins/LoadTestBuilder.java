@@ -9,7 +9,6 @@ import java.io.StringReader;
 import java.net.URI;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -26,7 +25,6 @@ import javax.xml.xpath.XPathFactory;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -42,9 +40,13 @@ import org.xml.sax.SAXException;
 import com.cloudbees.plugins.credentials.CredentialsMatchers;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
-import com.thoughtworks.xstream.annotations.XStreamAlias;
 import com.xceptance.xlt.tools.jenkins.Chart.ChartLine;
 import com.xceptance.xlt.tools.jenkins.Chart.ChartLineValue;
+import com.xceptance.xlt.tools.jenkins.config.AgentControllerConfig;
+import com.xceptance.xlt.tools.jenkins.config.AmazonEC2;
+import com.xceptance.xlt.tools.jenkins.config.Embedded;
+import com.xceptance.xlt.tools.jenkins.config.UrlFile;
+import com.xceptance.xlt.tools.jenkins.config.UrlList;
 import com.xceptance.xlt.tools.jenkins.config.option.MarkCriticalOption;
 import com.xceptance.xlt.tools.jenkins.config.option.SummaryReportOption;
 import com.xceptance.xlt.tools.jenkins.config.option.TrendReportOption;
@@ -111,8 +113,9 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
     private String plotTitle;
 
     @Nonnull
-    @XStreamAlias("builderID")
-    private final String stepId;
+    private String stepId;
+
+    private transient String builderID;
 
     private boolean plotVertical;
 
@@ -176,7 +179,7 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
         this.xltTemplateDir = xltTemplateDir;
 
         // load test configuration
-        this.agentControllerConfig = new AgentControllerConfig();
+        this.agentControllerConfig = getDescriptor().getDefaultAgentControllerConfig();
 
         this.initialResponseTimeout = getDescriptor().getDefaultInitialResponseTimeout();
 
@@ -190,16 +193,6 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
 
         // misc.
         this.stepId = stepId;
-    }
-
-    public List<AWSSecurityGroup> getSecurityGroups()
-    {
-        return agentControllerConfig.getSecurityGroups();
-    }
-
-    public String getAwsUserData()
-    {
-        return agentControllerConfig.getAwsUserData();
     }
 
     private SimpleDateFormat getDateFormat()
@@ -224,18 +217,6 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
             }
         }
         return dateFormat;
-    }
-
-    private String[] parseAgentControllerUrlsFromFile(FilePath file) throws Exception
-    {
-        String fileContent = file.readToString();
-
-        return parseAgentControllerUrls(fileContent);
-    }
-
-    static String[] parseAgentControllerUrls(String agentControllerUrls)
-    {
-        return StringUtils.split(agentControllerUrls, "\r\n\t|,; ");
     }
 
     @Nonnull
@@ -337,7 +318,7 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
     @DataBoundSetter
     public void setPathToTestSuite(@CheckForNull final String path)
     {
-        this.pathToTestSuite = Util.fixNull(path);
+        this.pathToTestSuite = StringUtils.isNotBlank(path) ? path : null;
     }
 
     @CheckForNull
@@ -349,7 +330,7 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
     @DataBoundSetter
     public void setTestPropertiesFile(@CheckForNull final String propertyFilePath)
     {
-        this.testPropertiesFile = Util.fixNull(propertyFilePath);
+        this.testPropertiesFile = StringUtils.isNotBlank(propertyFilePath) ? propertyFilePath : null;
     }
 
     @Nonnull
@@ -444,13 +425,6 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
     public String getStepId()
     {
         return stepId;
-    }
-
-    @Nonnull
-    @Deprecated
-    public String getBuilderID()
-    {
-        return getStepId();
     }
 
     public boolean isPlotVertical()
@@ -1473,72 +1447,62 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
 
     private boolean isEC2UsageEnabled()
     {
-        return agentControllerConfig.type.equals(AgentControllerConfig.TYPE.ec2.toString());
+        return agentControllerConfig instanceof AmazonEC2;
     }
 
-    private String[] configureAgentController(Run<?, ?> run, FilePath workspace, Launcher launcher, TaskListener listener) throws Exception
+    private void configureAgentController(Run<?, ?> run, FilePath workspace, Launcher launcher, TaskListener listener) throws Exception
     {
         listener.getLogger()
-                .println("-----------------------------------------------------------------\n" + "Configuring agent controllers ...\n");
+                .println("-----------------------------------------------------------------\nConfiguring agent controllers ...\n");
 
-        String[] agentControllerUrls = new String[0];
-        if (agentControllerConfig.type.equals(AgentControllerConfig.TYPE.embedded.toString()))
+        List<String> agentControllerUrls = Collections.emptyList();
+        if (agentControllerConfig instanceof Embedded)
         {
             listener.getLogger().println("Set to embedded mode");
         }
         else
         {
-            if (agentControllerConfig.type.equals(AgentControllerConfig.TYPE.list.toString()))
+            if (agentControllerConfig instanceof UrlFile)
             {
-                listener.getLogger().println("Read agent controller URLs from configuration:\n");
-                agentControllerUrls = parseAgentControllerUrls(agentControllerConfig.urlList);
-            }
-            else if (agentControllerConfig.type.equals(AgentControllerConfig.TYPE.file.toString()))
-            {
-                FilePath file = new FilePath(getTestSuiteConfigFolder(workspace), agentControllerConfig.urlFile);
-
-                listener.getLogger().printf("Read agent controller URLs from file %s:\n\n", file);
-
-                if (agentControllerConfig.urlFile != null)
+                final UrlFile uFile = (UrlFile) agentControllerConfig;
+                String urlFile = uFile.getUrlFile();
+                if (StringUtils.isNotBlank(urlFile))
                 {
-                    agentControllerUrls = parseAgentControllerUrlsFromFile(file);
+                    FilePath file = new FilePath(getTestSuiteConfigFolder(workspace), urlFile);
+
+                    listener.getLogger().printf("Read agent controller URLs from file %s:\n\n", file);
+
+                    ((UrlFile) agentControllerConfig).parse(file.getParent());
+                    agentControllerUrls = uFile.getItems();
                 }
+
             }
-            // run Amazon's EC2 machine
             else if (isEC2UsageEnabled())
             {
                 agentControllerUrls = startEc2Machine(run, launcher, listener);
             }
+            else if (agentControllerConfig instanceof UrlList)
+            {
+                listener.getLogger().println("Read agent controller URLs from configuration:\n");
+                agentControllerUrls = ((UrlList) agentControllerConfig).getItems();
+            }
 
-            if (ArrayUtils.isEmpty(agentControllerUrls))
+            if (agentControllerUrls.isEmpty())
             {
                 throw new IllegalStateException("No agent controller URLs found.");
             }
-            else
+
+            for (String agentControllerUrl : agentControllerUrls)
             {
-                for (String agentControllerUrl : agentControllerUrls)
-                {
-                    listener.getLogger().println(agentControllerUrl);
-                }
+                listener.getLogger().println(agentControllerUrl);
             }
         }
 
         listener.getLogger().println("\nFinished");
-        return agentControllerUrls;
+
     }
 
-    private String[] expandAgentControllerUrls(String[] agentControllerUrls)
-    {
-        String[] expandedUrls = new String[agentControllerUrls.length];
-        for (int i = 0; i < agentControllerUrls.length; i++)
-        {
-            expandedUrls[i] = String.format("com.xceptance.xlt.mastercontroller.agentcontrollers.ac%03d.url=%s", i + 1,
-                                            agentControllerUrls[i]);
-        }
-        return expandedUrls;
-    }
-
-    private String[] startEc2Machine(Run<?, ?> build, Launcher launcher, TaskListener listener) throws Exception
+    private List<String> startEc2Machine(Run<?, ?> build, Launcher launcher, TaskListener listener) throws Exception
     {
         listener.getLogger()
                 .println("-----------------------------------------------------------------\nStarting agent controller with EC2 admin tool ...\n");
@@ -1556,33 +1520,11 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
             commandLine.add("/c");
             commandLine.add("ec2_admin.cmd");
         }
-        commandLine.add("run");
-        commandLine.add(agentControllerConfig.getRegion());
-        commandLine.add(agentControllerConfig.getAmiId());
-        commandLine.add(agentControllerConfig.getEc2Type());
-        commandLine.add(agentControllerConfig.getCountMachines());
-        commandLine.add(agentControllerConfig.getTagName());
+        final AmazonEC2 ec2Config = (AmazonEC2) agentControllerConfig;
+        commandLine.addAll(ec2Config.toEC2AdminArgs(getXltConfigFolder(build, launcher)));
 
-        final String securityGroupsParameter = getSecurityGroupParameter();
-        if (StringUtils.isNotBlank(securityGroupsParameter))
-        {
-            commandLine.add("-s");
-            commandLine.add(securityGroupsParameter);
-        }
-
-        final String awsUserData = agentControllerConfig.getAwsUserData();
-        if (StringUtils.isNotBlank(awsUserData))
-        {
-            FilePath userData = new FilePath(getXltConfigFolder(build, launcher), "userData.txt");
-            userData.write(awsUserData, null);
-
-            commandLine.add("-uf");
-            commandLine.add(userData.absolutize().getRemote());
-        }
-
-        final FilePath acUrlFile = new FilePath(getXltConfigFolder(build, launcher), "acUrls.properties");
-        commandLine.add("-o");
-        commandLine.add(acUrlFile.absolutize().getRemote());
+        // path to output file is last argument
+        final String acUrlsPath = commandLine.get(commandLine.size() - 1);
 
         appendEc2Properties(build, launcher, listener);
 
@@ -1595,6 +1537,9 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
         {
             throw new Exception("Failed to start instances. EC2 admin tool returned with exit code: " + commandResult);
         }
+
+        final FilePath acUrlFile = new FilePath(new File(acUrlsPath));
+
         // open the file that contains the agent controller URLs
         listener.getLogger().printf("\nRead agent controller URLs from file %s:\n\n", acUrlFile);
 
@@ -1618,61 +1563,56 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
             }
         }
 
-        return urls.toArray(new String[urls.size()]);
-    }
-
-    private String getSecurityGroupParameter()
-    {
-        String securityGroupsParameter = "";
-        List<AWSSecurityGroup> securityGroups = agentControllerConfig.getSecurityGroups();
-        for (int i = 0; i < securityGroups.size(); i++)
-        {
-            if (i > 0)
-            {
-                securityGroupsParameter += ",";
-            }
-            securityGroupsParameter += securityGroups.get(i).getID();
-        }
-        return StringUtils.isNotBlank(securityGroupsParameter) ? securityGroupsParameter : null;
+        return urls;
     }
 
     private void appendEc2Properties(Run<?, ?> build, Launcher launcher, TaskListener listener) throws Exception
     {
-        // append properties to the end of the file
-        // the last properties will win so this would overwrite the original properties
-        FilePath ec2PropertiesFile = new FilePath(getXltConfigFolder(build, launcher), "ec2_admin.properties");
         BufferedWriter writer = null;
+
+        final String awsCredentialId = ((AmazonEC2) agentControllerConfig).getAwsCredentials();
+        if (StringUtils.isBlank(awsCredentialId))
+        {
+            return;
+        }
+
         try
         {
-            String originalContent = ec2PropertiesFile.readToString();
-            OutputStream outStream = ec2PropertiesFile.write(); // this will overwrite the existing file so we need the
-                                                                // original content to recreate the old content
+
+            // append properties to the end of the file
+            // the last properties will win so this would overwrite the original properties
+            final FilePath ec2PropertiesFile = new FilePath(getXltConfigFolder(build, launcher), "ec2_admin.properties");
+            final String originalContent = ec2PropertiesFile.readToString();
+
+            // this will overwrite the existing file so we need the original content to recreate the old content
+            final OutputStream outStream = ec2PropertiesFile.write();
+
             writer = new BufferedWriter(new OutputStreamWriter(outStream));
 
             writer.write(originalContent);
             writer.newLine();
 
-            if (StringUtils.isNotBlank(agentControllerConfig.getAwsCredentials()))
-            {
-                List<AwsCredentials> availableCredentials = CredentialsProvider.lookupCredentials(AwsCredentials.class, build.getParent(),
-                                                                                                  ACL.SYSTEM, new DomainRequirement[0]);
+            final List<AwsCredentials> availableCredentials = CredentialsProvider.lookupCredentials(AwsCredentials.class, build.getParent(),
+                                                                                                    ACL.SYSTEM, new DomainRequirement[0]);
 
-                AwsCredentials credentials = CredentialsMatchers.firstOrNull(availableCredentials,
-                                                                             CredentialsMatchers.withId(agentControllerConfig.getAwsCredentials()));
-                if (credentials != null)
-                {
-                    writer.write("aws.accessKey=" + Secret.toString(credentials.getAccessKey()));
-                    writer.newLine();
-                    writer.write("aws.secretKey=" + Secret.toString(credentials.getSecretKey()));
-                }
-                else
-                {
-                    LOGGER.warn("Credentials no longer available. (id: \"" + agentControllerConfig.getAwsCredentials() + "\")");
-                    listener.getLogger()
-                            .println("Credentials no longer available. (id: \"" + agentControllerConfig.getAwsCredentials() + "\")");
-                    throw new Exception("Credentials no longer available.");
-                }
+            final AwsCredentials credentials = CredentialsMatchers.firstOrNull(availableCredentials,
+                                                                               CredentialsMatchers.withId(awsCredentialId));
+            if (credentials != null)
+            {
+                writer.write("aws.accessKey=" + Secret.toString(credentials.getAccessKey()));
+                writer.newLine();
+                writer.write("aws.secretKey=" + Secret.toString(credentials.getSecretKey()));
+                writer.newLine();
             }
+            else
+            {
+                final String logMsg = String.format("Credentials no longer available. (id: \"%s\")", awsCredentialId);
+                LOGGER.warn(logMsg);
+                listener.getLogger().println(logMsg);
+
+                throw new Exception("Credentials no longer available.");
+            }
+
             writer.flush();
         }
         finally
@@ -1703,8 +1643,13 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
             commandLine.add("ec2_admin.cmd");
         }
         commandLine.add("terminate");
-        commandLine.add(agentControllerConfig.getRegion());
-        commandLine.add(agentControllerConfig.getTagName());
+
+        {
+            final AmazonEC2 ec2Config = (AmazonEC2) agentControllerConfig;
+            commandLine.add(ec2Config.getRegion());
+            commandLine.add(ec2Config.getTagName());
+
+        }
 
         // run the EC2 admin tool
         FilePath workingDirectory = getXltBinFolder(build, launcher);
@@ -1750,7 +1695,7 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
         throws IOException, InterruptedException, BuildNodeGoneException
     {
         listener.getLogger()
-                .println("-----------------------------------------------------------------\n" + "Cleaning up project directory ...\n");
+                .println("-----------------------------------------------------------------\nCleaning up project directory ...\n");
 
         getTemporaryXltProjectFolder(run, launcher).deleteRecursive();
 
@@ -1808,9 +1753,7 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
         listener.getLogger().println("\nFinished");
     }
 
-    private void runMasterController(Run<?, ?> run, Launcher launcher, FilePath workspace, TaskListener listener,
-                                     String[] agentControllerUrls)
-        throws Exception
+    private void runMasterController(Run<?, ?> run, Launcher launcher, FilePath workspace, TaskListener listener) throws Exception
     {
         listener.getLogger().println("-----------------------------------------------------------------\nRunning master controller ...\n");
 
@@ -1828,26 +1771,13 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
             commandLine.add("mastercontroller.cmd");
         }
 
-        if (agentControllerConfig.type.equals(AgentControllerConfig.TYPE.embedded.toString()))
-        {
-            commandLine.add("-embedded");
+        commandLine.addAll(agentControllerConfig.toCmdLineArgs());
 
-            // use any free port
-            commandLine.add("-Dcom.xceptance.xlt.agentcontroller.port=0");
-        }
-        else
+        // set the initialResponseTimeout property
+        if (agentControllerConfig != null && !(agentControllerConfig instanceof Embedded))
         {
-            // set the initialResponseTimeout property
             commandLine.add("-Dcom.xceptance.xlt.mastercontroller.initialResponseTimeout=" + (initialResponseTimeout * 1000));
-
-            // set agent controllers
-            String[] agentControllerProperties = expandAgentControllerUrls(agentControllerUrls);
-            for (int i = 0; i < agentControllerProperties.length; i++)
-            {
-                commandLine.add("-D" + agentControllerProperties[i]);
-            }
         }
-
         commandLine.add("-auto");
 
         if (StringUtils.isNotBlank(testPropertiesFile))
@@ -2218,8 +2148,8 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
         {
             copyXlt(run, launcher, listener);
 
-            String[] agentControllerProperties = configureAgentController(run, workspace, launcher, listener);
-            runMasterController(run, launcher, workspace, listener, agentControllerProperties);
+            configureAgentController(run, workspace, launcher, listener);
+            runMasterController(run, launcher, workspace, listener);
 
             createReport(run, launcher, listener);
             saveArtifacts(run, launcher, listener);
@@ -2253,5 +2183,14 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
             }
         }
 
+    }
+
+    protected Object readResolve()
+    {
+        if (builderID != null)
+        {
+            stepId = builderID;
+        }
+        return this;
     }
 }

@@ -195,7 +195,7 @@ public class XltChartAction extends InvisibleAction implements RunAction2, LastB
                             {
                                 for (final ChartLineValue<Integer, Double> val : line.getValues())
                                 {
-                                    final ChartLineValue<Integer, Double> theVal = val.clone(match.getXIndex());
+                                    final ChartLineValue<Integer, Double> theVal = val.forNewX(match.getXIndex());
                                     l.addLineValue(theVal);
 
                                     added = true;

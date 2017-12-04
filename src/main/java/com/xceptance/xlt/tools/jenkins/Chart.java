@@ -93,17 +93,6 @@ public class Chart<X, Y>
         return data;
     }
 
-    public Chart<X, Y> clone()
-    {
-        final Chart<X, Y> c = new Chart<>(chartID, title);
-        for (final ChartLine<X, Y> line : lines)
-        {
-            c.lines.add(line.clone());
-        }
-
-        return c;
-    }
-
     @Override
     public String toString()
     {
@@ -212,17 +201,6 @@ public class Chart<X, Y>
             return name;
         }
 
-        public ChartLine<X, Y> clone()
-        {
-            final ChartLine<X, Y> line = new ChartLine<>(lineID, name, maxCount, showNoValues);
-            for (final ChartLineValue<X, Y> val : values)
-            {
-                line.values.add(val.clone());
-            }
-
-            return line;
-        }
-        
         @Override
         public String toString()
         {
@@ -292,15 +270,7 @@ public class Chart<X, Y>
             return yValue;
         }
 
-        public ChartLineValue<X, Y> clone()
-        {
-            final ChartLineValue<X, Y> val = new ChartLineValue<>(xValue, yValue);
-            val.dataObjectValues.putAll(dataObjectValues);
-
-            return val;
-        }
-
-        public ChartLineValue<X, Y> clone(final X newX)
+        public ChartLineValue<X, Y> forNewX(final X newX)
         {
             final ChartLineValue<X, Y> val = new ChartLineValue<>(newX, yValue);
             val.dataObjectValues.putAll(dataObjectValues);
