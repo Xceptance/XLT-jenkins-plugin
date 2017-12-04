@@ -4,8 +4,7 @@
     xmlns:c="/lib/credentials">
 
     <style>
-        .xlt-subsection { color: #335B94; font-weight: bold; padding:
-        8px 0px 4px 4px }
+        .xlt-subsection { color: #335B94; font-weight: bold; padding: 8px 0px 4px 4px }
     </style>
 
     <!-- ===================================================================== -->
@@ -17,12 +16,11 @@
     <f:entry title="Path to XLT Template" field="xltTemplateDir">
         <f:textbox />
     </f:entry>
-    
-    <f:entry title="Step Identifier (must be unique across entire job)" field="stepId" >
+
+    <f:entry title="Step Identifier (must be unique across entire job)"
+        field="stepId">
         <f:textbox field="stepId" default="${descriptor.getDefaultStepId()}" />
     </f:entry>
-
-    
 
     <!-- ===================================================================== -->
 
@@ -38,12 +36,15 @@
         <f:textbox />
     </f:entry>
 
-    <f:entry title="Agent Controller Configuration">
+    <f:dropdownDescriptorSelector field="agentControllerConfig"
+        title="Agent Controller Configuration" default="${descriptor.defaultAgentControllerConfig}" />
 
-         <f:dropdownDescriptorSelector field="agentControllerConfig" title="Configuration Variant" default="${descriptor.defaultAgentControllerConfig}" />
-
-
-    </f:entry>
+    <f:advanced>
+        <f:entry title="AC Start-up Timeout [s]" field="initialResponseTimeout">
+            <f:textbox field="initialResponseTimeout"
+                default="${descriptor.getDefaultInitialResponseTimeout()}" />
+        </f:entry>
+    </f:advanced>
 
     <!-- ===================================================================== -->
 

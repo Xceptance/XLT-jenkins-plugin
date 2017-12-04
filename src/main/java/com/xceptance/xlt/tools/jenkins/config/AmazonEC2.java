@@ -28,6 +28,7 @@ import hudson.Extension;
 import hudson.FilePath;
 import hudson.model.Descriptor;
 import hudson.model.Item;
+import hudson.security.ACL;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 
@@ -76,7 +77,7 @@ public class AmazonEC2 extends UrlList
     @DataBoundSetter
     public void setAwsCredentials(@CheckForNull String awsCredentials)
     {
-        
+
         this.awsCredentials = StringUtils.isNotBlank(awsCredentials) ? awsCredentials : null;
     }
 
@@ -230,7 +231,7 @@ public class AmazonEC2 extends UrlList
         @Override
         public String getDisplayName()
         {
-            return "Use URLs of EC2 instances that are started prior to test execution and terminated once it has completed";
+            return "Use URLs of EC2 instances started on-demand";
         }
 
         /**
@@ -277,10 +278,15 @@ public class AmazonEC2 extends UrlList
             return FormValidation.validateRequired(value);
         }
 
-        public ListBoxModel doFillAwsCredentialsItems(@AncestorInPath Item project)
+        public ListBoxModel doFillAwsCredentialsItems(@AncestorInPath Item context, @QueryParameter String value)
         {
-            return new StandardListBoxModel().includeEmptyValue().includeMatching(project, AwsCredentials.class, null,
-                                                                                  CredentialsMatchers.always());
+            if (context == null || !context.hasPermission(Item.CONFIGURE))
+            {
+                return new StandardListBoxModel().includeCurrentValue(value);
+            }
+            return new StandardListBoxModel().includeEmptyValue().includeMatchingAs(ACL.SYSTEM, context, AwsCredentials.class, null,
+                                                                                    CredentialsMatchers.always())
+                                             .includeCurrentValue(value);
         }
 
         /**

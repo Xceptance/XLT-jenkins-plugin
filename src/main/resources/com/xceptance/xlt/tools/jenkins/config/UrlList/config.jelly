@@ -4,12 +4,5 @@
     <f:entry field="urlList">
         <f:textarea value="${instance.agentControllerConfig.urlList}" />
     </f:entry>
-    
-           <f:advanced>
-            <f:entry title="AC Start-up Timeout [s]" field="initialResponseTimeout">
-                <f:textbox field="initialResponseTimeout"
-                    default="${descriptor.getDefaultInitialResponseTimeout()}" />
-            </f:entry>
-        </f:advanced>
 
 </j:jelly>

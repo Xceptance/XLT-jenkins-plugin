@@ -52,7 +52,7 @@ public class UrlFile extends UrlList
         @Override
         public String getDisplayName()
         {
-            return "Text file that contains agent controller URLs";
+            return "Read Agent Controller URLs from text file";
         }
 
         /**

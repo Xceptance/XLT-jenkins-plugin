@@ -1780,8 +1780,11 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
 
         commandLine.addAll(agentControllerConfig.toCmdLineArgs());
 
-     // set the initialResponseTimeout property
-        commandLine.add("-Dcom.xceptance.xlt.mastercontroller.initialResponseTimeout=" + (initialResponseTimeout * 1000));
+        // set the initialResponseTimeout property
+        if (agentControllerConfig != null && !(agentControllerConfig instanceof Embedded))
+        {
+            commandLine.add("-Dcom.xceptance.xlt.mastercontroller.initialResponseTimeout=" + (initialResponseTimeout * 1000));
+        }
         commandLine.add("-auto");
 
         if (StringUtils.isNotBlank(testPropertiesFile))

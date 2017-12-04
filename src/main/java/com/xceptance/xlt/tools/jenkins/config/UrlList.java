@@ -7,7 +7,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.annotation.CheckForNull;
-
 import org.apache.commons.lang3.StringUtils;
 import org.jenkinsci.Symbol;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -93,7 +92,7 @@ public class UrlList extends AgentControllerConfig
         /**
          * Performs on-the-fly validation of the form field 'urlList'.
          */
-        public FormValidation doCheckUrls(@QueryParameter String value)
+        public FormValidation doCheckUrlList(@QueryParameter String value)
         {
             if (StringUtils.isBlank(value))
             {
@@ -119,6 +118,5 @@ public class UrlList extends AgentControllerConfig
             }
             return FormValidation.ok();
         }
-        
     }
 }
