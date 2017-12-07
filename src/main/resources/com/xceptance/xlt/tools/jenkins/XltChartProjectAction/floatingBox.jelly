@@ -76,6 +76,15 @@
                             </center>
                             <script type="text/javascript">
                                 (function(){
+                                    function tooltipFormatter(lineName, o, xData) {
+                                      try {
+                                        var data = xData[""+parseInt(o.x)];
+                                        return ('<div align="left">'+lineName+': '+o.y+'<br/>Build: '+data.buildNumber+'<br/>Date: '+data.buildTime + '</div>');
+                                      } catch(e) {
+                                        return "Unexpected";
+                                      }
+                                    }
+
                                     var xData = ${eachChart.getXData()};
                                     var xDataCount = 0;
                                     for (eachKey in xData){ 
@@ -83,7 +92,7 @@
                                             xDataCount++;
                                         }
                                     }
-                                    var data = ${eachChart.getDataString('function(lineName, o, xData){ try{var data = xData[""+parseInt(o.x)];return "&lt;div align=\"left\"&gt;"+lineName+": "+o.y+"&lt;br&gt;"+"Build: "+data.buildNumber+"&lt;br&gt;"+"Date: "+data.buildTime+"&lt;/div&gt;"} catch(e) {return "Unexpected"}}')};
+                                    var data = ${eachChart.getDataString('tooltipFormatter')};
                                     var container = document.getElementById('${plotContainerID}');
                                     var config = {
                                         yaxis:{

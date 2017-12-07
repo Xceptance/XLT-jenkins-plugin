@@ -115,8 +115,6 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
     @Nonnull
     private String stepId;
 
-    private transient String builderID;
-
     private boolean plotVertical;
 
     @CheckForNull
@@ -131,6 +129,27 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
     transient private List<Chart<Integer, Double>> charts = new ArrayList<Chart<Integer, Double>>();
 
     private transient Map<ENVIRONMENT_KEYS, ParameterValue> buildParameterMap;
+
+    /*
+     * Backward compatibility
+     */
+    private transient String builderID;
+
+    private transient boolean isPlotVertical;
+
+    private transient boolean createTrendReport;
+
+    private transient int numberOfBuildsForTrendReport;
+
+    private transient boolean createSummaryReport;
+
+    private transient int numberOfBuildsForSummaryReport;
+
+    private transient boolean markCriticalEnabled;
+
+    private transient int markCriticalConditionCount;
+
+    private transient int markCriticalBuildCount;
 
     public enum CONFIG_VALUE_PARAMETER
     {
@@ -2191,6 +2210,23 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
         {
             stepId = builderID;
         }
+        if (isPlotVertical)
+        {
+            plotVertical = true;
+        }
+        if (createTrendReport)
+        {
+            trendReportOption = new TrendReportOption(numberOfBuildsForTrendReport);
+        }
+        if (createSummaryReport)
+        {
+            summaryReportOption = new SummaryReportOption(numberOfBuildsForSummaryReport);
+        }
+        if (markCriticalEnabled)
+        {
+            markCriticalOption = new MarkCriticalOption(markCriticalConditionCount, markCriticalBuildCount);
+        }
+
         return this;
     }
 }

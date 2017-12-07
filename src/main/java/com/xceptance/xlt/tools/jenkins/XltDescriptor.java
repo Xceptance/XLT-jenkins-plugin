@@ -37,7 +37,10 @@ import com.xceptance.xlt.tools.jenkins.util.ValidationUtils.Flags;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Util;
+import hudson.init.InitMilestone;
+import hudson.init.Initializer;
 import hudson.model.AbstractProject;
+import hudson.model.Items;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
 import hudson.util.FormValidation;
@@ -158,7 +161,7 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
     {
         return 360;
     }
-    
+
     public String getDefaultStepId()
     {
         return UUID.randomUUID().toString();
@@ -190,20 +193,18 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
         return FormValidation.ok();
     }
 
-
-
     public FormValidation doCheckStepId(@QueryParameter String value)
     {
-        if(StringUtils.isBlank(value))
+        if (StringUtils.isBlank(value))
         {
             return FormValidation.validateRequired(value);
         }
-        
-        if(Pattern.matches("^[a-zA-Z0-9_\\-]+$", value))
+
+        if (Pattern.matches("^[a-zA-Z0-9_\\-]+$", value))
         {
             return FormValidation.ok();
         }
-        
+
         return FormValidation.error("Step identifier must not contain characters other than 'a'-'z', 'A'-'Z', '0'-'9', '-' and '_'.");
     }
 
@@ -469,9 +470,6 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
         return filePath;
     }
 
-
-
-
     /**
      * Performs on-the-fly validation of the form field 'markCriticalConditionCount'.
      */
@@ -509,5 +507,9 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
         return validateNumber(value, 0, null, Flags.IGNORE_BLANK_VALUE, Flags.IGNORE_MAX, Flags.IS_INTEGER);
     }
 
-    
+    @Initializer(before = InitMilestone.PLUGINS_STARTED)
+    public static void addAliases()
+    {
+        Items.XSTREAM2.addDefaultImplementation(Embedded.class, AgentControllerConfig.class);
+    }
 }
