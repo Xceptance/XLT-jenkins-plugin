@@ -89,8 +89,8 @@
                 default="${descriptor.getDefaultPlotTitle()}" />
         </f:entry>
 
-        <f:entry title="Stay Vertical" field="stayVertical">
-            <f:checkbox field="isPlotVertical"
+        <f:entry title="Stay Vertical" field="plotVertical">
+            <f:checkbox field="plotVertical"
                 default="${descriptor.getDefaultIsPlotVertical()}"
                 title="Stack charts vertical at the right side panel and do not let them float." />
         </f:entry>
