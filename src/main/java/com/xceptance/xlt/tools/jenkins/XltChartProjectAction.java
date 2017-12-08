@@ -3,6 +3,7 @@ package com.xceptance.xlt.tools.jenkins;
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.util.List;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletResponse;
@@ -62,13 +63,16 @@ public class XltChartProjectAction implements Action
         Run<?, ?> run = job.getLastBuild();
         while (run != null)
         {
-            final XltChartAction a = run.getAction(XltChartAction.class);
-            if (a != null && !run.isBuilding())
+            final List<XltChartAction> axns = run.getActions(XltChartAction.class);
+            for (final XltChartAction a : axns)
             {
-                final String stId = a.getStepId();
-                if (stId != null && stId.equals(stepId))
+                if (a != null && !run.isBuilding())
                 {
-                    return a;
+                    final String stId = a.getStepId();
+                    if (stId != null && stId.equals(stepId))
+                    {
+                        return a;
+                    }
                 }
             }
             if (run == r)

@@ -13,16 +13,14 @@
     </style>
     <tr>
         <td>
-            <img src="${resURL}/plugin/xlt-jenkins-plugin/logo.png"
-                width="48" />
+            <img src="${resURL}/plugin/xlt-jenkins-plugin/logo.png" width="48" />
         </td>
         <td>
             <table>
                 <tr>
                     <td>
                         <div>
-                            <a
-                                href="${it.getReportURL()}">XLT Report</a>
+                            <a href="${it.getReportURL()}">XLT Report&#160;${it.getStepId()}</a>
                         </div>
                     </td>
                 </tr>

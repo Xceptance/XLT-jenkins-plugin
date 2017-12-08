@@ -791,8 +791,6 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
         }
 
         addBuildToCharts(run);
-        // loadCharts(run, exludeBuilds);
-
     }
 
     private void updateConfig()
@@ -956,7 +954,6 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
     private static URI getArtifactsDir(Run<?, ?> build)
     {
         final VirtualFile artiDir = build.getArtifactManager().root();
-        LOGGER.warn("ArtifactsDir: " + artiDir.toString());
         return artiDir.toURI();
     }
 
@@ -1168,7 +1165,7 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
         final List<SlowRequestInfo> slowestRequests = determineSlowestRequests(run, listener, dataXml);
 
         // create the action with all the collected data
-        XltRecorderAction recorderAction = new XltRecorderAction(getBuildReportURL(run), failedAlerts, failedTestCases, slowestRequests);
+        XltRecorderAction recorderAction = new XltRecorderAction(getStepId(), getBuildReportURL(run), failedAlerts, failedTestCases, slowestRequests);
         run.addAction(recorderAction);
 
         // log failed criteria to the build's console

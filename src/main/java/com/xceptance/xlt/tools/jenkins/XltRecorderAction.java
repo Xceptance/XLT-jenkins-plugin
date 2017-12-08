@@ -8,6 +8,7 @@ import java.util.List;
 
 import javax.servlet.ServletException;
 
+import org.apache.commons.lang.StringUtils;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
@@ -28,14 +29,17 @@ public class XltRecorderAction implements RunAction2
 
     private final String reportURL;
 
+    private final String stepId;
+
     public static String URL_NAME = "xltResult";
 
     public static String RELATIVE_REPORT_URL = URL_NAME + "/report/";
 
     @DataBoundConstructor
-    public XltRecorderAction(final String reportURL, final List<CriterionResult> failedAlerts,
+    public XltRecorderAction(final String stepId, final String reportURL, final List<CriterionResult> failedAlerts,
                              final List<TestCaseInfo> failedTestCases, final List<SlowRequestInfo> slowestRequests)
     {
+        this.stepId = stepId;
         this.failedAlerts = failedAlerts;
         this.reportURL = reportURL;
         this.failedTestCases = failedTestCases;
@@ -55,6 +59,16 @@ public class XltRecorderAction implements RunAction2
     public String getUrlName()
     {
         return URL_NAME;
+    }
+
+    public String getStepId()
+    {
+        return stepId != null ? stepId : determineStepFromReportURL();
+    }
+
+    private String determineStepFromReportURL()
+    {
+        return StringUtils.substringAfterLast(StringUtils.substringBeforeLast(getReportURL(), "/report/index.html"), "/");
     }
 
     public String getReportURL()
