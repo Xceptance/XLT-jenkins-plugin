@@ -133,22 +133,31 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
     /*
      * Backward compatibility
      */
+    @Deprecated
     private transient String builderID;
 
+    @Deprecated
     private transient boolean isPlotVertical;
 
+    @Deprecated
     private transient boolean createTrendReport;
 
+    @Deprecated
     private transient int numberOfBuildsForTrendReport;
 
+    @Deprecated
     private transient boolean createSummaryReport;
 
+    @Deprecated
     private transient int numberOfBuildsForSummaryReport;
 
+    @Deprecated
     private transient boolean markCriticalEnabled;
 
+    @Deprecated
     private transient int markCriticalConditionCount;
 
+    @Deprecated
     private transient int markCriticalBuildCount;
 
     public enum CONFIG_VALUE_PARAMETER

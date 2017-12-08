@@ -2,6 +2,8 @@ package com.xceptance.xlt.tools.jenkins.config;
 
 import java.util.List;
 
+import org.apache.commons.lang3.StringUtils;
+
 import hudson.ExtensionPoint;
 import hudson.model.AbstractDescribableImpl;
 
@@ -10,6 +12,62 @@ import hudson.model.AbstractDescribableImpl;
  */
 public abstract class AgentControllerConfig extends AbstractDescribableImpl<AgentControllerConfig> implements ExtensionPoint
 {
+    @Deprecated
+    private transient String type;
+
+    @Deprecated
+    private transient String urlFile;
+
+    @Deprecated
+    private transient String urlList;
+
+    @Deprecated
+    private transient String region;
+
+    @Deprecated
+    private transient String amiId;
+
+    @Deprecated
+    private transient String ec2Type;
+
+    @Deprecated
+    private transient String countMachines;
+
+    @Deprecated
+    private transient String tagName;
+
+    @Deprecated
+    private transient String awsCredentials;
+
+    @Deprecated
+    private transient String awsUserData;
+
+    public Object readResolve()
+    {
+        if(StringUtils.isNotBlank(type))
+        {
+            if("embedded".equals(type))
+            {
+                return new Embedded();
+            }
+            if("list".equals(type))
+            {
+                return new UrlList(urlList);
+            }
+            if("file".equals(type))
+            {
+                return new UrlFile(urlFile);
+            }
+            if("ec2".equals(type))
+            {
+                final AmazonEC2 ec2 = new AmazonEC2(region, amiId, ec2Type, countMachines, tagName);
+                ec2.setAwsCredentials(awsCredentials);
+                ec2.setAwsUserData(awsUserData);
+                return ec2;
+            }
+        }
+        return this;
+    }
     
     public abstract List<String> toCmdLineArgs();
 }
