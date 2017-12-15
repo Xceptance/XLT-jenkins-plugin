@@ -1003,7 +1003,7 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep
 
     private FilePath getTrendReportFolder(Job<?, ?> project)
     {
-        return new FilePath(project.getRootDir()).child("trendreport").child(stepId);
+        return new FilePath(project.getRootDir()).child("trendReport").child(stepId);
     }
 
     private FilePath getSummaryReportFolder(Job<?, ?> project)
