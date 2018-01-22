@@ -1,33 +1,44 @@
-package com.xceptance.xlt.tools.jenkins;
+package com.xceptance.xlt.tools.jenkins.pipeline;
 
-import java.io.IOException;
+import static com.xceptance.xlt.tools.jenkins.util.ValidationUtils.validateNumber;
+
+import java.util.Set;
+import java.util.UUID;
 
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 
 import org.apache.commons.lang3.StringUtils;
+import org.jenkinsci.plugins.workflow.steps.Step;
+import org.jenkinsci.plugins.workflow.steps.StepContext;
+import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
+import org.jenkinsci.plugins.workflow.steps.StepExecution;
+import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
+import org.kohsuke.stapler.QueryParameter;
 
+import com.google.common.collect.ImmutableSet;
+import com.xceptance.xlt.tools.jenkins.LoadTestConfiguration;
 import com.xceptance.xlt.tools.jenkins.config.AgentControllerConfig;
+import com.xceptance.xlt.tools.jenkins.config.Embedded;
 import com.xceptance.xlt.tools.jenkins.config.option.MarkCriticalOption;
 import com.xceptance.xlt.tools.jenkins.config.option.SummaryReportOption;
 import com.xceptance.xlt.tools.jenkins.config.option.TrendReportOption;
+import com.xceptance.xlt.tools.jenkins.util.ConfigurationValidator;
+import com.xceptance.xlt.tools.jenkins.util.PluginDefaults;
+import com.xceptance.xlt.tools.jenkins.util.ValidationUtils.Flags;
 
+import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
 import hudson.Util;
+import hudson.model.Job;
 import hudson.model.Run;
 import hudson.model.TaskListener;
-import hudson.tasks.Builder;
-import jenkins.tasks.SimpleBuildStep;
+import hudson.util.FormValidation;
 
-/**
- * Readout the configuration of XLT in Jenkins, perform load testing and plot build results on project page.
- * 
- * @author Randolph Straub
- */
-public class LoadTestBuilder extends Builder implements SimpleBuildStep, LoadTestConfiguration
+public class LoadTestStep extends Step implements LoadTestConfiguration
 {
     @CheckForNull
     private String testPropertiesFile;
@@ -73,39 +84,10 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep, LoadTes
     @CheckForNull
     private MarkCriticalOption markCriticalOption;
 
-    /*
-     * Backward compatibility
-     */
-    @Deprecated
-    private transient String builderID;
-
-    @Deprecated
-    private transient boolean isPlotVertical;
-
-    @Deprecated
-    private transient boolean createTrendReport;
-
-    @Deprecated
-    private transient int numberOfBuildsForTrendReport;
-
-    @Deprecated
-    private transient boolean createSummaryReport;
-
-    @Deprecated
-    private transient int numberOfBuildsForSummaryReport;
-
-    @Deprecated
-    private transient boolean markCriticalEnabled;
-
-    @Deprecated
-    private transient int markCriticalConditionCount;
-
-    @Deprecated
-    private transient int markCriticalBuildCount;
-
     @DataBoundConstructor
-    public LoadTestBuilder(@Nonnull final String stepId, @Nonnull final String xltTemplateDir)
+    public LoadTestStep(@Nonnull final String stepId, @Nonnull final String xltTemplateDir)
     {
+        this.stepId = stepId;
         this.xltTemplateDir = xltTemplateDir;
 
         // load test configuration
@@ -121,8 +103,6 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep, LoadTes
         this.plotHeight = getDescriptor().getDefaultPlotHeight();
         this.plotTitle = getDescriptor().getDefaultPlotTitle();
 
-        // misc.
-        this.stepId = stepId;
     }
 
     @Nonnull
@@ -366,43 +346,183 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep, LoadTes
     }
 
     @Override
-    public XltDescriptor getDescriptor()
+    public StepExecution start(StepContext context) throws Exception
     {
-        return (XltDescriptor) super.getDescriptor();
+        return new LoadTestStepExecution(this, context);
     }
 
     @Override
-    public void perform(Run<?, ?> run, FilePath workspace, Launcher launcher, TaskListener listener)
-        throws InterruptedException, IOException
+    public DescriptorImpl getDescriptor()
     {
-        final XltTask task = new XltTask(this);
-        task.perform(run, workspace, listener, launcher);
-
+        return (DescriptorImpl) super.getDescriptor();
     }
 
-    protected Object readResolve()
+    // @OptionalExtension(requirePlugins = {"pipeline-stage-step","workflow-cps","workflow-job"})
+
+    @Extension
+    public static class DescriptorImpl extends StepDescriptor
     {
-        if (builderID != null)
+
+        @Override
+        public Set<? extends Class<?>> getRequiredContext()
         {
-            stepId = builderID;
-        }
-        if (isPlotVertical)
-        {
-            plotVertical = true;
-        }
-        if (createTrendReport)
-        {
-            trendReportOption = new TrendReportOption(numberOfBuildsForTrendReport);
-        }
-        if (createSummaryReport)
-        {
-            summaryReportOption = new SummaryReportOption(numberOfBuildsForSummaryReport);
-        }
-        if (markCriticalEnabled)
-        {
-            markCriticalOption = new MarkCriticalOption(markCriticalConditionCount, markCriticalBuildCount);
+            return ImmutableSet.of(FilePath.class, Run.class, TaskListener.class, Launcher.class);
         }
 
-        return this;
+        @Override
+        public String getFunctionName()
+        {
+            return "xlt";
+        }
+
+        @Override
+        public String getDisplayName()
+        {
+            return "Perform a Load Test with XLT";
+        }
+
+        public String getDefaultXltConfig()
+        {
+            return PluginDefaults.getXltConfig();
+        }
+
+        public int getDefaultPlotWidth()
+        {
+            return PluginDefaults.PLOT_WIDTH;
+        }
+
+        public int getDefaultPlotHeight()
+        {
+            return PluginDefaults.PLOT_HEIGHT;
+        }
+
+        public String getDefaultPlotTitle()
+        {
+            return PluginDefaults.PLOT_TITLE;
+        }
+
+        public boolean getDefaultIsPlotVertical()
+        {
+            return false;
+        }
+
+        public boolean getDefaultCreateTrendReport()
+        {
+            return false;
+        }
+
+        public boolean getDefaultCreateSummaryReport()
+        {
+            return false;
+        }
+
+        public int getDefaultNumberOfBuildsForTrendReport()
+        {
+            return PluginDefaults.HISTORYSIZE_TRENDREPORT;
+        }
+
+        public int getDefaultNumberOfBuildsForSummaryReport()
+        {
+            return PluginDefaults.HISTORYSIZE_SUMMARYREPORT;
+        }
+
+        public int getDefaultInitialResponseTimeout()
+        {
+            return PluginDefaults.INITIAL_RESPONSE_TIMEOUT;
+        }
+
+        public String getDefaultStepId()
+        {
+            return UUID.randomUUID().toString();
+        }
+
+        public AgentControllerConfig getDefaultAgentControllerConfig()
+        {
+            return Embedded.INSTANCE;
+        }
+
+        /**
+         * Performs on-the-fly validation of the form field 'testPropertiesFile'.
+         */
+        public FormValidation doCheckTestPropertiesFile(@QueryParameter String value)
+        {
+            return ConfigurationValidator.validateTestProperties(value);
+        }
+
+        public FormValidation doCheckStepId(@QueryParameter String value)
+        {
+            return ConfigurationValidator.validateStepId(value);
+        }
+
+        /**
+         * Performs on-the-fly validation of the form field 'parsers'.
+         */
+        public FormValidation doCheckXltConfig(@QueryParameter String value)
+        {
+            return ConfigurationValidator.validateXltConfig(value);
+        }
+
+        public FormValidation doCheckPlotWidth(@QueryParameter String value)
+        {
+            return ConfigurationValidator.validatePlotWidth(value);
+
+        }
+
+        public FormValidation doCheckPlotHeight(@QueryParameter String value)
+        {
+            return doCheckPlotWidth(value);
+        }
+
+        public FormValidation doCheckTimeFormatPattern(@QueryParameter String value)
+        {
+            return ConfigurationValidator.validateTimeFormat(value);
+        }
+
+        public FormValidation doCheckXltTemplateDir(@QueryParameter String value)
+        {
+            return ConfigurationValidator.validateXltTemplateDir(value);
+        }
+
+        public FormValidation doCheckPathToTestSuite(@QueryParameter String value, @AncestorInPath Job<?, ?> project)
+        {
+            return ConfigurationValidator.validateTestSuitePath(value, project);
+        }
+
+        /**
+         * Performs on-the-fly validation of the form field 'markCriticalConditionCount'.
+         */
+        public FormValidation doCheckMarkCriticalConditionCount(@QueryParameter String value)
+        {
+            return validateNumber(value, 0, null, Flags.IGNORE_BLANK_VALUE, Flags.IGNORE_MAX, Flags.IS_INTEGER);
+        }
+
+        /**
+         * Performs on-the-fly validation of the form field 'markCriticalBuildCount'.
+         */
+        public FormValidation doCheckMarkCriticalBuildCount(@QueryParameter String value)
+        {
+            return validateNumber(value, 0, null, Flags.IGNORE_BLANK_VALUE, Flags.IGNORE_MAX, Flags.IS_INTEGER);
+        }
+
+        /**
+         * Performs on-the-fly validation of the form field 'numberOfBuildsForTrendReport'.
+         */
+        public FormValidation doCheckNumberOfBuildsForTrendReport(@QueryParameter String value)
+        {
+            return validateNumber(value, 2, null, Flags.IGNORE_MAX, Flags.IGNORE_BLANK_VALUE, Flags.IS_INTEGER);
+        }
+
+        /**
+         * Performs on-the-fly validation of the form field 'numberOfBuildsForSummaryReport'.
+         */
+        public FormValidation doCheckNumberOfBuildsForSummaryReport(@QueryParameter String value)
+        {
+            return validateNumber(value, 2, null, Flags.IGNORE_MAX, Flags.IGNORE_BLANK_VALUE, Flags.IS_INTEGER);
+        }
+
+        public FormValidation doCheckInitialResponseTimeout(@QueryParameter String value)
+        {
+            return validateNumber(value, 0, null, Flags.IGNORE_BLANK_VALUE, Flags.IGNORE_MAX, Flags.IS_INTEGER);
+        }
     }
 }

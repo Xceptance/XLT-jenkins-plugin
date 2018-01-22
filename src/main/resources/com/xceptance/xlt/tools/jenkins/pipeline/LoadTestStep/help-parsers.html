@@ -1,0 +1,178 @@
+<style>
+	.syntax-section{
+		border-style: solid;
+		border-width: thin;
+		border-color: #ccccff;
+		background-color: #eeeeff;
+		padding: 1em;
+	}
+</style>
+
+<div>
+	<div>
+		<p>
+			This field allows you to define plot values and success conditions. If a success condition does not match the results then the build will be marked as unstable and the build variable <b>XLT_CONDITION_MESSAGE</b> will contain a preformatted message with further informations. If the field is left empty then the default configuration will be used.
+		</p>
+		
+		<hr>	
+		<p>
+			The syntax of the configuration is JSON and has the following structure.
+		</p>
+		<div class="syntax-section">
+			First we have a JSON object with a <code>values</code> and a <code>plots</code> field.	
+			<br>	
+			<div style="margin-left:50px">
+				<br>	
+				<b>values</b>  - A JSON array that contains JSON objects where each object represents a single value configuration.
+				<br>
+				<b>plots</b> - A JSON array that contains JSON objects where each object represents a single plot configuration.
+			</div>
+			<br>		
+			<b><u>Example:</u></b>
+			<pre>
+			
+  {
+    "values":[],
+    "plots":[]
+  }
+  
+			</pre>	
+		</div>
+	</div>
+	<br>
+	<div>
+		<h3>
+			Value Configuration
+		</h3>
+		<div class="syntax-section">
+			The <code>values</code> section is a JSON array which contains JSON objects where each object represents a single value configuration. A value configuration provides information about where the value can be found, the success condition, where to plot the value, and its name.
+			<br><br>
+			A value configuration consists of the following fields:
+			<br>	
+			<div style="margin-left:50px">
+				<br>	
+				<b>id</b>  - A unique identifier for the value configuration. 
+				<br>
+				<b>xPath</b> - An X-Path locator to retrieve a single value from the testreport.xml file.
+				<br>
+				<b>condition</b> - An X-Path expression that will be appended to the xPath to act as success validator. Can be empty if the value is not to be checked, but plotted only. 
+				<br>
+				<b>plotID</b> - The ID of the plot that will plot the values retrieved by the xPath. Can be empty if the value is to be checked only. 
+				<br>
+				<b>name</b> - A label for this value configuration. Will be used as label in the chart's legend and value tool tip.
+			</div>
+			<br>		
+			<b><u>Example:</u></b>
+			<pre>
+
+  {
+    "id": "fooBarID",
+    "xPath": "/foo/bar/baz",
+    "condition": "[number() < 10000]",
+    "plotID": "fooBar",
+    "name": "fooBarName"
+  }
+  
+			</pre>	
+		</div>
+	</div>
+	<br>
+	<div>
+		<h3>
+			Plot Configuration
+		</h3>
+		<div class="syntax-section">
+			The <code>plots</code> section is a JSON array which contains JSON objects where each object represents a single plot configuration.
+			For each plot configuration there will be a chart shown at the project's main page.
+			<br><br>
+			A plot configuration consists of the following fields:
+			<br>	
+			<div style="margin-left:50px">
+				<br>	
+				<b>id</b>  - A unique identifier for the plot configuration. Will also be used by a value configuration to refer to this plot. 
+				<br>
+				<b>title</b> - A text that will be shown above the chart.
+				<br>
+				<b>buildCount</b> - The number of previous builds to create the chart for. If empty then all builds will be used. 
+				<br>
+				<b>enabled</b> - Can be "yes" or "no". If set to "yes" then the chart will be visible, otherwise it will be not.
+				<br>
+				<b>showNoValues</b> - Can be "yes" or "no". If set to "yes" then also builds without results or a valid value will be shown as data point in the charts with a value of 0. Otherwise only builds with valid values will be visible in the charts. There are many reasons why no value is available for a build. For example, if the build was aborted or there was an error when creating the results or the value could not be retrieved because the xPath is not valid and so on.  								  				
+			</div>
+			<br>		
+			<b><u>Example:</u></b>
+			<pre>
+
+  {
+    "id": "fooBar",
+    "title": "fooBarTitle",
+    "buildCount": "10",
+    "enabled": "yes",
+    "showNoValues": "no"
+  }  
+  
+			</pre>	
+		</div>
+	</div>
+	
+	
+	<hr>	
+	<h2><u>Example</u></h2>	
+	<pre>
+{
+    "values": [
+        {
+            "id": "transactionErrors",
+            "xPath": "/testreport/summary/transactions/errors",
+            "condition": "[number() = 0]",
+            "plotID": "transactionErrors",
+            "name": "Count"
+        },
+        {
+            "id": "requestErrors",
+            "xPath": "/testreport/summary/requests/errors",
+            "condition": "[number() = 0]",
+            "plotID": "requestErrors",
+            "name": "Count"
+        },
+        {
+            "id": "requestsMax",
+            "xPath": "/testreport/summary/requests/max",
+            "condition": "[number() < 10000]",
+            "plotID": "requestRuntimes",
+            "name": "Max"
+        },
+        {
+            "id": "requestsMean",
+            "xPath": "/testreport/summary/requests/mean",
+            "condition": "",
+            "plotID": "requestRuntimes",
+            "name": "Mean"
+        }
+    ],
+    "plots": [
+        {
+            "id": "transactionErrors",
+            "title": "Transaction Errors",
+            "buildCount": "100",
+            "enabled": "yes",
+            "showNoValues": "no"
+        },
+        {
+            "id": "requestErrors",
+            "title": "Request Errors",
+            "buildCount": "100",
+            "enabled": "yes",
+            "showNoValues": "no"
+        },
+        {
+            "id": "requestRuntimes",
+            "title": "Request Runtimes [ms]",
+            "buildCount": "100",
+            "enabled": "yes",
+            "showNoValues": "no"
+        }
+    ]
+}
+</pre>
+</div>

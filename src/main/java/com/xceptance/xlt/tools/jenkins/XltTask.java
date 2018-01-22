@@ -1,0 +1,1290 @@
+package com.xceptance.xlt.tools.jenkins;
+
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.StringReader;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.w3c.dom.Document;
+import org.w3c.dom.Node;
+
+import com.cloudbees.plugins.credentials.CredentialsMatchers;
+import com.cloudbees.plugins.credentials.CredentialsProvider;
+import com.cloudbees.plugins.credentials.domains.DomainRequirement;
+import com.xceptance.xlt.tools.jenkins.Chart.ChartLineValue;
+import com.xceptance.xlt.tools.jenkins.config.AgentControllerConfig;
+import com.xceptance.xlt.tools.jenkins.config.AmazonEC2;
+import com.xceptance.xlt.tools.jenkins.config.Embedded;
+import com.xceptance.xlt.tools.jenkins.config.UrlFile;
+import com.xceptance.xlt.tools.jenkins.config.UrlList;
+import com.xceptance.xlt.tools.jenkins.logging.LOGGER;
+import com.xceptance.xlt.tools.jenkins.pipeline.LoadTestResult;
+import com.xceptance.xlt.tools.jenkins.util.ChartUtils;
+import com.xceptance.xlt.tools.jenkins.util.ChartUtils.ChartLineListener;
+import com.xceptance.xlt.tools.jenkins.util.CriterionChecker;
+import com.xceptance.xlt.tools.jenkins.util.Helper;
+import com.xceptance.xlt.tools.jenkins.util.Helper.FOLDER_NAMES;
+import com.xceptance.xlt.tools.jenkins.util.XmlUtils;
+
+import hudson.AbortException;
+import hudson.FilePath;
+import hudson.Launcher;
+import hudson.model.Job;
+import hudson.model.ParameterValue;
+import hudson.model.Result;
+import hudson.model.Run;
+import hudson.model.StringParameterValue;
+import hudson.model.TaskListener;
+import hudson.security.ACL;
+import hudson.util.Secret;
+import jenkins.model.Jenkins;
+
+public class XltTask
+{
+
+    public enum ENVIRONMENT_KEYS
+    {
+     XLT_RUN_FAILED,
+     XLT_CONDITION_CRITICAL,
+     XLT_CONDITION_FAILED,
+     XLT_CONDITION_ERROR,
+     XLT_REPORT_URL,
+     XLT_CONDITION_MESSAGE
+    }
+
+    private final LoadTestConfiguration taskConfig;
+
+    private transient PlotValuesConfiguration config;
+
+    private transient SimpleDateFormat dateFormat;
+
+    private transient final List<Chart<Integer, Double>> charts = new ArrayList<Chart<Integer, Double>>();
+
+    private transient Map<ENVIRONMENT_KEYS, Object> buildParameterMap;
+
+    public XltTask(final LoadTestConfiguration cfg)
+    {
+        taskConfig = cfg;
+    }
+
+    private Document getDataDocument(final Run<?, ?> run) throws IOException, InterruptedException
+    {
+        FilePath testDataFile = getTestReportDataFile(run);
+        if (testDataFile.exists())
+        {
+            return XmlUtils.parse(testDataFile);
+        }
+        else
+        {
+            LOGGER.info("No test data found for build. (build: \"" + run.number + "\" searchLocation: \"" + testDataFile.getRemote() +
+                        "\")");
+        }
+        return null;
+    }
+
+    private void addBuildToCharts(final Run<?, ?> run)
+    {
+        Document dataXml = null;
+
+        try
+        {
+            dataXml = getDataDocument(run);
+        }
+        catch (Exception e)
+        {
+            LOGGER.error("Failed to read test data xml", e);
+
+        }
+
+        if (dataXml == null)
+            return;
+
+        charts.addAll(ChartUtils.xml2Charts(dataXml, config, new ChartLineListener()
+        {
+            @Override
+            public void onValueAdded(ChartLineValue<Integer, Double> value)
+            {
+                if (value != null)
+                {
+                    value.setDataObjectValue("buildNumber", "\"" + run.number + "\"");
+                    value.setDataObjectValue("showBuildNumber", Boolean.toString(taskConfig.isShowBuildNumber()));
+                    value.setDataObjectValue("buildTime", "\"" + getDateFormat().format(run.getTime()) + "\"");
+                }
+            }
+        }));
+
+    }
+
+    private void publishChartData(final Run<?, ?> run)
+    {
+        // Clear list of charts
+        charts.clear();
+
+        addBuildToCharts(run);
+
+        run.addAction(new XltChartAction(ChartUtils.getEnabledCharts(charts, config), taskConfig.getPlotWidth(), taskConfig.getPlotHeight(),
+                                         taskConfig.getPlotTitle(), taskConfig.getStepId(), ChartUtils.getMaxBuildCount(config),
+                                         taskConfig.isPlotVertical(), taskConfig.getCreateTrendReport(),
+                                         taskConfig.getCreateSummaryReport()));
+    }
+
+    private void updateConfig()
+    {
+        try
+        {
+            config = PlotValuesConfiguration.fromJson(new JSONObject(taskConfig.getXltConfig()));
+        }
+        catch (final JSONException e)
+        {
+            LOGGER.error("Failed to parse XLT config as JSON object", e);
+            config = null;
+        }
+    }
+
+    private FilePath getTestReportDataFile(final Run<?, ?> run)
+    {
+        return getBuildReportFolder(run).child("testreport.xml");
+    }
+
+    private FilePath getXltResultFolder(final Run<?, ?> run, final Launcher launcher) throws BuildNodeGoneException
+    {
+        return getTemporaryXltFolder(run, launcher).child(FOLDER_NAMES.ARTIFACT_RESULT);
+    }
+
+    private FilePath getXltLogFolder(final Run<?, ?> run, final Launcher launcher) throws BuildNodeGoneException
+    {
+        return getTemporaryXltFolder(run, launcher).child("log");
+    }
+
+    private FilePath getXltReportFolder(final Run<?, ?> run, final Launcher launcher) throws BuildNodeGoneException
+    {
+        return getTemporaryXltFolder(run, launcher).child(FOLDER_NAMES.ARTIFACT_REPORT);
+    }
+
+    private FilePath getFirstSubFolder(final FilePath dir) throws IOException, InterruptedException
+    {
+        if (dir != null && dir.isDirectory())
+        {
+            final List<FilePath> subFiles = dir.list();
+            if (subFiles != null)
+            {
+                for (FilePath subFile : subFiles)
+                {
+                    if (subFile.isDirectory())
+                    {
+                        return subFile;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    private FilePath getBuildResultConfigFolder(final Run<?, ?> run)
+    {
+        return new FilePath(getBuildResultFolder(run), "config");
+    }
+
+    private FilePath getBuildLogsFolder(final Run<?, ?> build)
+    {
+        return Helper.getArtifact(build, taskConfig.getStepId() + "/log");
+    }
+
+    private FilePath getBuildReportFolder(final Run<?, ?> run)
+    {
+        return Helper.getArtifact(run, taskConfig.getStepId() + "/" + FOLDER_NAMES.ARTIFACT_REPORT);
+    }
+
+    private String getBuildReportURL(final Run<?, ?> run)
+    {
+        final StringBuilder sb = new StringBuilder();
+
+        sb.append(StringUtils.defaultString(Jenkins.getActiveInstance().getRootUrl(), "/")).append(run.getUrl())
+          .append(XltRecorderAction.RELATIVE_REPORT_URL).append(taskConfig.getStepId()).append('/').append(FOLDER_NAMES.ARTIFACT_REPORT)
+          .append("/index.html");
+        return sb.toString();
+    }
+
+    private FilePath getBuildResultFolder(final Run<?, ?> run)
+    {
+        return Helper.getArtifact(run, taskConfig.getStepId() + "/" + FOLDER_NAMES.ARTIFACT_RESULT);
+    }
+
+    private FilePath getTrendReportFolder(final Job<?, ?> job)
+    {
+        return new FilePath(job.getRootDir()).child("trendReport").child(taskConfig.getStepId());
+    }
+
+    private FilePath getSummaryReportFolder(final Job<?, ?> job)
+    {
+        return new FilePath(job.getRootDir()).child("summaryReport").child(taskConfig.getStepId());
+    }
+
+    private FilePath getSummaryResultsFolder(final Job<?, ?> job)
+    {
+        return new FilePath(job.getRootDir()).child("summaryResults").child(taskConfig.getStepId());
+    }
+
+    private FilePath getSummaryResultsConfigFolder(final Job<?, ?> job)
+    {
+        return new FilePath(getSummaryResultsFolder(job), "config");
+    }
+
+    private static FilePath getTemporaryXltBaseFolder(final Run<?, ?> run, final Launcher launcher) throws BuildNodeGoneException
+    {
+        final hudson.model.Node node = Helper.getBuildNodeIfOnlineOrFail(launcher);
+        FilePath base = new FilePath(run.getParent().getRootDir());
+        if (node != Jenkins.getInstance())
+        {
+            base = node.getRootPath();
+        }
+        return new FilePath(base, "tmp-xlt");
+    }
+
+    private FilePath getTemporaryXltProjectFolder(final Run<?, ?> run, final Launcher launcher) throws BuildNodeGoneException
+    {
+        return new FilePath(getTemporaryXltBaseFolder(run, launcher), run.getParent().getName());
+    }
+
+    private FilePath getTemporaryXltBuildFolder(final Run<?, ?> run, final Launcher launcher) throws BuildNodeGoneException
+    {
+        return new FilePath(getTemporaryXltProjectFolder(run, launcher), "" + run.getNumber());
+    }
+
+    private FilePath getTemporaryXltFolder(final Run<?, ?> run, final Launcher launcher) throws BuildNodeGoneException
+    {
+        return new FilePath(new FilePath(getTemporaryXltBuildFolder(run, launcher), taskConfig.getStepId()), "xlt");
+    }
+
+    private FilePath getXltTemplateFilePath()
+    {
+        return Helper.resolvePath(taskConfig.getXltTemplateDir());
+    }
+
+    private FilePath getXltBinFolder(final Run<?, ?> run, final Launcher launcher) throws BuildNodeGoneException
+    {
+        return new FilePath(getTemporaryXltFolder(run, launcher), "bin");
+    }
+
+    private FilePath getXltBinFolderOnMaster()
+    {
+        return new FilePath(getXltTemplateFilePath(), "bin");
+    }
+
+    private FilePath getXltConfigFolder(final Run<?, ?> run, final Launcher launcher) throws BuildNodeGoneException
+    {
+        return new FilePath(getTemporaryXltFolder(run, launcher), "config");
+    }
+
+    private void validateCriteria(final Run<?, ?> run, final TaskListener listener) throws IOException, InterruptedException
+    {
+        // get the test report document
+        final Document dataXml = getDataDocument(run);
+
+        listener.getLogger()
+                .println("-----------------------------------------------------------------\n" + "Checking success criteria ...\n");
+
+        // process the test report
+        final List<CriterionResult> failedAlerts = CriterionChecker.getFailed(dataXml, config);
+
+        final List<TestCaseInfo> failedTestCases = determineFailedTestCases(run, listener, dataXml);
+        final List<SlowRequestInfo> slowestRequests = determineSlowestRequests(run, listener, dataXml);
+
+        // create the action with all the collected data
+        XltRecorderAction recorderAction = new XltRecorderAction(taskConfig.getStepId(), getBuildReportURL(run), failedAlerts,
+                                                                 failedTestCases, slowestRequests);
+        run.addAction(recorderAction);
+
+        // log failed criteria to the build's console
+        if (!failedAlerts.isEmpty())
+        {
+            listener.getLogger().println();
+            for (CriterionResult eachAlert : failedAlerts)
+            {
+                listener.getLogger().println(eachAlert.getLogMessage());
+            }
+            listener.getLogger().println();
+            listener.getLogger().println("Set state to UNSTABLE");
+            run.setResult(Result.UNSTABLE);
+        }
+
+        // set build parameters
+        if (!recorderAction.getAlerts().isEmpty())
+        {
+            if (!recorderAction.getFailedAlerts().isEmpty())
+            {
+                setBuildParameterXLT_CONDITION_FAILED(true);
+                checkForCritical(run);
+            }
+
+            if (!recorderAction.getErrorAlerts().isEmpty())
+            {
+                setBuildParameterXLT_CONDITION_ERROR(true);
+            }
+        }
+        setBuildParameterXLT_CONDITION_MESSAGE(recorderAction.getConditionMessage());
+    }
+
+    private void checkForCritical(final Run<?, ?> run)
+    {
+        final int mcBuildCount = taskConfig.getMarkCriticalBuildCount();
+        final int mcCondCount = taskConfig.getMarkCriticalConditionCount();
+        if (taskConfig.getMarkCriticalEnabled() && (mcBuildCount > 0 && mcCondCount > 0 && mcBuildCount >= mcCondCount))
+        {
+            int failedCriterionBuilds = 0;
+            for (Run<?, ?> eachBuild : Helper.getRuns(run, 0, mcBuildCount))
+            {
+                XltRecorderAction recorderAction = eachBuild.getAction(XltRecorderAction.class);
+                if (recorderAction != null)
+                {
+                    if (!recorderAction.getFailedAlerts().isEmpty())
+                    {
+                        failedCriterionBuilds++;
+                        if (failedCriterionBuilds == mcCondCount)
+                        {
+                            setBuildParameterXLT_CONDITION_CRITICAL(true);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Extracts test case name, action name, and error message from each failed test case.
+     * 
+     * @param run
+     * @param listener
+     * @param document
+     *            the test report document
+     * @return the list of failure info objects
+     * @throws IOException
+     * @throws InterruptedException
+     */
+    private List<TestCaseInfo> determineFailedTestCases(final Run<?, ?> run, final TaskListener listener, final Document document)
+        throws IOException, InterruptedException
+    {
+        final List<TestCaseInfo> failedTestCases = new ArrayList<TestCaseInfo>();
+
+        // get the info from the test report
+        if (document != null)
+        {
+            @SuppressWarnings("unchecked")
+            final List<Node> matches = XmlUtils.evaluateXPath(document, "/testreport/errors/error", List.class);
+            for (final Node n : matches)
+            {
+                final String testCaseName = XmlUtils.evaluateXPath(n, "testCaseName");
+                // ensure action name is null if it was not given in test report
+                final String actionName = StringUtils.defaultIfBlank(XmlUtils.evaluateXPath(n, "actionName"), null);
+                final String message = XmlUtils.evaluateXPath(n, "message");
+
+                failedTestCases.add(new TestCaseInfo(testCaseName, actionName, message));
+            }
+        }
+
+        // sort the list by test case name
+        Collections.sort(failedTestCases);
+
+        return failedTestCases;
+    }
+
+    /**
+     * Extracts URL and runtime from the slowest requests in the test report.
+     * 
+     * @param run
+     * @param listener
+     * @param document
+     *            the test report document
+     * @return the list of info objects
+     * @throws IOException
+     * @throws InterruptedException
+     */
+    private List<SlowRequestInfo> determineSlowestRequests(final Run<?, ?> run, final TaskListener listener, final Document document)
+        throws IOException, InterruptedException
+    {
+        final List<SlowRequestInfo> slowestRequests = new ArrayList<SlowRequestInfo>();
+
+        // get the info from the test report
+        if (document != null)
+        {
+            @SuppressWarnings("unchecked")
+            final List<Node> matches = XmlUtils.evaluateXPath(document, "/testreport/general/slowestRequests/request", List.class);
+            for (final Node n : matches)
+            {
+                final String url = XmlUtils.evaluateXPath(n, "url");
+                final String runtime = XmlUtils.evaluateXPath(n, "runtime");
+
+                slowestRequests.add(new SlowRequestInfo(url, runtime));
+            }
+        }
+
+        return slowestRequests;
+    }
+
+    private SimpleDateFormat getDateFormat()
+    {
+        if (dateFormat == null)
+        {
+            final String timeFormatPattern = taskConfig.getTimeFormatPattern();
+            if (timeFormatPattern != null)
+            {
+                try
+                {
+                    dateFormat = new SimpleDateFormat(timeFormatPattern);
+                }
+                catch (Exception ex)
+                {
+                    LOGGER.warn("Failed to create date format for pattern: " + timeFormatPattern, ex);
+                }
+            }
+
+            if (dateFormat == null)
+            {
+                dateFormat = new SimpleDateFormat();
+            }
+        }
+        return dateFormat;
+    }
+
+    public void publishBuildParameters(final Run<?, ?> run)
+    {
+        final ArrayList<ParameterValue> params = new ArrayList<>();
+        for(final Map.Entry<ENVIRONMENT_KEYS, Object> entry : buildParameterMap.entrySet())
+        {
+            final Object o = entry.getValue();
+            params.add(new StringParameterValue(entry.getKey().name(), o == null ? "null" : o.toString()));
+        }
+        run.addAction(new XltParametersAction(params, taskConfig.getStepId()));
+    }
+
+    private void setBuildParameter(final ENVIRONMENT_KEYS parameter, final Object value)
+    {
+        buildParameterMap.put(parameter, value);
+    }
+
+    private void setBuildParameterXLT_RUN_FAILED(final Boolean value)
+    {
+        setBuildParameter(ENVIRONMENT_KEYS.XLT_RUN_FAILED, value);
+    }
+
+    private void setBuildParameterXLT_CONDITION_FAILED(final Boolean value)
+    {
+        setBuildParameter(ENVIRONMENT_KEYS.XLT_CONDITION_FAILED, value);
+    }
+
+    private void setBuildParameterXLT_CONDITION_ERROR(final Boolean value)
+    {
+        setBuildParameter(ENVIRONMENT_KEYS.XLT_CONDITION_ERROR, value);
+    }
+
+    private void setBuildParameterXLT_CONDITION_CRITICAL(final Boolean value)
+    {
+        setBuildParameter(ENVIRONMENT_KEYS.XLT_CONDITION_CRITICAL, value);
+    }
+
+    private void setBuildParameterXLT_CONDITION_MESSAGE(final String message)
+    {
+        setBuildParameter(ENVIRONMENT_KEYS.XLT_CONDITION_MESSAGE, message);
+    }
+
+    private void setBuildParameterXLT_REPORT_URL(final String reportURL)
+    {
+        setBuildParameter(ENVIRONMENT_KEYS.XLT_REPORT_URL, StringUtils.defaultString(reportURL));
+    }
+
+    protected void init()
+    {
+        buildParameterMap = new TreeMap<ENVIRONMENT_KEYS, Object>();
+        setBuildParameterXLT_RUN_FAILED(false);
+        setBuildParameterXLT_CONDITION_FAILED(false);
+        setBuildParameterXLT_CONDITION_ERROR(false);
+        setBuildParameterXLT_CONDITION_CRITICAL(false);
+        setBuildParameterXLT_REPORT_URL(null);
+        setBuildParameterXLT_CONDITION_MESSAGE("");
+
+        updateConfig();
+    }
+
+    private void performPostTestSteps(final Run<?, ?> run, final Launcher launcher, final TaskListener listener, boolean artifactsSaved)
+    {
+        // terminate Amazon's EC2 instances
+        if (isEC2UsageEnabled())
+        {
+            try
+            {
+                terminateEc2Machine(run, launcher, listener);
+            }
+            catch (Exception e)
+            {
+                listener.getLogger().println("Could not terminate Amazon EC2 instances! " + e);
+                LOGGER.error("Could not terminate Amazon EC2 instances!", e);
+                run.setResult(Result.FAILURE);
+            }
+        }
+
+        if (taskConfig.getCreateSummaryReport() && artifactsSaved)
+        {
+            try
+            {
+                createSummaryReport(run, launcher, listener);
+            }
+            catch (Exception e)
+            {
+                listener.getLogger().println("Summary report failed. " + e);
+                LOGGER.error("Summary report failed", e);
+            }
+        }
+
+        if (taskConfig.getCreateTrendReport() && artifactsSaved)
+        {
+            try
+            {
+                createTrendReport(run, launcher, listener);
+            }
+            catch (Exception e)
+            {
+                listener.getLogger().println("Trend report failed. " + e);
+                LOGGER.error("Trend report failed", e);
+            }
+        }
+
+        listener.getLogger().println("\n\n-----------------------------------------------------------------\nArchive logs ...\n");
+        // save logs
+        try
+        {
+            Helper.moveFolder(getXltLogFolder(run, launcher), getBuildLogsFolder(run));
+        }
+        catch (Exception e)
+        {
+            listener.getLogger().println("Archive logs failed: " + e);
+            LOGGER.error("Archive logs failed: ", e);
+        }
+
+        listener.getLogger().println("\n\n-----------------------------------------------------------------\nCleanup ...\n");
+        // delete any temporary directory with local XLT
+        try
+        {
+            FilePath tempProjectFolder = getTemporaryXltProjectFolder(run, launcher);
+            tempProjectFolder.deleteRecursive();
+
+            FilePath tempFolder = getTemporaryXltBaseFolder(run, launcher);
+            if (tempFolder.exists() || tempFolder.list() == null || tempFolder.list().isEmpty())
+            {
+                tempFolder.delete();
+            }
+        }
+        catch (Exception e)
+        {
+            listener.getLogger().println("Cleanup Failed: " + e);
+            LOGGER.error("Cleanup Failed: ", e);
+        }
+
+        listener.getLogger().println("\nFinished");
+    }
+
+    private boolean isEC2UsageEnabled()
+    {
+        return taskConfig.getAgentControllerConfig() instanceof AmazonEC2;
+    }
+
+    private void configureAgentController(final Run<?, ?> run, final FilePath workspace, final Launcher launcher,
+                                          final TaskListener listener)
+        throws Exception
+    {
+        listener.getLogger()
+                .println("-----------------------------------------------------------------\nConfiguring agent controllers ...\n");
+
+        List<String> agentControllerUrls = Collections.emptyList();
+
+        final AgentControllerConfig acConfig = taskConfig.getAgentControllerConfig();
+        if (acConfig instanceof Embedded)
+        {
+            listener.getLogger().println("Set to embedded mode");
+        }
+        else
+        {
+            if (acConfig instanceof UrlFile)
+            {
+                final UrlFile uFile = (UrlFile) acConfig;
+                String urlFile = uFile.getUrlFile();
+                if (StringUtils.isNotBlank(urlFile))
+                {
+                    FilePath file = new FilePath(getTestSuiteConfigFolder(workspace), urlFile);
+
+                    listener.getLogger().printf("Read agent controller URLs from file %s:\n\n", file);
+
+                    ((UrlFile) acConfig).parse(file.getParent());
+                    agentControllerUrls = uFile.getItems();
+                }
+
+            }
+            else if (isEC2UsageEnabled())
+            {
+                agentControllerUrls = startEc2Machine(run, launcher, listener);
+            }
+            else if (acConfig instanceof UrlList)
+            {
+                listener.getLogger().println("Read agent controller URLs from configuration:\n");
+                agentControllerUrls = ((UrlList) acConfig).getItems();
+            }
+
+            if (agentControllerUrls.isEmpty())
+            {
+                throw new IllegalStateException("No agent controller URLs found.");
+            }
+
+            for (String agentControllerUrl : agentControllerUrls)
+            {
+                listener.getLogger().println(agentControllerUrl);
+            }
+        }
+
+        listener.getLogger().println("\nFinished");
+
+    }
+
+    private List<String> startEc2Machine(final Run<?, ?> run, final Launcher launcher, final TaskListener listener) throws Exception
+    {
+        listener.getLogger()
+                .println("-----------------------------------------------------------------\nStarting agent controller with EC2 admin tool ...\n");
+
+        // build the EC2 admin command line
+        final List<String> commandLine = new ArrayList<String>();
+
+        if (launcher.isUnix())
+        {
+            commandLine.add("./ec2_admin.sh");
+        }
+        else
+        {
+            commandLine.add("cmd.exe");
+            commandLine.add("/c");
+            commandLine.add("ec2_admin.cmd");
+        }
+        final AmazonEC2 ec2Config = (AmazonEC2) taskConfig.getAgentControllerConfig();
+        commandLine.addAll(ec2Config.toEC2AdminArgs(getXltConfigFolder(run, launcher)));
+
+        // path to output file is last argument
+        final String acUrlsPath = commandLine.get(commandLine.size() - 1);
+
+        appendEc2Properties(run, launcher, listener);
+
+        // run the EC2 admin tool
+        FilePath workingDirectory = getXltBinFolder(run, launcher);
+        int commandResult = Helper.executeCommand(launcher, workingDirectory, commandLine, listener);
+        listener.getLogger().println("EC2 admin tool returned with exit code: " + commandResult);
+
+        if (commandResult != 0)
+        {
+            throw new Exception("Failed to start instances. EC2 admin tool returned with exit code: " + commandResult);
+        }
+
+        final FilePath acUrlFile = new FilePath(new File(acUrlsPath));
+
+        // open the file that contains the agent controller URLs
+        listener.getLogger().printf("\nRead agent controller URLs from file %s:\n\n", acUrlFile);
+
+        // read the lines from agent controller file
+        List<?> lines = IOUtils.readLines(new StringReader(acUrlFile.readToString()));
+        List<String> urls = new ArrayList<String>(lines.size());
+        for (Object eachLine : lines)
+        {
+            String line = (String) eachLine;
+            if (StringUtils.isNotBlank(line))
+            {
+                int start = line.indexOf('=') + 1;
+                if (start > 0 && start < line.length() - 1)
+                {
+                    String url = line.substring(start);
+                    if (StringUtils.isNotBlank(line))
+                    {
+                        urls.add(url.trim());
+                    }
+                }
+            }
+        }
+
+        return urls;
+    }
+
+    private void appendEc2Properties(final Run<?, ?> run, final Launcher launcher, final TaskListener listener) throws Exception
+    {
+        BufferedWriter writer = null;
+
+        final String awsCredentialId = ((AmazonEC2) taskConfig.getAgentControllerConfig()).getAwsCredentials();
+        if (StringUtils.isBlank(awsCredentialId))
+        {
+            return;
+        }
+
+        try
+        {
+
+            // append properties to the end of the file
+            // the last properties will win so this would overwrite the original properties
+            final FilePath ec2PropertiesFile = new FilePath(getXltConfigFolder(run, launcher), "ec2_admin.properties");
+            final String originalContent = ec2PropertiesFile.readToString();
+
+            // this will overwrite the existing file so we need the original content to recreate the old content
+            final OutputStream outStream = ec2PropertiesFile.write();
+
+            writer = new BufferedWriter(new OutputStreamWriter(outStream));
+
+            writer.write(originalContent);
+            writer.newLine();
+
+            final List<AwsCredentials> availableCredentials = CredentialsProvider.lookupCredentials(AwsCredentials.class, run.getParent(),
+                                                                                                    ACL.SYSTEM, new DomainRequirement[0]);
+
+            final AwsCredentials credentials = CredentialsMatchers.firstOrNull(availableCredentials,
+                                                                               CredentialsMatchers.withId(awsCredentialId));
+            if (credentials != null)
+            {
+                writer.write("aws.accessKey=" + Secret.toString(credentials.getAccessKey()));
+                writer.newLine();
+                writer.write("aws.secretKey=" + Secret.toString(credentials.getSecretKey()));
+                writer.newLine();
+            }
+            else
+            {
+                final String logMsg = String.format("Credentials no longer available. (id: \"%s\")", awsCredentialId);
+                LOGGER.warn(logMsg);
+                listener.getLogger().println(logMsg);
+
+                throw new Exception("Credentials no longer available.");
+            }
+
+            writer.flush();
+        }
+        finally
+        {
+            if (writer != null)
+            {
+                IOUtils.closeQuietly(writer);
+            }
+        }
+    }
+
+    private void terminateEc2Machine(final Run<?, ?> run, final Launcher launcher, final TaskListener listener) throws Exception
+    {
+        listener.getLogger()
+                .println("-----------------------------------------------------------------\nTerminating agent controller with EC2 admin tool ...\n");
+
+        // build the EC2 admin command line
+        List<String> commandLine = new ArrayList<String>();
+
+        if (launcher.isUnix())
+        {
+            commandLine.add("./ec2_admin.sh");
+        }
+        else
+        {
+            commandLine.add("cmd.exe");
+            commandLine.add("/c");
+            commandLine.add("ec2_admin.cmd");
+        }
+        commandLine.add("terminate");
+
+        {
+            final AmazonEC2 ec2Config = (AmazonEC2) taskConfig.getAgentControllerConfig();
+            commandLine.add(ec2Config.getRegion());
+            commandLine.add(ec2Config.getTagName());
+
+        }
+
+        // run the EC2 admin tool
+        FilePath workingDirectory = getXltBinFolder(run, launcher);
+        int commandResult = Helper.executeCommand(launcher, workingDirectory, commandLine, listener);
+        listener.getLogger().println("EC2 admin tool returned with exit code: " + commandResult);
+
+        if (commandResult != 0)
+        {
+            throw new Exception("Failed to terminate instances. EC2 admin tool returned with exit code: " + commandResult);
+        }
+    }
+
+    private FilePath getTestSuiteFolder(final FilePath workspace)
+    {
+        final String pathToTestSuite = taskConfig.getPathToTestSuite();
+        if (StringUtils.isBlank(pathToTestSuite))
+        {
+            return workspace;
+        }
+        else
+        {
+            return new FilePath(workspace, pathToTestSuite);
+        }
+    }
+
+    private FilePath getTestSuiteConfigFolder(final FilePath workspace)
+    {
+        return new FilePath(getTestSuiteFolder(workspace), "config");
+    }
+
+    private FilePath getTestPropertiesFile(final FilePath workspace)
+    {
+        final String testPropertiesFile = taskConfig.getTestPropertiesFile();
+        if (StringUtils.isBlank(testPropertiesFile))
+        {
+            return null;
+        }
+        else
+        {
+            return new FilePath(getTestSuiteConfigFolder(workspace), testPropertiesFile);
+        }
+    }
+
+    private void initialCleanUp(final Run<?, ?> run, final Launcher launcher, final TaskListener listener)
+        throws IOException, InterruptedException, BuildNodeGoneException
+    {
+        listener.getLogger()
+                .println("-----------------------------------------------------------------\nCleaning up project directory ...\n");
+
+        getTemporaryXltProjectFolder(run, launcher).deleteRecursive();
+
+        listener.getLogger().println("\nFinished");
+    }
+
+    private void copyXlt(final Run<?, ?> run, final Launcher launcher, final TaskListener listener) throws Exception
+    {
+        listener.getLogger().println("-----------------------------------------------------------------\nCopying XLT ...\n");
+
+        // the directory with the XLT template installation
+        if (StringUtils.isBlank(taskConfig.getXltTemplateDir()))
+        {
+            throw new Exception("Path to xlt not set");
+        }
+
+        FilePath srcDir = getXltTemplateFilePath();
+        listener.getLogger().println("XLT template directory: " + srcDir.getRemote());
+
+        if (!srcDir.exists())
+        {
+            throw new Exception("The directory does not exists: " + srcDir.getRemote());
+        }
+        else if (!srcDir.isDirectory())
+        {
+            throw new Exception("The path does not point to a directory: " + srcDir.getRemote());
+        }
+        else if (!new FilePath(new FilePath(srcDir, "bin"), "mastercontroller.sh").exists() ||
+                 !new FilePath(new FilePath(srcDir, "bin"), "mastercontroller.cmd").exists())
+        {
+            throw new Exception("No \"mastercontroller\" script found for path: " + new FilePath(srcDir, "bin").getRemote());
+        }
+
+        // the target directory in the project folder
+        FilePath destDir = getTemporaryXltFolder(run, launcher);
+        listener.getLogger().println("Target directory: " + destDir.getRemote());
+
+        // copy XLT to a remote directory
+        String excludePattern = "config/scriptdoc/, config/externaldataconfig.xml.sample, config/scriptdocgenerator.properties";
+        int copyCount = srcDir.copyRecursiveTo("bin/**, config/**, lib/**", excludePattern, destDir);
+        if (copyCount == 0 || destDir.list() == null || destDir.list().isEmpty())
+        {
+            throw new Exception("Copy template failed. Nothing was copyed from xlt template \"" + srcDir.getRemote() +
+                                "\" to destination \"" + destDir + "\"");
+        }
+
+        // make XLT start scripts executable
+        FilePath workingDirectory = getXltBinFolder(run, launcher);
+
+        for (FilePath child : workingDirectory.list())
+        {
+            child.chmod(0777);
+        }
+
+        listener.getLogger().println("\nFinished");
+    }
+
+    private void runMasterController(final Run<?, ?> run, final Launcher launcher, final FilePath workspace, final TaskListener listener)
+        throws Exception
+    {
+        listener.getLogger().println("-----------------------------------------------------------------\nRunning master controller ...\n");
+
+        // build the master controller command line
+        List<String> commandLine = new ArrayList<String>();
+
+        if (launcher.isUnix())
+        {
+            commandLine.add("./mastercontroller.sh");
+        }
+        else
+        {
+            commandLine.add("cmd.exe");
+            commandLine.add("/c");
+            commandLine.add("mastercontroller.cmd");
+        }
+
+        final AgentControllerConfig acConfig = taskConfig.getAgentControllerConfig();
+        commandLine.addAll(acConfig.toCmdLineArgs());
+
+        // set the initialResponseTimeout property
+        if (!(acConfig instanceof Embedded))
+        {
+            commandLine.add("-Dcom.xceptance.xlt.mastercontroller.initialResponseTimeout=" +
+                            (taskConfig.getInitialResponseTimeout() * 1000));
+        }
+        commandLine.add("-auto");
+
+        final String testPropertiesFile = taskConfig.getTestPropertiesFile();
+        if (StringUtils.isNotBlank(testPropertiesFile))
+        {
+            validateTestPropertiesFile(launcher, workspace);
+            commandLine.add("-testPropertiesFile");
+            commandLine.add(testPropertiesFile);
+        }
+
+        validateTestSuiteDirectory(workspace);
+        commandLine.add("-Dcom.xceptance.xlt.mastercontroller.testSuitePath=" + getTestSuiteFolder(workspace).getRemote());
+        commandLine.add("-Dcom.xceptance.xlt.mastercontroller.results=" + getXltResultFolder(run, launcher).getRemote());
+
+        // run the master controller
+        FilePath workingDirectory = getXltBinFolder(run, launcher);
+        int commandResult = Helper.executeCommand(launcher, workingDirectory, commandLine, listener);
+        listener.getLogger().println("Master controller returned with exit code: " + commandResult);
+
+        if (commandResult != 0)
+        {
+            throw new Exception("Master controller returned with exit code: " + commandResult);
+        }
+    }
+
+    private void validateTestPropertiesFile(final Launcher launcher, final FilePath workspace) throws Exception
+    {
+        final String testPropertiesFile = taskConfig.getTestPropertiesFile();
+        if (StringUtils.isBlank(testPropertiesFile))
+        {
+            return;
+        }
+
+        if (!Helper.isRelativeFilePathOnNode(launcher, testPropertiesFile))
+        {
+            throw new Exception("The test properties file path must be relative to the \"<testSuite>/config/\" directory. (" +
+                                testPropertiesFile + ")");
+        }
+
+        final FilePath testProperties = getTestPropertiesFile(workspace);
+        if (testProperties == null || !testProperties.exists())
+        {
+            throw new Exception("The test properties file does not exists. (" + testProperties.getRemote() + ")");
+        }
+        else if (testProperties.isDirectory())
+        {
+            throw new Exception("The test properties file path  must specify a file, not a directory. (" + testProperties.getRemote() +
+                                ")");
+        }
+    }
+
+    private void validateTestSuiteDirectory(final FilePath workspace) throws Exception
+    {
+        FilePath testSuiteDirectory = getTestSuiteFolder(workspace);
+        if (!testSuiteDirectory.exists())
+        {
+            throw new Exception("The test suite path does not exists. (" + testSuiteDirectory.getRemote() + ")");
+        }
+        else if (!testSuiteDirectory.isDirectory())
+        {
+            throw new Exception("The test suite path must specify a directory, not a file. (" + testSuiteDirectory.getRemote() + ")");
+        }
+        else if (testSuiteDirectory.list() == null || testSuiteDirectory.list().isEmpty())
+        {
+            throw new Exception("The test suite directory is empty. (" + testSuiteDirectory.getRemote() + ")");
+        }
+    }
+
+    private void createReport(final Run<?, ?> run, final Launcher launcher, final TaskListener listener) throws Exception
+    {
+        listener.getLogger().println("-----------------------------------------------------------------\nRunning report generator ...\n");
+
+        FilePath resultSubFolder = getFirstSubFolder(getXltResultFolder(run, launcher));
+        if (resultSubFolder == null || resultSubFolder.list() == null || resultSubFolder.list().isEmpty())
+        {
+            throw new Exception("No results found at: " + getXltResultFolder(run, launcher).getRemote());
+        }
+        resultSubFolder.moveAllChildrenTo(getXltResultFolder(run, launcher));
+
+        // build the master controller command line
+        List<String> commandLine = new ArrayList<String>();
+
+        if (launcher.isUnix())
+        {
+            commandLine.add("./create_report.sh");
+        }
+        else
+        {
+            commandLine.add("cmd.exe");
+            commandLine.add("/c");
+            commandLine.add("create_report.cmd");
+        }
+
+        commandLine.add("-o");
+        commandLine.add(getXltReportFolder(run, launcher).getRemote());
+        commandLine.add("-linkToResults");
+        commandLine.add("yes");
+        commandLine.add(getXltResultFolder(run, launcher).getRemote());
+        commandLine.add("-Dmonitoring.trackSlowestRequests=true");
+
+        // run the report generator
+        FilePath workingDirectory = getXltBinFolder(run, launcher);
+        int commandResult = Helper.executeCommand(launcher, workingDirectory, commandLine, listener);
+        listener.getLogger().println("Report generator returned with exit code: " + commandResult);
+
+        if (commandResult != 0)
+        {
+            throw new Exception("Report generator returned with exit code: " + commandResult);
+        }
+    }
+
+    private void saveArtifacts(final Run<?, ?> run, final Launcher launcher, final TaskListener listener)
+        throws IOException, InterruptedException, BuildNodeGoneException
+    {
+        listener.getLogger()
+                .println("\n\n-----------------------------------------------------------------\nArchive results and report...\n");
+
+        run.pickArtifactManager();
+
+        // save load test results and report (copy from node)
+        Helper.moveFolder(getXltResultFolder(run, launcher), getBuildResultFolder(run));
+        Helper.moveFolder(getXltReportFolder(run, launcher), getBuildReportFolder(run));
+
+        setBuildParameterXLT_REPORT_URL(getBuildReportURL(run));
+    }
+
+    private void createSummaryReport(final Run<?, ?> run, final Launcher launcher, final TaskListener listener) throws Exception
+    {
+        listener.getLogger().println("-----------------------------------------------------------------\nCreating summary report ...\n");
+
+        // copy the results of the last n builds to the summary results directory
+        copyResults(run, launcher, listener);
+
+        // build report generator command line
+        List<String> commandLine = new ArrayList<String>();
+
+        if (launcher.isUnix())
+        {
+            commandLine.add("./create_report.sh");
+        }
+        else
+        {
+            commandLine.add("cmd.exe");
+            commandLine.add("/c");
+            commandLine.add("create_report.cmd");
+        }
+
+        FilePath outputFolder = getSummaryReportFolder(run.getParent());
+        commandLine.add("-o");
+        commandLine.add(outputFolder.getRemote());
+
+        commandLine.add(getSummaryResultsFolder(run.getParent()).getRemote());
+        // run the report generator on the master
+        int commandResult = Helper.executeCommand(launcher, getXltBinFolderOnMaster(), commandLine, listener);
+        listener.getLogger().println("Load report generator returned with exit code: " + commandResult);
+        if (commandResult != 0)
+        {
+            run.setResult(Result.FAILURE);
+        }
+    }
+
+    private void copyResults(final Run<?, ?> run, final Launcher launcher, final TaskListener listener)
+        throws InterruptedException, IOException
+    {
+        // recreate a fresh summary results directory
+        FilePath summaryResultsFolder = getSummaryResultsFolder(run.getParent());
+
+        summaryResultsFolder.deleteRecursive();
+        summaryResultsFolder.mkdirs();
+
+        // copy config from the current build's results
+        FilePath configFolder = getBuildResultConfigFolder(run);
+        FilePath summaryConfigFolder = getSummaryResultsConfigFolder(run.getParent());
+
+        configFolder.copyRecursiveTo(summaryConfigFolder);
+
+        // copy timer data from the last n builds
+
+        List<Run<?, ?>> builds = new ArrayList<Run<?, ?>>(run.getPreviousBuildsOverThreshold(taskConfig.getNumberOfBuildsForSummaryReport() -
+                                                                                             1, Result.UNSTABLE));
+        builds.add(0, run);
+
+        for (Run<?, ?> build : builds)
+        {
+            FilePath resultsFolder = getBuildResultFolder(build);
+            if (resultsFolder.isDirectory())
+            {
+                copyResults(summaryResultsFolder, resultsFolder, build.getNumber());
+            }
+        }
+    }
+
+    private void copyResults(final FilePath targetDir, final FilePath srcDir, final int buildNumber)
+        throws IOException, InterruptedException
+    {
+        List<FilePath> files = srcDir.list();
+        if (files != null)
+        {
+            for (FilePath file : files)
+            {
+                if (file.isDirectory())
+                {
+                    copyResults(new FilePath(targetDir, file.getName()), file, buildNumber);
+                }
+                else if (file.getName().startsWith("timers.csv"))
+                {
+                    // regular timer files
+                    // use File instead of FilePath to prevent error on Windows systems
+                    // in this case using File is ok, because copying results is done on master
+                    File renamedResultsFile = new File(targetDir.getRemote(), file.getName() + "." + buildNumber);
+                    FileUtils.copyFile(new File(file.getRemote()), renamedResultsFile);
+                }
+                else if (file.getName().endsWith(".csv"))
+                {
+                    // WebDriver timer files
+                    FileUtils.copyFileToDirectory(new File(file.getRemote()), new File(targetDir.getRemote()));
+                }
+            }
+        }
+    }
+
+    private void createTrendReport(final Run<?, ?> run, final Launcher launcher, final TaskListener listener) throws Exception
+    {
+        listener.getLogger().println("-----------------------------------------------------------------\nCreating trend report ...\n");
+
+        List<String> commandLine = new ArrayList<String>();
+
+        if (launcher.isUnix())
+        {
+            commandLine.add("./create_trend_report.sh");
+        }
+        else
+        {
+            commandLine.add("cmd.exe");
+            commandLine.add("/c");
+            commandLine.add("create_trend_report.cmd");
+        }
+
+        FilePath trendReportDest = getTrendReportFolder(run.getParent());
+        commandLine.add("-o");
+        commandLine.add(trendReportDest.getRemote());
+
+        // get some previous builds that were either UNSTABLE or SUCCESS
+        List<Run<?, ?>> builds = new ArrayList<Run<?, ?>>(run.getPreviousBuildsOverThreshold(taskConfig.getNumberOfBuildsForTrendReport() -
+                                                                                             1, Result.UNSTABLE));
+        // add the current build
+        builds.add(run);
+
+        // add the report directories
+        int numberOfBuildsWithReports = 0;
+        for (Run<?, ?> eachBuild : builds)
+        {
+            FilePath reportDirectory = getBuildReportFolder(eachBuild);
+            if (reportDirectory.isDirectory())
+            {
+                commandLine.add(reportDirectory.getRemote());
+                numberOfBuildsWithReports++;
+            }
+        }
+
+        // check whether we have enough builds with reports to create a trend report
+        if (numberOfBuildsWithReports > 1)
+        {
+            // run trend report generator on master
+            int commandResult = Helper.executeCommand(launcher, getXltBinFolderOnMaster(), commandLine, listener);
+            listener.getLogger().println("Trend report generator returned with exit code: " + commandResult);
+            if (commandResult != 0)
+            {
+                run.setResult(Result.FAILURE);
+            }
+        }
+        else
+        {
+            listener.getLogger().println("Cannot create trend report because no previous reports available!");
+        }
+    }
+
+    public LoadTestResult perform(final Run<?, ?> run, final FilePath workspace, final TaskListener listener, final Launcher launcher)
+        throws InterruptedException, IOException
+    {
+        if (StringUtils.isBlank(taskConfig.getStepId()))
+        {
+            throw new AbortException("Parameter 'stepId' must not be blank");
+        }
+
+        if (StringUtils.isBlank(taskConfig.getXltTemplateDir()))
+        {
+            throw new AbortException("Parameter 'xltTemplateDir' must not be blank");
+        }
+
+        if (workspace == null)
+        {
+            throw new AbortException("Cannot run without a workspace");
+        }
+
+        init();
+
+        try
+        {
+            initialCleanUp(run, launcher, listener);
+        }
+        catch (Exception e)
+        {
+            listener.getLogger().println("Cleanup failed: " + e.getMessage());
+            LOGGER.error("Cleanup failed: ", e);
+        }
+
+        boolean artifactsSaved = false;
+        try
+        {
+            copyXlt(run, launcher, listener);
+
+            configureAgentController(run, workspace, launcher, listener);
+            runMasterController(run, launcher, workspace, listener);
+
+            createReport(run, launcher, listener);
+            saveArtifacts(run, launcher, listener);
+            artifactsSaved = true;
+
+            validateCriteria(run, listener);
+        }
+        catch (InterruptedException e)
+        {
+            run.setResult(run.getExecutor().abortResult());
+        }
+        catch (Exception e)
+        {
+            run.setResult(Result.FAILURE);
+            listener.getLogger().println("Build failed: " + e.getMessage());
+            LOGGER.error("Build failed", e);
+        }
+        finally
+        {
+            performPostTestSteps(run, launcher, listener, artifactsSaved);
+
+            if (run.getResult() == Result.FAILURE)
+            {
+                setBuildParameterXLT_RUN_FAILED(true);
+            }
+            publishBuildParameters(run);
+
+            if (artifactsSaved)
+            {
+                publishChartData(run);
+            }
+        }
+
+        return new LoadTestResult(buildParameterMap);
+    }
+}

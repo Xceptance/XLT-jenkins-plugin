@@ -1,0 +1,41 @@
+<div>
+    <p>This option allows you to customize the date/time presentation in the charts as a pattern. If empty, the
+        default will be used. The pattern "' '" (Without the double quotes) can be used to hide the date/time, for
+        example if you just want to see the build number (see option "Show Build Number").</p>
+    <hr>
+    <p>Within the date/time pattern, any letter (out of [A-Za-z]) is interpreted specially and will be replaced by
+        the date/time value it stands for. Arbitrary text can be inserted into the pattern by enclosing the text in
+        single quotes ('). To insert a single quote, use "''". Any other character is not interpreted and will be copied
+        to the resulting string as is.</p>
+    <p>
+        For a full explanation of the pattern syntax see <a href="http://docs.oracle.com/javase/7/docs/api/java/text/SimpleDateFormat.html">here</a>.
+    </p>
+    <hr>
+    <p>
+        <b>Examples</b>
+    </p>
+    <table border="0" cellspacing="3" cellpadding="3">
+        <tbody>
+            <tr>
+                <th align="left">Pattern</th>
+                <th align="left">Result</th>
+            </tr>
+            <tr>
+                <td>yyyy.MM.dd 'at' HH:mm:ss z</td>
+                <td>2014.07.25 at 15:17:30 EDT</td>
+            </tr>
+            <tr>
+                <td>yy/MM/dd-HH:mm</td>
+                <td>14/07/25-15:17</td>
+            </tr>
+            <tr>
+                <td>h:mm a</td>
+                <td>3:17 PM</td>
+            </tr>
+            <tr>
+                <td>HH:mm</td>
+                <td>15:17</td>
+            </tr>
+        </tbody>
+    </table>
+</div>

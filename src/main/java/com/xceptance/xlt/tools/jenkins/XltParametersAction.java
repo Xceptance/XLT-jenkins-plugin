@@ -4,6 +4,8 @@ import java.util.List;
 
 import org.apache.commons.lang3.StringUtils;
 
+import com.xceptance.xlt.tools.jenkins.util.Helper;
+
 import hudson.model.ParameterValue;
 import hudson.model.ParametersAction;
 import hudson.model.Run;
@@ -47,7 +49,7 @@ public class XltParametersAction extends ParametersAction implements RunAction2
     @Override
     public String getIconFileName()
     {
-        return LoadTestBuilder.getResourcePath("logo_24_24.png");
+        return Helper.getResourcePath("logo_24_24.png");
     }
 
     @Override
