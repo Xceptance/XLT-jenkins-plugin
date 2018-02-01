@@ -1,9 +1,12 @@
 package com.xceptance.xlt.tools.jenkins.util;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 import org.apache.commons.lang3.StringUtils;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 
@@ -73,4 +76,91 @@ public final class CriterionChecker
         }
         return failedAlerts;
     }
+
+    public static List<CriterionResult> parseCriteriaValidationResult(JSONObject critOutJSON)
+    {
+        final ArrayList<CriterionResult> list = new ArrayList<>();
+        if (critOutJSON != null)
+        {
+            final HashMap<String, JSONObject> critById = new HashMap<>();
+            final JSONArray criteria = critOutJSON.optJSONArray("criteria");
+            if (criteria != null)
+            {
+                for (int j = 0, l = criteria.length(); j < l; j++)
+                {
+                    final JSONObject c = criteria.optJSONObject(j);
+                    if (c != null)
+                    {
+                        final String cid = c.optString("id");
+                        if (StringUtils.isNotBlank(cid))
+                        {
+                            critById.put(cid, c);
+                        }
+                    }
+                }
+            }
+
+            parseCriteriaChecks(critById, critOutJSON.optJSONArray("checks"), list);
+        }
+
+        return list;
+    }
+
+    private static void parseCriteriaChecks(HashMap<String, JSONObject> critById, JSONArray checks, ArrayList<CriterionResult> list)
+    {
+        if (checks == null)
+        {
+            return;
+        }
+
+        for (int i = 0, l = checks.length(); i < l; i++)
+        {
+            final JSONObject check = checks.optJSONObject(i);
+            if (check != null)
+            {
+                parseCriteriaCheck(critById, check, list);
+            }
+        }
+    }
+
+    private static void parseCriteriaCheck(HashMap<String, JSONObject> critById, JSONObject check, ArrayList<CriterionResult> list)
+    {
+        final JSONObject details = check.optJSONObject("details");
+        if (details != null)
+        {
+            for (final String critID : details.keySet())
+            {
+                if (StringUtils.isBlank(critID))
+                {
+                    continue;
+                }
+
+                final JSONObject detail = details.optJSONObject(critID);
+                final JSONObject crit = critById.get(critID);
+                if (detail == null || crit == null)
+                {
+                    continue;
+                }
+                final String status = detail.optString("status").toLowerCase();
+                final String message = detail.optString("message");
+                CriterionResult cr = null;
+                if ("error".equals(status))
+                {
+                    cr = CriterionResult.error(message);
+                }
+                else if ("failed".equals(status))
+                {
+                    cr = CriterionResult.failed(message);
+                }
+
+                if (cr != null)
+                {
+                    cr.setCondition(crit.optString("condition"));
+                    cr.setCriterionID(critID);
+                    list.add(cr);
+                }
+            }
+        }
+    }
+
 }

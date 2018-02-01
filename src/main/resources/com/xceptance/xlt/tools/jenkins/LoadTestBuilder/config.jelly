@@ -72,6 +72,8 @@
         </f:entry>
     </f:optionalBlock>
 
+    <f:optionalProperty field="diffReportOption" title="Create a difference report" />
+    
     <!-- ===================================================================== -->
 
     <f:block>

@@ -31,6 +31,8 @@ public class XltRecorderAction implements RunAction2
 
     private final String reportURL;
 
+    private final String diffReportURL;
+
     private final String stepId;
 
     public static String URL_NAME = "xltResult";
@@ -39,13 +41,15 @@ public class XltRecorderAction implements RunAction2
 
     @DataBoundConstructor
     public XltRecorderAction(final String stepId, final String reportURL, final List<CriterionResult> failedAlerts,
-                             final List<TestCaseInfo> failedTestCases, final List<SlowRequestInfo> slowestRequests)
+                             final List<TestCaseInfo> failedTestCases, final List<SlowRequestInfo> slowestRequests,
+                             final String diffReportURL)
     {
         this.stepId = stepId;
         this.failedAlerts = failedAlerts;
         this.reportURL = reportURL;
         this.failedTestCases = failedTestCases;
         this.slowestRequests = slowestRequests;
+        this.diffReportURL = diffReportURL;
     }
 
     public String getIconFileName()
@@ -76,6 +80,11 @@ public class XltRecorderAction implements RunAction2
     public String getReportURL()
     {
         return reportURL;
+    }
+
+    public String getDiffReportURL()
+    {
+        return diffReportURL;
     }
 
     public List<CriterionResult> getAlerts()

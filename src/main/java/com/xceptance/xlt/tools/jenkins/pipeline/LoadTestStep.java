@@ -13,7 +13,6 @@ import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
-import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
@@ -22,6 +21,7 @@ import com.google.common.collect.ImmutableSet;
 import com.xceptance.xlt.tools.jenkins.LoadTestConfiguration;
 import com.xceptance.xlt.tools.jenkins.config.AgentControllerConfig;
 import com.xceptance.xlt.tools.jenkins.config.Embedded;
+import com.xceptance.xlt.tools.jenkins.config.option.DiffReportOption;
 import com.xceptance.xlt.tools.jenkins.config.option.MarkCriticalOption;
 import com.xceptance.xlt.tools.jenkins.config.option.SummaryReportOption;
 import com.xceptance.xlt.tools.jenkins.config.option.TrendReportOption;
@@ -33,7 +33,6 @@ import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
 import hudson.Util;
-import hudson.model.Job;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.util.FormValidation;
@@ -83,6 +82,9 @@ public class LoadTestStep extends Step implements LoadTestConfiguration
 
     @CheckForNull
     private MarkCriticalOption markCriticalOption;
+
+    @CheckForNull
+    private DiffReportOption diffReportOption;
 
     @DataBoundConstructor
     public LoadTestStep(@Nonnull final String stepId, @Nonnull final String xltTemplateDir)
@@ -345,6 +347,36 @@ public class LoadTestStep extends Step implements LoadTestConfiguration
         return nbBuilds > 0 ? nbBuilds : getDescriptor().getDefaultNumberOfBuildsForSummaryReport();
     }
 
+    @CheckForNull
+    public DiffReportOption getDiffReportOption()
+    {
+        return diffReportOption;
+    }
+
+    @DataBoundSetter
+    public void setDiffReportOption(@CheckForNull final DiffReportOption diffReportOption)
+    {
+        this.diffReportOption = diffReportOption;
+    }
+
+    @Override
+    public boolean getCreateDiffReport()
+    {
+        return diffReportOption != null;
+    }
+
+    @Override
+    public String getDiffReportBaseline()
+    {
+        return diffReportOption != null ? StringUtils.defaultString(diffReportOption.getDiffReportBaseline()) : null;
+    }
+
+    @Override
+    public String getDiffReportCriteriaFile()
+    {
+        return diffReportOption != null ? diffReportOption.getDiffReportCriteriaFile() : null;
+    }
+
     @Override
     public StepExecution start(StepContext context) throws Exception
     {
@@ -483,9 +515,9 @@ public class LoadTestStep extends Step implements LoadTestConfiguration
             return ConfigurationValidator.validateXltTemplateDir(value);
         }
 
-        public FormValidation doCheckPathToTestSuite(@QueryParameter String value, @AncestorInPath Job<?, ?> project)
+        public FormValidation doCheckPathToTestSuite(@QueryParameter String value)
         {
-            return ConfigurationValidator.validateTestSuitePath(value, project);
+            return ConfigurationValidator.validateTestSuitePath(value);
         }
 
         /**

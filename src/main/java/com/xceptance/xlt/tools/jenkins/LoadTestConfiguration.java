@@ -44,4 +44,10 @@ public interface LoadTestConfiguration
     public int getMarkCriticalConditionCount();
 
     public int getMarkCriticalBuildCount();
+
+    public boolean getCreateDiffReport();
+
+    public String getDiffReportBaseline();
+
+    public String getDiffReportCriteriaFile();
 }

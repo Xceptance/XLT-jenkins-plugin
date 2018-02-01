@@ -73,4 +73,11 @@ public class LoadTestResult
         final Object o = params.get(ENVIRONMENT_KEYS.XLT_REPORT_URL);
         return o != null ? o.toString() : null;
     }
+    @Whitelisted
+    public String getDiffReportUrl()
+    {
+        final Object o = params.get(ENVIRONMENT_KEYS.XLT_DIFFREPORT_URL);
+        return o != null ? o.toString() : null;
+    }
+
 }

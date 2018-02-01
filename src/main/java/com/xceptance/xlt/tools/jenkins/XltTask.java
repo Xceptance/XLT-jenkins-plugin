@@ -1,6 +1,8 @@
 package com.xceptance.xlt.tools.jenkins;
 
+import java.io.BufferedOutputStream;
 import java.io.BufferedWriter;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -13,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
+import org.apache.commons.io.Charsets;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -61,8 +64,9 @@ public class XltTask
      XLT_CONDITION_CRITICAL,
      XLT_CONDITION_FAILED,
      XLT_CONDITION_ERROR,
+     XLT_CONDITION_MESSAGE,
      XLT_REPORT_URL,
-     XLT_CONDITION_MESSAGE
+     XLT_DIFFREPORT_URL
     }
 
     private final LoadTestConfiguration taskConfig;
@@ -74,6 +78,8 @@ public class XltTask
     private transient final List<Chart<Integer, Double>> charts = new ArrayList<Chart<Integer, Double>>();
 
     private transient Map<ENVIRONMENT_KEYS, Object> buildParameterMap;
+
+    private transient JSONObject critOutJSON;
 
     public XltTask(final LoadTestConfiguration cfg)
     {
@@ -174,6 +180,11 @@ public class XltTask
         return getTemporaryXltFolder(run, launcher).child(FOLDER_NAMES.ARTIFACT_REPORT);
     }
 
+    private FilePath getXltDiffReportFolder(final Run<?, ?> run, final Launcher launcher) throws BuildNodeGoneException
+    {
+        return getTemporaryXltFolder(run, launcher).child(FOLDER_NAMES.ARTIFACT_DIFFREPORT);
+    }
+
     private FilePath getFirstSubFolder(final FilePath dir) throws IOException, InterruptedException
     {
         if (dir != null && dir.isDirectory())
@@ -208,12 +219,27 @@ public class XltTask
         return Helper.getArtifact(run, taskConfig.getStepId() + "/" + FOLDER_NAMES.ARTIFACT_REPORT);
     }
 
+    private FilePath getBuildDiffReportFolder(final Run<?, ?> run)
+    {
+        return Helper.getArtifact(run, taskConfig.getStepId() + "/" + FOLDER_NAMES.ARTIFACT_DIFFREPORT);
+    }
+
     private String getBuildReportURL(final Run<?, ?> run)
     {
         final StringBuilder sb = new StringBuilder();
 
         sb.append(StringUtils.defaultString(Jenkins.getActiveInstance().getRootUrl(), "/")).append(run.getUrl())
           .append(XltRecorderAction.RELATIVE_REPORT_URL).append(taskConfig.getStepId()).append('/').append(FOLDER_NAMES.ARTIFACT_REPORT)
+          .append("/index.html");
+        return sb.toString();
+    }
+
+    private String getBuildDiffReportURL(final Run<?, ?> run)
+    {
+        final StringBuilder sb = new StringBuilder();
+
+        sb.append(StringUtils.defaultString(Jenkins.getActiveInstance().getRootUrl(), "/")).append(run.getUrl())
+          .append(XltRecorderAction.RELATIVE_REPORT_URL).append(taskConfig.getStepId()).append('/').append(FOLDER_NAMES.ARTIFACT_DIFFREPORT)
           .append("/index.html");
         return sb.toString();
     }
@@ -294,8 +320,7 @@ public class XltTask
         // get the test report document
         final Document dataXml = getDataDocument(run);
 
-        listener.getLogger()
-                .println("-----------------------------------------------------------------\n" + "Checking success criteria ...\n");
+        listener.getLogger().println("-----------------------------------------------------------------\nChecking success criteria ...\n");
 
         // process the test report
         final List<CriterionResult> failedAlerts = CriterionChecker.getFailed(dataXml, config);
@@ -303,9 +328,16 @@ public class XltTask
         final List<TestCaseInfo> failedTestCases = determineFailedTestCases(run, listener, dataXml);
         final List<SlowRequestInfo> slowestRequests = determineSlowestRequests(run, listener, dataXml);
 
+        final boolean hasDiffReport = buildParameterMap.get(ENVIRONMENT_KEYS.XLT_DIFFREPORT_URL) != null;
+        if (hasDiffReport && critOutJSON != null)
+        {
+            failedAlerts.addAll(CriterionChecker.parseCriteriaValidationResult(critOutJSON));
+        }
+
         // create the action with all the collected data
         XltRecorderAction recorderAction = new XltRecorderAction(taskConfig.getStepId(), getBuildReportURL(run), failedAlerts,
-                                                                 failedTestCases, slowestRequests);
+                                                                 failedTestCases, slowestRequests,
+                                                                 hasDiffReport ? getBuildDiffReportURL(run) : null);
         run.addAction(recorderAction);
 
         // log failed criteria to the build's console
@@ -463,7 +495,7 @@ public class XltTask
     public void publishBuildParameters(final Run<?, ?> run)
     {
         final ArrayList<ParameterValue> params = new ArrayList<>();
-        for(final Map.Entry<ENVIRONMENT_KEYS, Object> entry : buildParameterMap.entrySet())
+        for (final Map.Entry<ENVIRONMENT_KEYS, Object> entry : buildParameterMap.entrySet())
         {
             final Object o = entry.getValue();
             params.add(new StringParameterValue(entry.getKey().name(), o == null ? "null" : o.toString()));
@@ -504,6 +536,11 @@ public class XltTask
     private void setBuildParameterXLT_REPORT_URL(final String reportURL)
     {
         setBuildParameter(ENVIRONMENT_KEYS.XLT_REPORT_URL, StringUtils.defaultString(reportURL));
+    }
+
+    private void setBuildParameterXLT_DIFFREPORT_URL(final String diffReportURL)
+    {
+        setBuildParameter(ENVIRONMENT_KEYS.XLT_DIFFREPORT_URL, StringUtils.defaultString(diffReportURL));
     }
 
     protected void init()
@@ -1062,6 +1099,18 @@ public class XltTask
         Helper.moveFolder(getXltReportFolder(run, launcher), getBuildReportFolder(run));
 
         setBuildParameterXLT_REPORT_URL(getBuildReportURL(run));
+
+        // take care of difference report
+        {
+            final FilePath diffReportFolder = getXltDiffReportFolder(run, launcher);
+            if (diffReportFolder.exists())
+            {
+                Helper.moveFolder(diffReportFolder, getBuildDiffReportFolder(run));
+
+                setBuildParameterXLT_DIFFREPORT_URL(getBuildDiffReportURL(run));
+            }
+        }
+
     }
 
     private void createSummaryReport(final Run<?, ?> run, final Launcher launcher, final TaskListener listener) throws Exception
@@ -1215,6 +1264,143 @@ public class XltTask
         }
     }
 
+    private void createDiffReport(final Run<?, ?> run, final Launcher launcher, final FilePath workspace, final TaskListener listener)
+        throws Exception
+    {
+        if (!taskConfig.getCreateDiffReport())
+        {
+            return;
+        }
+
+        listener.getLogger().println("-----------------------------------------------------------------\nCreating difference report ...\n");
+
+        final String baseLine = taskConfig.getDiffReportBaseline();
+        FilePath baseLinePath = null;
+        if (StringUtils.isBlank(baseLine) || baseLine.startsWith("#"))
+        {
+            Run<?, ?> r = null;
+
+            if (StringUtils.isBlank(baseLine))
+            {
+                r = run.getPreviousSuccessfulBuild();
+                if (r == null)
+                {
+                    listener.getLogger()
+                            .println("Did not find a previous build that was successful => Creation of difference report will be SKIPPED");
+                    return;
+                }
+            }
+            else
+            {
+                r = run.getParent().getBuildByNumber(Integer.parseInt(baseLine.substring(1)));
+            }
+
+            if (r != null)
+            {
+                baseLinePath = getBuildReportFolder(r);
+            }
+        }
+        else
+        {
+            baseLinePath = new FilePath(Jenkins.getInstance().getRootPath(), baseLine);
+        }
+
+        if (baseLinePath == null || !baseLinePath.exists() || !baseLinePath.isDirectory())
+        {
+            throw new Exception("Failed to resolve difference report directory for '" + baseLine + "'");
+        }
+
+        final ArrayList<String> cmdLine = new ArrayList<>();
+        if (launcher.isUnix())
+        {
+            cmdLine.add("./create_diff_report.sh");
+        }
+        else
+        {
+            cmdLine.add("cmd.exe");
+            cmdLine.add("/c");
+            cmdLine.add("create_diff_report.cmd");
+        }
+
+        // configure output directory
+        FilePath diffReportDest = getXltDiffReportFolder(run, launcher);
+        cmdLine.add("-o");
+        cmdLine.add(diffReportDest.getRemote());
+
+        // add remaining args
+        cmdLine.add(baseLinePath.getRemote());
+        cmdLine.add(getXltReportFolder(run, launcher).getRemote());
+
+        // run difference report generator on master
+        int commandResult = Helper.executeCommand(launcher, getXltBinFolderOnMaster(), cmdLine, listener);
+        listener.getLogger().println("Difference report generator returned with exit code: " + commandResult);
+        if (commandResult != 0)
+        {
+            run.setResult(Result.FAILURE);
+            return;
+        }
+
+        final String critFile = Helper.environmentResolve(taskConfig.getDiffReportCriteriaFile());
+        if (StringUtils.isNotBlank(critFile))
+        {
+            cmdLine.clear();
+            final FilePath critFilePath = new FilePath(workspace, critFile);
+            if (launcher.isUnix())
+            {
+                cmdLine.add("./check_criteria.sh");
+            }
+            else
+            {
+                cmdLine.add("cmd.exe");
+                cmdLine.add("/c");
+                cmdLine.add("check_criteria.cmd");
+            }
+
+            cmdLine.add("-c");
+            cmdLine.add(critFilePath.getRemote());
+            cmdLine.add(diffReportDest.child("diffreport.xml").getRemote());
+
+            final ByteArrayOutputStream os = new ByteArrayOutputStream(4096);
+            final BufferedOutputStream buf = new BufferedOutputStream(os);
+            try
+            {
+                commandResult = Helper.executeCommand(launcher, getXltBinFolderOnMaster(), cmdLine, buf);
+            }
+            finally
+            {
+                buf.flush();
+                buf.close();
+            }
+
+            final byte[] bytes = os.toByteArray();
+            final String out = new String(bytes, Charsets.UTF_8);
+
+            listener.getLogger().println("Criteria check returned with exit code: " + commandResult);
+            if (commandResult != 0)
+            {
+                run.setResult(Result.FAILURE);
+                listener.getLogger().println("check_criteria output: " + out);
+            }
+            else
+            {
+                if (StringUtils.isNotBlank(out))
+                {
+                    JSONObject o = null;
+                    try
+                    {
+                        o = new JSONObject(out);
+                    }
+                    catch (JSONException e)
+                    {
+                        // ignore
+                    }
+
+                    critOutJSON = o;
+                }
+            }
+        }
+    }
+
     public LoadTestResult perform(final Run<?, ?> run, final FilePath workspace, final TaskListener listener, final Launcher launcher)
         throws InterruptedException, IOException
     {
@@ -1254,6 +1440,8 @@ public class XltTask
             runMasterController(run, launcher, workspace, listener);
 
             createReport(run, launcher, listener);
+            createDiffReport(run, launcher, workspace, listener);
+
             saveArtifacts(run, launcher, listener);
             artifactsSaved = true;
 

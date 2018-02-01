@@ -56,7 +56,7 @@
         default="${descriptor.getDefaultCreateTrendReport()}"
         title="Create a trend report from the results of the last n builds (see below)."
         checked="${instance.createTrendReport}">
-        <f:entry title="#Builds For Trend Report" field="numberOfBuildsForTrendReport">
+        <f:entry title="#Builds For Trend Report" >
             <f:textbox field="numberOfBuildsForTrendReport"
                 default="${descriptor.getDefaultNumberOfBuildsForTrendReport()}" />
         </f:entry>
@@ -66,11 +66,13 @@
         default="${descriptor.getDefaultCreateSummaryReport()}"
         title="Create a summary load test report from the results of the last n builds (see below)."
         checked="${instance.createSummaryReport}">
-        <f:entry title="#Builds For Summary Report" field="numberOfBuildsForSummaryReport">
+        <f:entry title="#Builds For Summary Report" >
             <f:textbox field="numberOfBuildsForSummaryReport"
                 default="${descriptor.getDefaultNumberOfBuildsForSummaryReport()}" />
         </f:entry>
     </f:optionalBlock>
+
+    <f:optionalProperty field="diffReportOption" title="Create a difference report" />
 
     <!-- ===================================================================== -->
 

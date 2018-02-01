@@ -167,7 +167,10 @@ public class LoadTestBuilderTest
         {
             for (final XltTask.ENVIRONMENT_KEYS k : XltTask.ENVIRONMENT_KEYS.values())
             {
-                assertNotNull(axn.getParameter(k.name()));
+                if(k != XltTask.ENVIRONMENT_KEYS.XLT_DIFFREPORT_URL)
+                {
+                    assertNotNull(axn.getParameter(k.name()));
+                }
             }
             final String sid = StringUtils.substringAfter(axn.getUrlName(), "_");
             assertFalse(StringUtils.isEmpty(sid));
@@ -188,20 +191,7 @@ public class LoadTestBuilderTest
             assertTrue(allSteps.contains(axn.getStepId()));
         }
 
-        final List<XltParametersAction> paramAxn = run.getActions(XltParametersAction.class);
-        assertNotNull(paramAxn);
-        assertEquals(strings.length, paramAxn.size());
-
-        for (final XltParametersAction axn : paramAxn)
-        {
-            for (final XltTask.ENVIRONMENT_KEYS k : XltTask.ENVIRONMENT_KEYS.values())
-            {
-                assertNotNull(axn.getParameter(k.name()));
-            }
-            final String sid = StringUtils.substringAfter(axn.getUrlName(), "_");
-            assertFalse(StringUtils.isEmpty(sid));
-            assertTrue(allSteps.contains(sid));
-        }
+        validateParametersAction(run, strings);
 
     }
 }

@@ -10,6 +10,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
 import com.xceptance.xlt.tools.jenkins.config.AgentControllerConfig;
+import com.xceptance.xlt.tools.jenkins.config.option.DiffReportOption;
 import com.xceptance.xlt.tools.jenkins.config.option.MarkCriticalOption;
 import com.xceptance.xlt.tools.jenkins.config.option.SummaryReportOption;
 import com.xceptance.xlt.tools.jenkins.config.option.TrendReportOption;
@@ -72,6 +73,9 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep, LoadTes
 
     @CheckForNull
     private MarkCriticalOption markCriticalOption;
+
+    @CheckForNull
+    private DiffReportOption diffReportOption;
 
     /*
      * Backward compatibility
@@ -213,6 +217,18 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep, LoadTes
         final int mcCondCount = markCriticalOption.getMarkCriticalConditionCount();
         final int mcBuildCount = markCriticalOption.getMarkCriticalBuildCount();
         return mcCondCount > 0 ? Math.max(mcCondCount, mcBuildCount) : mcBuildCount;
+    }
+
+    @CheckForNull
+    public DiffReportOption getDiffReportOption()
+    {
+        return diffReportOption;
+    }
+
+    @DataBoundSetter
+    public void setDiffReportOption(@CheckForNull final DiffReportOption opt)
+    {
+        this.diffReportOption = opt;
     }
 
     @CheckForNull
@@ -363,6 +379,24 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep, LoadTes
     {
         final int nbBuilds = summaryReportOption != null ? summaryReportOption.getNumberOfBuildsForSummaryReport() : -1;
         return nbBuilds > 0 ? nbBuilds : getDescriptor().getDefaultNumberOfBuildsForSummaryReport();
+    }
+
+    @Override
+    public boolean getCreateDiffReport()
+    {
+        return diffReportOption != null;
+    }
+
+    @Override
+    public String getDiffReportBaseline()
+    {
+        return diffReportOption != null ? StringUtils.defaultString(diffReportOption.getDiffReportBaseline()) : null;
+    }
+
+    @Override
+    public String getDiffReportCriteriaFile()
+    {
+        return diffReportOption != null ? diffReportOption.getDiffReportCriteriaFile() : null;
     }
 
     @Override

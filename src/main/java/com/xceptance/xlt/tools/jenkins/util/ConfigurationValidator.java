@@ -28,7 +28,6 @@ import static com.xceptance.xlt.tools.jenkins.util.Helper.getErrorMessage;
 import static com.xceptance.xlt.tools.jenkins.util.ValidationUtils.validateNumber;
 
 import hudson.FilePath;
-import hudson.model.Job;
 import hudson.util.FormValidation;
 
 public final class ConfigurationValidator
@@ -282,7 +281,7 @@ public final class ConfigurationValidator
 
     }
 
-    public static FormValidation validateTestSuitePath(String value, Job<?, ?> project)
+    public static FormValidation validateTestSuitePath(String value)
     {
         if (StringUtils.isBlank(value))
         {
@@ -300,4 +299,39 @@ public final class ConfigurationValidator
 
     }
 
+    public static FormValidation validateDiffReportBaseline(String value)
+    {
+        if (StringUtils.isBlank(value))
+        {
+            return FormValidation.ok("Will use report of last run with same step identifier");
+        }
+        if (value.matches("^#[1-9]\\d*$"))
+        {
+            return FormValidation.ok("Will use report of run " + value + " with same step identifier");
+        }
+        final String resolvedPath = Helper.environmentResolve(value);
+        final FilePath filePath = new FilePath(new File(resolvedPath));
+        final String remotePath = filePath.getRemote();
+        if (!StringUtils.isBlank(FilenameUtils.getExtension(resolvedPath)))
+        {
+            return FormValidation.error("The path must specify a directory, not a file. (" + remotePath + ")");
+        }
+        return FormValidation.ok("(<workspace>/" + remotePath + ") or (" + remotePath + ")");
+    }
+
+    public static FormValidation validateDiffReportCriteriaFile(String value)
+    {
+        value = Helper.environmentResolve(value);
+        if (StringUtils.isNotBlank(value))
+        {
+            final FilePath filePath = new FilePath(new File(value));
+            final String remote = filePath.getRemote();
+            if (StringUtils.isBlank(FilenameUtils.getName(value)))
+            {
+                return FormValidation.error("The criteria file path must specify a file, not a directory. (" + remote + ")");
+            }
+            return FormValidation.ok("(<workspace>/" + remote + ") or (" + remote + ")");
+        }
+        return FormValidation.ok();
+    }
 }

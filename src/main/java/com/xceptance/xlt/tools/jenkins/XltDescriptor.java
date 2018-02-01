@@ -4,7 +4,6 @@ import static com.xceptance.xlt.tools.jenkins.util.ValidationUtils.validateNumbe
 
 import java.util.UUID;
 
-import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.QueryParameter;
 
 import com.xceptance.xlt.tools.jenkins.config.AgentControllerConfig;
@@ -18,7 +17,6 @@ import hudson.init.InitMilestone;
 import hudson.init.Initializer;
 import hudson.model.AbstractProject;
 import hudson.model.Items;
-import hudson.model.Job;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
 import hudson.util.FormValidation;
@@ -51,7 +49,7 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
     @Override
     public String getDisplayName()
     {
-        return "Run a load test with XLT";
+        return "Perform a Load Test with XLT";
     }
 
     public String getDefaultXltConfig()
@@ -156,9 +154,9 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
         return ConfigurationValidator.validateXltTemplateDir(value);
     }
 
-    public FormValidation doCheckPathToTestSuite(@QueryParameter String value, @AncestorInPath Job<?, ?> project)
+    public FormValidation doCheckPathToTestSuite(@QueryParameter String value)
     {
-        return ConfigurationValidator.validateTestSuitePath(value, project);
+        return ConfigurationValidator.validateTestSuitePath(value);
     }
 
     /**

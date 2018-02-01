@@ -2,6 +2,7 @@ package com.xceptance.xlt.tools.jenkins.util;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
@@ -13,9 +14,10 @@ import com.xceptance.xlt.tools.jenkins.BuildNodeGoneException;
 
 import hudson.FilePath;
 import hudson.Launcher;
+import hudson.Launcher.ProcStarter;
 import hudson.PluginWrapper;
 import hudson.Util;
-import hudson.Launcher.ProcStarter;
+import hudson.model.AbstractBuild;
 import hudson.model.Computer;
 import hudson.model.Job;
 import hudson.model.Run;
@@ -32,6 +34,8 @@ public final class Helper
     public static class FOLDER_NAMES
     {
         public static String ARTIFACT_REPORT = "report";
+
+        public static String ARTIFACT_DIFFREPORT = "diffReport";
 
         public static String ARTIFACT_RESULT = "results";
     }
@@ -54,6 +58,16 @@ public final class Helper
     public static URI getBaseResourceURI() throws URISyntaxException
     {
         return plugin().baseResourceURL.toURI();
+    }
+
+    public static boolean isBuiltOnMaster(final Run<?, ?> run)
+    {
+        if (run != null && run instanceof AbstractBuild)
+        {
+            final Jenkins j = Jenkins.getInstance();
+            return j != null && j == ((AbstractBuild<?, ?>) run).getBuiltOn();
+        }
+        return false;
     }
 
     public static hudson.model.Node getBuildNodeIfOnlineOrFail(Launcher launcher) throws BuildNodeGoneException
@@ -164,6 +178,19 @@ public final class Helper
         starter.cmds(commandLine);
 
         starter.stdout(logger);
+
+        // starts process and waits for its completion
+        return starter.join();
+    }
+
+    public static int executeCommand(Launcher launcher, FilePath workingDirectory, List<String> commandLine, OutputStream out)
+        throws IOException, InterruptedException
+    {
+        final ProcStarter starter = launcher.launch();
+        starter.pwd(workingDirectory);
+        starter.cmds(commandLine);
+
+        starter.stdout(out);
 
         // starts process and waits for its completion
         return starter.join();
