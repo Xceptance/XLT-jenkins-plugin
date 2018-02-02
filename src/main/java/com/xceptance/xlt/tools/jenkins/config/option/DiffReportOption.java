@@ -11,36 +11,36 @@ import hudson.util.FormValidation;
 
 public class DiffReportOption extends AbstractOption
 {
-    private final String diffReportBaseline;
+    private final String baseline;
 
-    private final String diffReportCriteriaFile;
+    private final String criteriaFile;
 
     @DataBoundConstructor
-    public DiffReportOption(final String diffReportBaseline, final String diffReportCriteriaFile)
+    public DiffReportOption(final String baseline, final String criteriaFile)
     {
-        this.diffReportBaseline = diffReportBaseline;
-        this.diffReportCriteriaFile = diffReportCriteriaFile;
+        this.baseline = baseline;
+        this.criteriaFile = criteriaFile;
     }
 
-    public String getDiffReportBaseline()
+    public String getBaseline()
     {
-        return diffReportBaseline;
+        return baseline;
     }
 
-    public String getDiffReportCriteriaFile()
+    public String getCriteriaFile()
     {
-        return diffReportCriteriaFile;
+        return criteriaFile;
     }
 
     @Extension
     public static class DescriptorImpl extends Descriptor<AbstractOption>
     {
-        public FormValidation doCheckDiffReportBaseline(@QueryParameter String value)
+        public FormValidation doCheckBaseline(@QueryParameter String value)
         {
             return ConfigurationValidator.validateDiffReportBaseline(value);
         }
 
-        public FormValidation doCheckDiffReportCriteriaFile(@QueryParameter String value)
+        public FormValidation doCheckCriteriaFile(@QueryParameter String value)
         {
             return ConfigurationValidator.validateDiffReportCriteriaFile(value);
         }

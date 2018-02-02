@@ -390,13 +390,13 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep, LoadTes
     @Override
     public String getDiffReportBaseline()
     {
-        return diffReportOption != null ? StringUtils.defaultString(diffReportOption.getDiffReportBaseline()) : null;
+        return diffReportOption != null ? StringUtils.defaultString(diffReportOption.getBaseline()) : null;
     }
 
     @Override
     public String getDiffReportCriteriaFile()
     {
-        return diffReportOption != null ? diffReportOption.getDiffReportCriteriaFile() : null;
+        return diffReportOption != null ? diffReportOption.getCriteriaFile() : null;
     }
 
     @Override

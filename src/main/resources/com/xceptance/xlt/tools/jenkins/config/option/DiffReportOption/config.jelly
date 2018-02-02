@@ -1,11 +1,11 @@
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
 
-    <f:entry title="Baseline (path or number of run)">
-        <f:textbox field="diffReportBaseline" />
+    <f:entry title="Baseline" field="baseline">
+        <f:textbox field="baseline" />
     </f:entry>
-    <f:entry title="Path to Criteria File (optional)">
-        <f:textbox field="diffReportCriteriaFile" />
+    <f:entry title="Path to Criteria File" field="criteriaFile" >
+        <f:textbox field="criteriaFile" />
     </f:entry>
 
 </j:jelly>

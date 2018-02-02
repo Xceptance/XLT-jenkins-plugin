@@ -75,16 +75,16 @@ public class LoadTestStep extends Step implements LoadTestConfiguration
     private boolean plotVertical;
 
     @CheckForNull
-    private TrendReportOption trendReportOption;
+    private TrendReportOption trendReport;
 
     @CheckForNull
-    private SummaryReportOption summaryReportOption;
+    private SummaryReportOption summaryReport;
 
     @CheckForNull
-    private MarkCriticalOption markCriticalOption;
+    private MarkCriticalOption markCritical;
 
     @CheckForNull
-    private DiffReportOption diffReportOption;
+    private DiffReportOption diffReport;
 
     @DataBoundConstructor
     public LoadTestStep(@Nonnull final String stepId, @Nonnull final String xltTemplateDir)
@@ -135,65 +135,65 @@ public class LoadTestStep extends Step implements LoadTestConfiguration
     }
 
     @CheckForNull
-    public TrendReportOption getTrendReportOption()
+    public TrendReportOption getTrendReport()
     {
-        return trendReportOption;
+        return trendReport;
     }
 
     @DataBoundSetter
-    public void setTrendReportOption(@CheckForNull final TrendReportOption opt)
+    public void setTrendReport(@CheckForNull final TrendReportOption opt)
     {
-        this.trendReportOption = opt;
+        this.trendReport = opt;
     }
 
     @CheckForNull
-    public SummaryReportOption getSummaryReportOption()
+    public SummaryReportOption getSummaryReport()
     {
-        return summaryReportOption;
+        return summaryReport;
     }
 
     @DataBoundSetter
-    public void setSummaryReportOption(@CheckForNull final SummaryReportOption opt)
+    public void setSummaryReport(@CheckForNull final SummaryReportOption opt)
     {
-        this.summaryReportOption = opt;
+        this.summaryReport = opt;
     }
 
     @CheckForNull
-    public MarkCriticalOption getMarkCriticalOption()
+    public MarkCriticalOption getMarkCritical()
     {
-        return markCriticalOption;
+        return markCritical;
     }
 
     @DataBoundSetter
-    public void setMarkCriticalOption(@CheckForNull final MarkCriticalOption opt)
+    public void setMarkCritical(@CheckForNull final MarkCriticalOption opt)
     {
-        this.markCriticalOption = opt;
+        this.markCritical = opt;
     }
 
     public boolean getMarkCriticalEnabled()
     {
-        return markCriticalOption != null;
+        return markCritical != null;
     }
 
     public int getMarkCriticalConditionCount()
     {
-        if (markCriticalOption == null)
+        if (markCritical == null)
         {
             return 0;
         }
 
-        return markCriticalOption.getMarkCriticalConditionCount();
+        return markCritical.getMarkCriticalConditionCount();
     }
 
     public int getMarkCriticalBuildCount()
     {
-        if (markCriticalOption == null)
+        if (markCritical == null)
         {
             return 0;
         }
 
-        final int mcCondCount = markCriticalOption.getMarkCriticalConditionCount();
-        final int mcBuildCount = markCriticalOption.getMarkCriticalBuildCount();
+        final int mcCondCount = markCritical.getMarkCriticalConditionCount();
+        final int mcBuildCount = markCritical.getMarkCriticalBuildCount();
         return mcCondCount > 0 ? Math.max(mcCondCount, mcBuildCount) : mcBuildCount;
     }
 
@@ -327,54 +327,54 @@ public class LoadTestStep extends Step implements LoadTestConfiguration
 
     public boolean getCreateTrendReport()
     {
-        return trendReportOption != null;
+        return trendReport != null;
     }
 
     public boolean getCreateSummaryReport()
     {
-        return summaryReportOption != null;
+        return summaryReport != null;
     }
 
     public int getNumberOfBuildsForTrendReport()
     {
-        final int nbBuilds = trendReportOption != null ? trendReportOption.getNumberOfBuildsForTrendReport() : -1;
+        final int nbBuilds = trendReport != null ? trendReport.getNumberOfBuildsForTrendReport() : -1;
         return nbBuilds > 0 ? nbBuilds : getDescriptor().getDefaultNumberOfBuildsForTrendReport();
     }
 
     public int getNumberOfBuildsForSummaryReport()
     {
-        final int nbBuilds = summaryReportOption != null ? summaryReportOption.getNumberOfBuildsForSummaryReport() : -1;
+        final int nbBuilds = summaryReport != null ? summaryReport.getNumberOfBuildsForSummaryReport() : -1;
         return nbBuilds > 0 ? nbBuilds : getDescriptor().getDefaultNumberOfBuildsForSummaryReport();
     }
 
     @CheckForNull
-    public DiffReportOption getDiffReportOption()
+    public DiffReportOption getDiffReport()
     {
-        return diffReportOption;
+        return diffReport;
     }
 
     @DataBoundSetter
-    public void setDiffReportOption(@CheckForNull final DiffReportOption diffReportOption)
+    public void setDiffReport(@CheckForNull final DiffReportOption diffReportOption)
     {
-        this.diffReportOption = diffReportOption;
+        this.diffReport = diffReportOption;
     }
 
     @Override
     public boolean getCreateDiffReport()
     {
-        return diffReportOption != null;
+        return diffReport != null;
     }
 
     @Override
     public String getDiffReportBaseline()
     {
-        return diffReportOption != null ? StringUtils.defaultString(diffReportOption.getDiffReportBaseline()) : null;
+        return diffReport != null ? StringUtils.defaultString(diffReport.getBaseline()) : null;
     }
 
     @Override
     public String getDiffReportCriteriaFile()
     {
-        return diffReportOption != null ? diffReportOption.getDiffReportCriteriaFile() : null;
+        return diffReport != null ? diffReport.getCriteriaFile() : null;
     }
 
     @Override
