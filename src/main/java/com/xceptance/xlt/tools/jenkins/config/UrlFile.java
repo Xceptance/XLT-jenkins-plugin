@@ -57,6 +57,10 @@ public class UrlFile extends UrlList
 
         /**
          * Performs on-the-fly validation of the form field 'urlFile'.
+         * 
+         * @param value
+         *            the input value
+         * @return form validation object
          */
         public FormValidation doCheckUrlFile(@QueryParameter String value)
         {

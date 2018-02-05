@@ -91,6 +91,10 @@ public class UrlList extends AgentControllerConfig
 
         /**
          * Performs on-the-fly validation of the form field 'urlList'.
+         * 
+         * @param value
+         *            the input value
+         * @return form validation object
          */
         public FormValidation doCheckUrlList(@QueryParameter String value)
         {

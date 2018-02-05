@@ -256,6 +256,10 @@ public class AmazonEC2 extends UrlList
 
         /**
          * Performs on-the-fly validation of the form field 'amiId'.
+         * 
+         * @param value
+         *            the input value
+         * @return form validation object
          */
         public FormValidation doCheckAmiId(@QueryParameter String value)
         {
@@ -264,6 +268,10 @@ public class AmazonEC2 extends UrlList
 
         /**
          * Performs on-the-fly validation of the form field 'countMachines'.
+         * 
+         * @param value
+         *            the input value
+         * @return form validation object
          */
         public FormValidation doCheckCountMachines(@QueryParameter String value)
         {
@@ -272,6 +280,10 @@ public class AmazonEC2 extends UrlList
 
         /**
          * Performs on-the-fly validation of the form field 'tagName'.
+         * 
+         * @param value
+         *            the input value
+         * @return form validation object
          */
         public FormValidation doCheckTagName(@QueryParameter String value)
         {
