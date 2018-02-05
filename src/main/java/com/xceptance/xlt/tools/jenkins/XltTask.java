@@ -12,8 +12,6 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
 
 import org.apache.commons.io.Charsets;
 import org.apache.commons.io.FileUtils;
@@ -46,10 +44,8 @@ import hudson.AbortException;
 import hudson.FilePath;
 import hudson.Launcher;
 import hudson.model.Job;
-import hudson.model.ParameterValue;
 import hudson.model.Result;
 import hudson.model.Run;
-import hudson.model.StringParameterValue;
 import hudson.model.TaskListener;
 import hudson.security.ACL;
 import hudson.util.Secret;
@@ -57,18 +53,6 @@ import jenkins.model.Jenkins;
 
 public class XltTask
 {
-
-    public enum ENVIRONMENT_KEYS
-    {
-     XLT_RUN_FAILED,
-     XLT_CONDITION_CRITICAL,
-     XLT_CONDITION_FAILED,
-     XLT_CONDITION_ERROR,
-     XLT_CONDITION_MESSAGE,
-     XLT_REPORT_URL,
-     XLT_DIFFREPORT_URL
-    }
-
     private final LoadTestConfiguration taskConfig;
 
     private transient PlotValuesConfiguration config;
@@ -77,7 +61,7 @@ public class XltTask
 
     private transient final List<Chart<Integer, Double>> charts = new ArrayList<Chart<Integer, Double>>();
 
-    private transient Map<ENVIRONMENT_KEYS, Object> buildParameterMap;
+    private transient XltResult result;
 
     private transient JSONObject critOutJSON;
 
@@ -328,11 +312,15 @@ public class XltTask
         final List<TestCaseInfo> failedTestCases = determineFailedTestCases(run, listener, dataXml);
         final List<SlowRequestInfo> slowestRequests = determineSlowestRequests(run, listener, dataXml);
 
-        final boolean hasDiffReport = buildParameterMap.get(ENVIRONMENT_KEYS.XLT_DIFFREPORT_URL) != null;
+        final boolean hasDiffReport = result.getDiffReportUrl() != null;
         if (hasDiffReport && critOutJSON != null)
         {
             failedAlerts.addAll(CriterionChecker.parseCriteriaValidationResult(critOutJSON));
         }
+
+        result.setFailedCriteria(failedAlerts);
+        result.setSlowestRequests(slowestRequests);
+        result.setTestFailures(failedTestCases);
 
         // create the action with all the collected data
         XltRecorderAction recorderAction = new XltRecorderAction(taskConfig.getStepId(), getBuildReportURL(run), failedAlerts,
@@ -358,16 +346,16 @@ public class XltTask
         {
             if (!recorderAction.getFailedAlerts().isEmpty())
             {
-                setBuildParameterXLT_CONDITION_FAILED(true);
+                result.setConditionFailed(true);
                 checkForCritical(run);
             }
 
             if (!recorderAction.getErrorAlerts().isEmpty())
             {
-                setBuildParameterXLT_CONDITION_ERROR(true);
+                result.setConditionError(true);
             }
         }
-        setBuildParameterXLT_CONDITION_MESSAGE(recorderAction.getConditionMessage());
+        result.setConditionMessage(recorderAction.getConditionMessage());
     }
 
     private void checkForCritical(final Run<?, ?> run)
@@ -387,7 +375,7 @@ public class XltTask
                         failedCriterionBuilds++;
                         if (failedCriterionBuilds == mcCondCount)
                         {
-                            setBuildParameterXLT_CONDITION_CRITICAL(true);
+                            result.setConditionCritical(true);
                             break;
                         }
                     }
@@ -494,64 +482,12 @@ public class XltTask
 
     public void publishBuildParameters(final Run<?, ?> run)
     {
-        final ArrayList<ParameterValue> params = new ArrayList<>();
-        for (final Map.Entry<ENVIRONMENT_KEYS, Object> entry : buildParameterMap.entrySet())
-        {
-            final Object o = entry.getValue();
-            params.add(new StringParameterValue(entry.getKey().name(), o == null ? "null" : o.toString()));
-        }
-        run.addAction(new XltParametersAction(params, taskConfig.getStepId()));
-    }
-
-    private void setBuildParameter(final ENVIRONMENT_KEYS parameter, final Object value)
-    {
-        buildParameterMap.put(parameter, value);
-    }
-
-    private void setBuildParameterXLT_RUN_FAILED(final Boolean value)
-    {
-        setBuildParameter(ENVIRONMENT_KEYS.XLT_RUN_FAILED, value);
-    }
-
-    private void setBuildParameterXLT_CONDITION_FAILED(final Boolean value)
-    {
-        setBuildParameter(ENVIRONMENT_KEYS.XLT_CONDITION_FAILED, value);
-    }
-
-    private void setBuildParameterXLT_CONDITION_ERROR(final Boolean value)
-    {
-        setBuildParameter(ENVIRONMENT_KEYS.XLT_CONDITION_ERROR, value);
-    }
-
-    private void setBuildParameterXLT_CONDITION_CRITICAL(final Boolean value)
-    {
-        setBuildParameter(ENVIRONMENT_KEYS.XLT_CONDITION_CRITICAL, value);
-    }
-
-    private void setBuildParameterXLT_CONDITION_MESSAGE(final String message)
-    {
-        setBuildParameter(ENVIRONMENT_KEYS.XLT_CONDITION_MESSAGE, message);
-    }
-
-    private void setBuildParameterXLT_REPORT_URL(final String reportURL)
-    {
-        setBuildParameter(ENVIRONMENT_KEYS.XLT_REPORT_URL, StringUtils.defaultString(reportURL));
-    }
-
-    private void setBuildParameterXLT_DIFFREPORT_URL(final String diffReportURL)
-    {
-        setBuildParameter(ENVIRONMENT_KEYS.XLT_DIFFREPORT_URL, StringUtils.defaultString(diffReportURL));
+        run.addAction(new XltParametersAction(result.getParameterList(), taskConfig.getStepId()));
     }
 
     protected void init()
     {
-        buildParameterMap = new TreeMap<ENVIRONMENT_KEYS, Object>();
-        setBuildParameterXLT_RUN_FAILED(false);
-        setBuildParameterXLT_CONDITION_FAILED(false);
-        setBuildParameterXLT_CONDITION_ERROR(false);
-        setBuildParameterXLT_CONDITION_CRITICAL(false);
-        setBuildParameterXLT_REPORT_URL(null);
-        setBuildParameterXLT_CONDITION_MESSAGE("");
+        result = new XltResult();
 
         updateConfig();
     }
@@ -1098,7 +1034,7 @@ public class XltTask
         Helper.moveFolder(getXltResultFolder(run, launcher), getBuildResultFolder(run));
         Helper.moveFolder(getXltReportFolder(run, launcher), getBuildReportFolder(run));
 
-        setBuildParameterXLT_REPORT_URL(getBuildReportURL(run));
+        result.setReportUrl(getBuildReportURL(run));
 
         // take care of difference report
         {
@@ -1107,7 +1043,7 @@ public class XltTask
             {
                 Helper.moveFolder(diffReportFolder, getBuildDiffReportFolder(run));
 
-                setBuildParameterXLT_DIFFREPORT_URL(getBuildDiffReportURL(run));
+                result.setDiffReportUrl(getBuildDiffReportURL(run));
             }
         }
 
@@ -1468,7 +1404,7 @@ public class XltTask
 
             if (run.getResult() == Result.FAILURE)
             {
-                setBuildParameterXLT_RUN_FAILED(true);
+                result.setRunFailed(true);
             }
             publishBuildParameters(run);
 
@@ -1478,6 +1414,6 @@ public class XltTask
             }
         }
 
-        return new LoadTestResult(buildParameterMap);
+        return new LoadTestResult(result);
     }
 }

@@ -26,7 +26,7 @@ public final class CriterionChecker
         final List<CriterionResult> failedAlerts = new ArrayList<>();
         if (document == null)
         {
-            CriterionResult criterionResult = CriterionResult.error("No test data found.");
+            CriterionResult criterionResult = CriterionResult.error("No XML document given.");
             failedAlerts.add(criterionResult);
         }
         else
@@ -44,7 +44,7 @@ public final class CriterionChecker
                 }
                 if (StringUtils.isBlank(xPath))
                 {
-                    CriterionResult criterionResult = CriterionResult.error("No xPath for Criterion");
+                    CriterionResult criterionResult = CriterionResult.error("No XPath for Criterion");
                     criterionResult.setCriterionID(critId);
                     failedAlerts.add(criterionResult);
                     continue;

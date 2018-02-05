@@ -165,9 +165,9 @@ public class LoadTestBuilderTest
         final String allSteps = StringUtils.join(strings, "_");
         for (final XltParametersAction axn : paramAxn)
         {
-            for (final XltTask.ENVIRONMENT_KEYS k : XltTask.ENVIRONMENT_KEYS.values())
+            for (final XltResult.ENVIRONMENT_KEYS k : XltResult.ENVIRONMENT_KEYS.values())
             {
-                if(k != XltTask.ENVIRONMENT_KEYS.XLT_DIFFREPORT_URL)
+                if(k != XltResult.ENVIRONMENT_KEYS.XLT_DIFFREPORT_URL)
                 {
                     assertNotNull(axn.getParameter(k.name()));
                 }
