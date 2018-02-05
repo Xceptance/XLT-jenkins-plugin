@@ -1139,6 +1139,11 @@ public class XltTask
         commandLine.add(outputFolder.getRemote());
 
         commandLine.add(getSummaryResultsFolder(run.getParent()).getRemote());
+
+        // Redmine #2999: Agent charts pile up in summary report
+        // -> wipe out output folder before generating the report
+        outputFolder.deleteRecursive();
+
         // run the report generator on the master
         int commandResult = Helper.executeCommand(launcher, getXltBinFolderOnMaster(), commandLine, listener);
         listener.getLogger().println("Load report generator returned with exit code: " + commandResult);
