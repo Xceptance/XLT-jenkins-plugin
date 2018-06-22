@@ -1,5 +1,6 @@
 package com.xceptance.xlt.tools.jenkins.pipeline;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -13,8 +14,12 @@ import com.xceptance.xlt.tools.jenkins.XltResult;
 /**
  * The (read-only view on the) result of executing the custom pipeline step {@code xlt}.
  */
-public class LoadTestResult
+public class LoadTestResult implements Serializable
 {
+    /** The serialVersionUID. */
+    private static final long serialVersionUID = 615594859843167094L;
+    
+    /** The wrapped execution result. */
     private final XltResult _result;
 
     public LoadTestResult(final XltResult result)

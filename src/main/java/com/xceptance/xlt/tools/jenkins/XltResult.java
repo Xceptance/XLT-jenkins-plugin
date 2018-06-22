@@ -1,5 +1,6 @@
 package com.xceptance.xlt.tools.jenkins;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -11,8 +12,11 @@ import org.apache.commons.lang3.StringUtils;
 import hudson.model.ParameterValue;
 import hudson.model.StringParameterValue;
 
-public class XltResult
+public class XltResult implements Serializable
 {
+    /** The serialVersionUID. */
+    private static final long serialVersionUID = -554427818438727255L;
+
     enum ENVIRONMENT_KEYS
     {
      XLT_RUN_FAILED,

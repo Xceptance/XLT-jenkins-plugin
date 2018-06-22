@@ -1,9 +1,13 @@
 package com.xceptance.xlt.tools.jenkins;
 
+import java.io.Serializable;
 import java.util.List;
 
-public class CriterionResult
+public class CriterionResult implements Serializable
 {
+    /** The serialVersionUID. */
+    private static final long serialVersionUID = -6839553617591586597L;
+
     private Type type;
 
     private String message;
