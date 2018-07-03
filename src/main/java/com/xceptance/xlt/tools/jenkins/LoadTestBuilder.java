@@ -31,6 +31,9 @@ import jenkins.tasks.SimpleBuildStep;
 public class LoadTestBuilder extends Builder implements SimpleBuildStep, LoadTestConfiguration
 {
     @CheckForNull
+    private String additionalMCPropertiesFile;
+
+    @CheckForNull
     private String testPropertiesFile;
 
     @Nonnull
@@ -397,6 +400,18 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep, LoadTes
     public String getDiffReportCriteriaFile()
     {
         return diffReportOption != null ? diffReportOption.getCriteriaFile() : null;
+    }
+
+    @CheckForNull
+    public String getAdditionalMCPropertiesFile()
+    {
+        return additionalMCPropertiesFile;
+    }
+
+    @DataBoundSetter
+    public void setAdditionalMCPropertiesFile(@CheckForNull final String propertyFilePath)
+    {
+        this.additionalMCPropertiesFile = StringUtils.isNotBlank(propertyFilePath) ? propertyFilePath : null;
     }
 
     @Override

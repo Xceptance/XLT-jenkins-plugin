@@ -39,9 +39,9 @@ public class UrlFile extends UrlList
         return urlFile;
     }
 
-    public void parse(final FilePath workspace) throws IOException, InterruptedException
+    public void parse(final FilePath basedir) throws IOException, InterruptedException
     {
-        final String content = workspace.child(urlFile).readToString();
+        final String content = basedir.child(urlFile).readToString();
         setUrlList(content);
     }
 

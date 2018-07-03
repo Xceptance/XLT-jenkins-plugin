@@ -596,11 +596,12 @@ public class XltTask
                 String urlFile = uFile.getUrlFile();
                 if (StringUtils.isNotBlank(urlFile))
                 {
-                    FilePath file = new FilePath(getTestSuiteConfigFolder(workspace), urlFile);
+                    final FilePath testSuiteConfig = getTestSuiteConfigFolder(workspace);
+                    FilePath file = new FilePath(testSuiteConfig, urlFile);
 
                     listener.getLogger().printf("Read agent controller URLs from file %s:\n\n", file);
 
-                    ((UrlFile) acConfig).parse(file.getParent());
+                    ((UrlFile) acConfig).parse(testSuiteConfig);
                     agentControllerUrls = uFile.getItems();
                 }
 
@@ -811,14 +812,21 @@ public class XltTask
     private FilePath getTestPropertiesFile(final FilePath workspace)
     {
         final String testPropertiesFile = taskConfig.getTestPropertiesFile();
-        if (StringUtils.isBlank(testPropertiesFile))
-        {
-            return null;
-        }
-        else
+        if (StringUtils.isNotBlank(testPropertiesFile))
         {
             return new FilePath(getTestSuiteConfigFolder(workspace), testPropertiesFile);
         }
+        return null;
+    }
+
+    private FilePath getMCPropertiesFile(final FilePath workspace)
+    {
+        final String testPropertiesFile = taskConfig.getAdditionalMCPropertiesFile();
+        if (StringUtils.isNotBlank(testPropertiesFile))
+        {
+            return new FilePath(getTestSuiteConfigFolder(workspace), testPropertiesFile);
+        }
+        return null;
     }
 
     private void initialCleanUp(final Run<?, ?> run, final Launcher launcher, final TaskListener listener)
@@ -913,6 +921,14 @@ public class XltTask
         }
         commandLine.add("-auto");
 
+        final String mcPropertiesFile = taskConfig.getAdditionalMCPropertiesFile();
+        if(StringUtils.isNotBlank(mcPropertiesFile))
+        {
+            validateMCPropertiesFile(launcher, workspace);
+            commandLine.add("-pf");
+            commandLine.add(getMCPropertiesFile(workspace).getRemote());
+        }
+        
         final String testPropertiesFile = taskConfig.getTestPropertiesFile();
         if (StringUtils.isNotBlank(testPropertiesFile))
         {
@@ -958,6 +974,26 @@ public class XltTask
         else if (testProperties.isDirectory())
         {
             throw new Exception("The test properties file path  must specify a file, not a directory. (" + testProperties.getRemote() +
+                                ")");
+        }
+    }
+
+    private void validateMCPropertiesFile(final Launcher launcher, final FilePath workspace) throws Exception
+    {
+        final String propertiesFile = taskConfig.getAdditionalMCPropertiesFile();
+        if (StringUtils.isBlank(propertiesFile))
+        {
+            return;
+        }
+
+        final FilePath testProperties = getMCPropertiesFile(workspace);
+        if (testProperties == null || !testProperties.exists())
+        {
+            throw new Exception("Additional master controller properties file does not exists. (" + testProperties.getRemote() + ")");
+        }
+        else if (testProperties.isDirectory())
+        {
+            throw new Exception("Path to additional master controller properties denotes a directory instead of a file. (" + testProperties.getRemote() +
                                 ")");
         }
     }

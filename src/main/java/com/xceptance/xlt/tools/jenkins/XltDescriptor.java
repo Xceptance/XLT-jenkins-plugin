@@ -125,6 +125,18 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
     }
 
     /**
+     * Performs on-the-fly validation of the form field 'additionalMCPropertiesFile'.
+     * 
+     * @param value
+     *            the input value
+     * @return form validation object
+     */
+    public FormValidation doCheckAdditionalMCPropertiesFile(@QueryParameter String value)
+    {
+        return ConfigurationValidator.validateMCProperties(value);
+    }
+
+    /**
      * Performs on-the-fly validation of the form field 'stepId'.
      * 
      * @param value

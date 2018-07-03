@@ -55,6 +55,24 @@ public final class ConfigurationValidator
         return FormValidation.ok();
     }
 
+    public static FormValidation validateMCProperties(String pathToPropertiesFile)
+    {
+        pathToPropertiesFile = Helper.environmentResolve(pathToPropertiesFile);
+        if (StringUtils.isNotBlank(pathToPropertiesFile))
+        {
+            final File file = new File(pathToPropertiesFile);
+            final FilePath filePath = new FilePath(file);
+
+            final String remote = filePath.getRemote();
+            if (StringUtils.isBlank(FilenameUtils.getName(pathToPropertiesFile)))
+            {
+                return FormValidation.error("Path to mastercontroller override properties file must specify a file, not a directory. (" + remote + ")");
+            }
+            return FormValidation.ok("(<testSuite>/config/" + remote + ")");
+        }
+        return FormValidation.ok();
+    }
+
     public static FormValidation validateStepId(final String stepId)
     {
         if (StringUtils.isBlank(stepId))

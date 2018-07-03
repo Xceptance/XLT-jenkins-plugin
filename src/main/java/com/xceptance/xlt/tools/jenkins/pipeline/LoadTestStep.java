@@ -40,6 +40,9 @@ import hudson.util.FormValidation;
 public class LoadTestStep extends Step implements LoadTestConfiguration
 {
     @CheckForNull
+    private String additionalMCPropertiesFile;
+
+    @CheckForNull
     private String testPropertiesFile;
 
     @Nonnull
@@ -377,6 +380,18 @@ public class LoadTestStep extends Step implements LoadTestConfiguration
         return diffReport != null ? diffReport.getCriteriaFile() : null;
     }
 
+    @CheckForNull
+    public String getAdditionalMCPropertiesFile()
+    {
+        return additionalMCPropertiesFile;
+    }
+
+    @DataBoundSetter
+    public void setAdditionalMCPropertiesFile(@CheckForNull final String propertyFilePath)
+    {
+        this.additionalMCPropertiesFile = StringUtils.isNotBlank(propertyFilePath) ? propertyFilePath : null;
+    }
+
     @Override
     public StepExecution start(StepContext context) throws Exception
     {
@@ -483,6 +498,18 @@ public class LoadTestStep extends Step implements LoadTestConfiguration
         public FormValidation doCheckTestPropertiesFile(@QueryParameter String value)
         {
             return ConfigurationValidator.validateTestProperties(value);
+        }
+
+        /**
+         * Performs on-the-fly validation of the form field 'additionalMCPropertiesFile'.
+         * 
+         * @param value
+         *            the input value
+         * @return form validation object
+         */
+        public FormValidation doCheckAdditionalMCPropertiesFile(@QueryParameter String value)
+        {
+            return ConfigurationValidator.validateMCProperties(value);
         }
 
         /**

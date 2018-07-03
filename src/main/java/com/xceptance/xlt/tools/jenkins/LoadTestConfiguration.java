@@ -11,6 +11,8 @@ public interface LoadTestConfiguration
 
     public String getPathToTestSuite();
 
+    public String getAdditionalMCPropertiesFile();
+
     public String getTestPropertiesFile();
 
     public String getXltConfig();

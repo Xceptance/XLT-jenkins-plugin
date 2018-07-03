@@ -44,6 +44,9 @@
             <f:textbox field="initialResponseTimeout"
                 default="${descriptor.getDefaultInitialResponseTimeout()}" />
         </f:entry>
+        <f:entry title="Additional Master Controller Settings" field="additionalMCPropertiesFile">
+            <f:textbox />
+        </f:entry>
     </f:advanced>
 
     <!-- ===================================================================== -->
