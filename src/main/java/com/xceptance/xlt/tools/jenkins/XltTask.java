@@ -208,6 +208,11 @@ public class XltTask
         return Helper.getArtifact(run, taskConfig.getStepId() + "/" + FOLDER_NAMES.ARTIFACT_DIFFREPORT);
     }
 
+    private FilePath getBuildResultFolder(final Run<?, ?> run)
+    {
+        return Helper.getArtifact(run, taskConfig.getStepId() + "/" + FOLDER_NAMES.ARTIFACT_RESULT);
+    }
+
     private String getBuildReportURL(final Run<?, ?> run)
     {
         final StringBuilder sb = new StringBuilder();
@@ -226,11 +231,6 @@ public class XltTask
           .append(XltRecorderAction.RELATIVE_REPORT_URL).append(taskConfig.getStepId()).append('/').append(FOLDER_NAMES.ARTIFACT_DIFFREPORT)
           .append("/index.html");
         return sb.toString();
-    }
-
-    private FilePath getBuildResultFolder(final Run<?, ?> run)
-    {
-        return Helper.getArtifact(run, taskConfig.getStepId() + "/" + FOLDER_NAMES.ARTIFACT_RESULT);
     }
 
     private FilePath getTrendReportFolder(final Job<?, ?> job)
@@ -555,7 +555,7 @@ public class XltTask
             tempProjectFolder.deleteRecursive();
 
             FilePath tempFolder = getTemporaryXltBaseFolder(run, launcher);
-            if (tempFolder.exists() || tempFolder.list() == null || tempFolder.list().isEmpty())
+            if (tempFolder.exists() && (tempFolder.list() == null || tempFolder.list().isEmpty()))
             {
                 tempFolder.delete();
             }
@@ -922,13 +922,13 @@ public class XltTask
         commandLine.add("-auto");
 
         final String mcPropertiesFile = taskConfig.getAdditionalMCPropertiesFile();
-        if(StringUtils.isNotBlank(mcPropertiesFile))
+        if (StringUtils.isNotBlank(mcPropertiesFile))
         {
             validateMCPropertiesFile(launcher, workspace);
             commandLine.add("-pf");
             commandLine.add(getMCPropertiesFile(workspace).getRemote());
         }
-        
+
         final String testPropertiesFile = taskConfig.getTestPropertiesFile();
         if (StringUtils.isNotBlank(testPropertiesFile))
         {
@@ -993,8 +993,8 @@ public class XltTask
         }
         else if (testProperties.isDirectory())
         {
-            throw new Exception("Path to additional master controller properties denotes a directory instead of a file. (" + testProperties.getRemote() +
-                                ")");
+            throw new Exception("Path to additional master controller properties denotes a directory instead of a file. (" +
+                                testProperties.getRemote() + ")");
         }
     }
 
@@ -1287,6 +1287,10 @@ public class XltTask
             throw new Exception("Failed to resolve difference report directory for '" + baseLine + "'");
         }
 
+        // copy baseline report to temporary directory
+        final FilePath tempBaseLineDir = workspace.createTempDir("diff-report", "base");
+        baseLinePath.copyRecursiveTo(tempBaseLineDir);
+
         final ArrayList<String> cmdLine = new ArrayList<>();
         if (launcher.isUnix())
         {
@@ -1305,16 +1309,26 @@ public class XltTask
         cmdLine.add(diffReportDest.getRemote());
 
         // add remaining args
-        cmdLine.add(baseLinePath.getRemote());
+        cmdLine.add(tempBaseLineDir.getRemote());
         cmdLine.add(getXltReportFolder(run, launcher).getRemote());
 
-        // run difference report generator on master
-        int commandResult = Helper.executeCommand(launcher, getXltBinFolderOnMaster(), cmdLine, listener);
-        listener.getLogger().println("Difference report generator returned with exit code: " + commandResult);
-        if (commandResult != 0)
+        // run difference report generator
+        final FilePath xltBinFolder = getXltBinFolder(run, launcher);
+        int commandResult;
+        try
         {
-            run.setResult(Result.FAILURE);
-            return;
+            commandResult = Helper.executeCommand(launcher, xltBinFolder, cmdLine, listener);
+            listener.getLogger().println("Difference report generator returned with exit code: " + commandResult);
+
+            if (commandResult != 0)
+            {
+                run.setResult(Result.FAILURE);
+                return;
+            }
+        }
+        finally
+        {
+            tempBaseLineDir.deleteRecursive();
         }
 
         final String critFile = Helper.environmentResolve(taskConfig.getDiffReportCriteriaFile());
@@ -1341,7 +1355,7 @@ public class XltTask
             final BufferedOutputStream buf = new BufferedOutputStream(os);
             try
             {
-                commandResult = Helper.executeCommand(launcher, getXltBinFolderOnMaster(), cmdLine, buf);
+                commandResult = Helper.executeCommand(launcher, xltBinFolder, cmdLine, buf);
             }
             finally
             {
