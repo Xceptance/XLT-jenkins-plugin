@@ -1117,7 +1117,7 @@ public class XltTask
         outputFolder.deleteRecursive();
 
         // run the report generator on the master
-        int commandResult = Helper.executeCommand(launcher, getXltBinFolderOnMaster(), commandLine, listener);
+        int commandResult = Helper.executeCommand(Jenkins.getActiveInstance(), getXltBinFolderOnMaster(), commandLine, listener);
         listener.getLogger().println("Load report generator returned with exit code: " + commandResult);
         if (commandResult != 0)
         {
@@ -1228,7 +1228,7 @@ public class XltTask
         if (numberOfBuildsWithReports > 1)
         {
             // run trend report generator on master
-            int commandResult = Helper.executeCommand(launcher, getXltBinFolderOnMaster(), commandLine, listener);
+            int commandResult = Helper.executeCommand(Jenkins.getActiveInstance(), getXltBinFolderOnMaster(), commandLine, listener);
             listener.getLogger().println("Trend report generator returned with exit code: " + commandResult);
             if (commandResult != 0)
             {

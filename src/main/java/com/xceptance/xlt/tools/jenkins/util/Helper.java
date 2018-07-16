@@ -196,6 +196,16 @@ public final class Helper
         return starter.join();
     }
 
+    public static int executeCommand(final hudson.model.Node node, final FilePath workingDirectory, final List<String> commandLine,
+                                     final TaskListener logger)
+        throws IOException, InterruptedException
+    {
+        final Launcher launcher = node.createLauncher(logger);
+        launcher.decorateFor(node);
+
+        return executeCommand(launcher, workingDirectory, commandLine, logger);
+    }
+
     public static List<Run<?, ?>> getRuns(final Run<?, ?> currentRun, final int startFrom, final int count)
     {
         final Job<?, ?> job = currentRun.getParent();
