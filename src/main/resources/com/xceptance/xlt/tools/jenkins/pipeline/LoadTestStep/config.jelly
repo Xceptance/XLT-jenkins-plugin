@@ -77,6 +77,13 @@
 
     <f:optionalProperty field="diffReport" title="Create a difference report" />
 
+    <f:advanced>
+        <f:block>
+            <f:checkbox field="archiveResults" default="${descriptor.getDefaultArchiveResults()}"
+                title="Archive test results on Jenkins master node (required for summary report)" />
+        </f:block>
+    </f:advanced>
+
     <!-- ===================================================================== -->
 
     <f:block>

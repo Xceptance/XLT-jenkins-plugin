@@ -39,6 +39,8 @@ import hudson.util.FormValidation;
 
 public class LoadTestStep extends Step implements LoadTestConfiguration
 {
+    private boolean archiveResults;
+
     @CheckForNull
     private String additionalMCPropertiesFile;
 
@@ -108,6 +110,8 @@ public class LoadTestStep extends Step implements LoadTestConfiguration
         this.plotHeight = getDescriptor().getDefaultPlotHeight();
         this.plotTitle = getDescriptor().getDefaultPlotTitle();
 
+        // misc.
+        this.archiveResults = getDescriptor().getDefaultArchiveResults();
     }
 
     @Nonnull
@@ -393,6 +397,18 @@ public class LoadTestStep extends Step implements LoadTestConfiguration
     }
 
     @Override
+    public boolean getArchiveResults()
+    {
+        return archiveResults;
+    }
+
+    @DataBoundSetter
+    public void setArchiveResults(final boolean archiveResults)
+    {
+        this.archiveResults = archiveResults;
+    }
+
+    @Override
     public StepExecution start(StepContext context) throws Exception
     {
         return new LoadTestStepExecution(this, context);
@@ -461,6 +477,11 @@ public class LoadTestStep extends Step implements LoadTestConfiguration
         public boolean getDefaultCreateSummaryReport()
         {
             return false;
+        }
+
+        public boolean getDefaultArchiveResults()
+        {
+            return true;
         }
 
         public int getDefaultNumberOfBuildsForTrendReport()

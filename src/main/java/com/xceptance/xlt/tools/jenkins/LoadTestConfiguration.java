@@ -4,6 +4,7 @@ import com.xceptance.xlt.tools.jenkins.config.AgentControllerConfig;
 
 public interface LoadTestConfiguration
 {
+    public boolean getArchiveResults();
 
     public AgentControllerConfig getAgentControllerConfig();
 

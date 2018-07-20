@@ -80,6 +80,9 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep, LoadTes
     @CheckForNull
     private DiffReportOption diffReportOption;
 
+    @CheckForNull
+    private Boolean archiveResults;
+
     /*
      * Backward compatibility
      */
@@ -114,6 +117,7 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep, LoadTes
     public LoadTestBuilder(@Nonnull final String stepId, @Nonnull final String xltTemplateDir)
     {
         this.xltTemplateDir = xltTemplateDir;
+        this.stepId = stepId;
 
         // load test configuration
         this.agentControllerConfig = getDescriptor().getDefaultAgentControllerConfig();
@@ -129,7 +133,7 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep, LoadTes
         this.plotTitle = getDescriptor().getDefaultPlotTitle();
 
         // misc.
-        this.stepId = stepId;
+        this.archiveResults = getDescriptor().getDefaultArchiveResults();
     }
 
     @Nonnull
@@ -414,6 +418,18 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep, LoadTes
         this.additionalMCPropertiesFile = StringUtils.isNotBlank(propertyFilePath) ? propertyFilePath : null;
     }
 
+    @DataBoundSetter
+    public void setArchiveResults(final boolean archiveResults)
+    {
+        this.archiveResults = archiveResults;
+    }
+
+    @Override
+    public boolean getArchiveResults()
+    {
+        return archiveResults;
+    }
+
     @Override
     public XltDescriptor getDescriptor()
     {
@@ -450,6 +466,10 @@ public class LoadTestBuilder extends Builder implements SimpleBuildStep, LoadTes
         if (markCriticalEnabled)
         {
             markCriticalOption = new MarkCriticalOption(markCriticalConditionCount, markCriticalBuildCount);
+        }
+        if(archiveResults == null)
+        {
+            archiveResults = getDescriptor().getDefaultArchiveResults();
         }
 
         return this;

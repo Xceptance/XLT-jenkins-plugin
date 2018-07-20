@@ -16,6 +16,7 @@ import java.util.List;
 import org.apache.commons.io.Charsets;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -513,7 +514,14 @@ public class XltTask
         {
             try
             {
-                createSummaryReport(run, launcher, listener);
+                if (taskConfig.getArchiveResults())
+                {
+                    createSummaryReport(run, launcher, listener);
+                }
+                else
+                {
+                    listener.getLogger().println("Test results were not archived => SKIPPING creation of summary report");
+                }
             }
             catch (Exception e)
             {
@@ -1042,8 +1050,11 @@ public class XltTask
 
         commandLine.add("-o");
         commandLine.add(getXltReportFolder(run, launcher).getRemote());
+
+        // Only link to results when we're going to archive them
         commandLine.add("-linkToResults");
-        commandLine.add("yes");
+        commandLine.add(BooleanUtils.toStringYesNo(taskConfig.getArchiveResults()));
+
         commandLine.add(getXltResultFolder(run, launcher).getRemote());
         commandLine.add("-Dmonitoring.trackSlowestRequests=true");
 
@@ -1067,7 +1078,10 @@ public class XltTask
         run.pickArtifactManager();
 
         // save load test results and report (copy from node)
-        Helper.moveFolder(getXltResultFolder(run, launcher), getBuildResultFolder(run));
+        if (taskConfig.getArchiveResults())
+        {
+            Helper.moveFolder(getXltResultFolder(run, launcher), getBuildResultFolder(run));
+        }
         Helper.moveFolder(getXltReportFolder(run, launcher), getBuildReportFolder(run));
 
         result.setReportUrl(getBuildReportURL(run));

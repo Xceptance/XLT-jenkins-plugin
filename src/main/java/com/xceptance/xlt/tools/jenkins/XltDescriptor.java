@@ -87,6 +87,11 @@ public class XltDescriptor extends BuildStepDescriptor<Builder>
         return false;
     }
 
+    public boolean getDefaultArchiveResults()
+    {
+        return true;
+    }
+
     public int getDefaultNumberOfBuildsForTrendReport()
     {
         return PluginDefaults.HISTORYSIZE_TRENDREPORT;
