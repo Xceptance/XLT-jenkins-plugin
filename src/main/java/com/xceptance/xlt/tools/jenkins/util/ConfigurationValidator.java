@@ -68,7 +68,7 @@ public final class ConfigurationValidator
             {
                 return FormValidation.error("Path to mastercontroller override properties file must specify a file, not a directory. (" + remote + ")");
             }
-            return FormValidation.ok("(<testSuite>/config/" + remote + ")");
+            return FormValidation.ok("(<testSuite>/config/" + remote + ") or (" + remote + ")");
         }
         return FormValidation.ok();
     }
