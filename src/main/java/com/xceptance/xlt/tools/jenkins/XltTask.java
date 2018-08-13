@@ -516,7 +516,7 @@ public class XltTask
             {
                 if (taskConfig.getArchiveResults())
                 {
-                    createSummaryReport(run, launcher, listener);
+                    createSummaryReport(run, listener);
                 }
                 else
                 {
@@ -1099,15 +1099,19 @@ public class XltTask
 
     }
 
-    private void createSummaryReport(final Run<?, ?> run, final Launcher launcher, final TaskListener listener) throws Exception
+    private void createSummaryReport(final Run<?, ?> run, final TaskListener listener) throws Exception
     {
         listener.getLogger().println("-----------------------------------------------------------------\nCreating summary report ...\n");
 
         // copy the results of the last n builds to the summary results directory
-        copyResults(run, launcher, listener);
+        copyResults(run, listener);
 
         // build report generator command line
         List<String> commandLine = new ArrayList<String>();
+
+        final jenkins.model.Jenkins masterNode = Jenkins.getActiveInstance();
+        final Launcher launcher = masterNode.createLauncher(listener);
+        launcher.decorateFor(masterNode);
 
         if (launcher.isUnix())
         {
@@ -1131,7 +1135,7 @@ public class XltTask
         outputFolder.deleteRecursive();
 
         // run the report generator on the master
-        int commandResult = Helper.executeCommand(Jenkins.getActiveInstance(), getXltBinFolderOnMaster(), commandLine, listener);
+        int commandResult = Helper.executeCommand(launcher, getXltBinFolderOnMaster(), commandLine, listener);
         listener.getLogger().println("Load report generator returned with exit code: " + commandResult);
         if (commandResult != 0)
         {
@@ -1139,7 +1143,7 @@ public class XltTask
         }
     }
 
-    private void copyResults(final Run<?, ?> run, final Launcher launcher, final TaskListener listener)
+    private void copyResults(final Run<?, ?> run, final TaskListener listener)
         throws InterruptedException, IOException
     {
         // recreate a fresh summary results directory
