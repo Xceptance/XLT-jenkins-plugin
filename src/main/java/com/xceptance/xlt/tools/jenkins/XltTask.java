@@ -534,7 +534,7 @@ public class XltTask
         {
             try
             {
-                createTrendReport(run, launcher, listener);
+                createTrendReport(run, listener);
             }
             catch (Exception e)
             {
@@ -1203,11 +1203,15 @@ public class XltTask
         }
     }
 
-    private void createTrendReport(final Run<?, ?> run, final Launcher launcher, final TaskListener listener) throws Exception
+    private void createTrendReport(final Run<?, ?> run, final TaskListener listener) throws Exception
     {
         listener.getLogger().println("-----------------------------------------------------------------\nCreating trend report ...\n");
 
         List<String> commandLine = new ArrayList<String>();
+
+        final jenkins.model.Jenkins masterNode = Jenkins.getActiveInstance();
+        final Launcher launcher = masterNode.createLauncher(listener);
+        launcher.decorateFor(masterNode);
 
         if (launcher.isUnix())
         {
@@ -1246,7 +1250,7 @@ public class XltTask
         if (numberOfBuildsWithReports > 1)
         {
             // run trend report generator on master
-            int commandResult = Helper.executeCommand(Jenkins.getActiveInstance(), getXltBinFolderOnMaster(), commandLine, listener);
+            int commandResult = Helper.executeCommand(launcher, getXltBinFolderOnMaster(), commandLine, listener);
             listener.getLogger().println("Trend report generator returned with exit code: " + commandResult);
             if (commandResult != 0)
             {
