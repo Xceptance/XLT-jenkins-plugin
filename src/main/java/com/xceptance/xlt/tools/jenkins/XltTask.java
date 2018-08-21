@@ -239,6 +239,11 @@ public class XltTask
         return new FilePath(job.getRootDir()).child("trendReport").child(taskConfig.getStepId());
     }
 
+    private FilePath getTrendResultsFolder(final Job<?, ?> job)
+    {
+        return new FilePath(job.getRootDir()).child("trendResults").child(taskConfig.getStepId());
+    }
+
     private FilePath getSummaryReportFolder(final Job<?, ?> job)
     {
         return new FilePath(job.getRootDir()).child("summaryReport").child(taskConfig.getStepId());
@@ -1143,8 +1148,7 @@ public class XltTask
         }
     }
 
-    private void copyResults(final Run<?, ?> run, final TaskListener listener)
-        throws InterruptedException, IOException
+    private void copyResults(final Run<?, ?> run, final TaskListener listener) throws InterruptedException, IOException
     {
         // recreate a fresh summary results directory
         FilePath summaryResultsFolder = getSummaryResultsFolder(run.getParent());
@@ -1203,6 +1207,20 @@ public class XltTask
         }
     }
 
+    private FilePath copyReport(final FilePath targetDirectory, final FilePath reportDirectory, final int buildNumber)
+        throws IOException, InterruptedException
+    {
+        final FilePath dest = targetDirectory.child(Integer.toString(buildNumber));
+        for (final FilePath file : reportDirectory.list())
+        {
+            if (file.getName().endsWith(".xml"))
+            {
+                FileUtils.copyFile(new File(file.getRemote()), new File(dest.getRemote(), file.getName()));
+            }
+        }
+        return dest;
+    }
+
     private void createTrendReport(final Run<?, ?> run, final TaskListener listener) throws Exception
     {
         listener.getLogger().println("-----------------------------------------------------------------\nCreating trend report ...\n");
@@ -1232,34 +1250,50 @@ public class XltTask
         List<Run<?, ?>> builds = new ArrayList<Run<?, ?>>(run.getPreviousBuildsOverThreshold(taskConfig.getNumberOfBuildsForTrendReport() -
                                                                                              1, Result.UNSTABLE));
         // add the current build
-        builds.add(run);
+        builds.add(0, run);
 
-        // add the report directories
-        int numberOfBuildsWithReports = 0;
-        for (Run<?, ?> eachBuild : builds)
+        final FilePath trendResultsFolder = getTrendResultsFolder(run.getParent());
+
+        try
         {
-            FilePath reportDirectory = getBuildReportFolder(eachBuild);
-            if (reportDirectory.isDirectory())
+            // add the report directories
+            int numberOfBuildsWithReports = 0;
+            for (Run<?, ?> eachBuild : builds)
             {
-                commandLine.add(reportDirectory.getRemote());
-                numberOfBuildsWithReports++;
+                final FilePath reportDirectory = getBuildReportFolder(eachBuild);
+                if (reportDirectory.isDirectory())
+                {
+                    // copy all XML files to a temporary folder whose name is the number of the build
+                    final FilePath tempReportCopy = copyReport(trendResultsFolder, reportDirectory, eachBuild.getNumber());
+                    // folder might not exist (e.g. no XML file copied)
+                    if(tempReportCopy.exists())
+                    {
+                        commandLine.add(reportDirectory.getRemote());
+                        numberOfBuildsWithReports++;
+                    }
+                }
+            }
+
+            // check whether we have enough builds with reports to create a trend report
+            if (numberOfBuildsWithReports > 1)
+            {
+                // run trend report generator on master
+                int commandResult = Helper.executeCommand(launcher, getXltBinFolderOnMaster(), commandLine, listener);
+                listener.getLogger().println("Trend report generator returned with exit code: " + commandResult);
+                if (commandResult != 0)
+                {
+                    run.setResult(Result.FAILURE);
+                }
+            }
+            else
+            {
+                listener.getLogger().println("Cannot create trend report because no previous reports available!");
             }
         }
-
-        // check whether we have enough builds with reports to create a trend report
-        if (numberOfBuildsWithReports > 1)
+        finally
         {
-            // run trend report generator on master
-            int commandResult = Helper.executeCommand(launcher, getXltBinFolderOnMaster(), commandLine, listener);
-            listener.getLogger().println("Trend report generator returned with exit code: " + commandResult);
-            if (commandResult != 0)
-            {
-                run.setResult(Result.FAILURE);
-            }
-        }
-        else
-        {
-            listener.getLogger().println("Cannot create trend report because no previous reports available!");
+            // trend report generation done -> temporary folder can be removed
+            trendResultsFolder.deleteRecursive();
         }
     }
 
