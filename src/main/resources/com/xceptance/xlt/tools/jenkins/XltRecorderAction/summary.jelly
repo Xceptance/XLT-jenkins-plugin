@@ -13,17 +13,29 @@
     </style>
     <tr>
         <td>
-            <img src="${resURL}/plugin/xlt-jenkins-plugin/logo.png" width="48" />
+            <img src="${resURL}/plugin/xlt-jenkins-plugin/logo.png"
+                width="48" />
         </td>
         <td>
             <table>
                 <tr>
                     <td>
                         <div>
-                            <a href="${it.getReportURL()}">XLT Report&#160;${it.getStepId()}</a>
+                            <a href="${it.getReportURL()}">XLT Report&#160;${it.getStepId()}
+                            </a>
                         </div>
                     </td>
                 </tr>
+                <j:if test="${it.getDiffReportURL() != null}">
+                    <tr>
+                        <td>
+                            <div>
+                                <a href="${it.getDiffReportURL()}">XLT Difference
+                                    Report&#160;${it.getStepId()}</a>
+                            </div>
+                        </td>
+                    </tr>
+                </j:if>
                 <tr>
                     <td>
                         <j:if

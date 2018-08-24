@@ -55,7 +55,7 @@
         <div class="xlt-subsection">Report Configuration</div>
     </f:block>
 
-    <f:optionalBlock field="trendReportOption"
+    <f:optionalBlock field="trendReport"
         default="${descriptor.getDefaultCreateTrendReport()}"
         title="Create a trend report from the results of the last n builds (see below)."
         checked="${instance.createTrendReport}">
@@ -65,7 +65,7 @@
         </f:entry>
     </f:optionalBlock>
 
-    <f:optionalBlock field="summaryReportOption"
+    <f:optionalBlock field="summaryReport"
         default="${descriptor.getDefaultCreateSummaryReport()}"
         title="Create a summary load test report from the results of the last n builds (see below)."
         checked="${instance.createSummaryReport}">
@@ -75,7 +75,7 @@
         </f:entry>
     </f:optionalBlock>
 
-    <f:optionalProperty field="diffReportOption" title="Create a difference report" />
+    <f:optionalProperty field="diffReport" title="Create a difference report" />
 
     <f:advanced>
         <f:block>
@@ -126,7 +126,7 @@
                 title="Display the build number at the x-axis of the charts." />
         </f:entry>
 
-        <f:optionalBlock field="markCriticalOption"
+        <f:optionalBlock field="markCritical"
             title="Tag the build as critical if a specified number of builds failed by a condition in the past."
             checked="${instance.markCriticalEnabled}">
             <f:entry title="Critical Threshold" field="markCriticalConditionCount">

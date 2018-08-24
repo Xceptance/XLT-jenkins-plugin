@@ -13,6 +13,8 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
 
+import com.xceptance.xlt.tools.jenkins.util.Helper;
+
 import hudson.FilePath;
 import hudson.model.Run;
 import jenkins.model.RunAction2;
@@ -29,6 +31,8 @@ public class XltRecorderAction implements RunAction2
 
     private final String reportURL;
 
+    private final String diffReportURL;
+
     private final String stepId;
 
     public static String URL_NAME = "xltResult";
@@ -37,13 +41,15 @@ public class XltRecorderAction implements RunAction2
 
     @DataBoundConstructor
     public XltRecorderAction(final String stepId, final String reportURL, final List<CriterionResult> failedAlerts,
-                             final List<TestCaseInfo> failedTestCases, final List<SlowRequestInfo> slowestRequests)
+                             final List<TestCaseInfo> failedTestCases, final List<SlowRequestInfo> slowestRequests,
+                             final String diffReportURL)
     {
         this.stepId = stepId;
         this.failedAlerts = failedAlerts;
         this.reportURL = reportURL;
         this.failedTestCases = failedTestCases;
         this.slowestRequests = slowestRequests;
+        this.diffReportURL = diffReportURL;
     }
 
     public String getIconFileName()
@@ -74,6 +80,11 @@ public class XltRecorderAction implements RunAction2
     public String getReportURL()
     {
         return reportURL;
+    }
+
+    public String getDiffReportURL()
+    {
+        return diffReportURL;
     }
 
     public List<CriterionResult> getAlerts()
@@ -129,7 +140,7 @@ public class XltRecorderAction implements RunAction2
     public void doReport(StaplerRequest request, StaplerResponse response)
         throws MalformedURLException, ServletException, IOException, InterruptedException
     {
-        final FilePath reportPath = LoadTestBuilder.getArtifact(run, request.getRestOfPath());
+        final FilePath reportPath = Helper.getArtifact(run, request.getRestOfPath());
         response.serveFile(request, reportPath.toURI().toURL());
     }
 

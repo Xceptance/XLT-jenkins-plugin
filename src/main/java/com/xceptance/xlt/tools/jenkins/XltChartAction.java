@@ -1,7 +1,6 @@
 package com.xceptance.xlt.tools.jenkins;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -26,7 +25,7 @@ public class XltChartAction extends InvisibleAction implements RunAction2, LastB
 
     private final String title;
 
-    private final String stepId;
+    private String stepId;
 
     private final boolean isPlotVertical;
 
@@ -213,5 +212,17 @@ public class XltChartAction extends InvisibleAction implements RunAction2, LastB
         }
 
         return allCharts;
+    }
+
+    @Deprecated
+    private transient String builderID;
+
+    protected Object readResolve()
+    {
+        if (builderID != null)
+        {
+            stepId = builderID;
+        }
+        return this;
     }
 }

@@ -1,0 +1,43 @@
+<div>
+    <p>Path - either absolute or relative to the workspace of this run - to JSON file defining your success/fail criteria.</p>
+    <p>
+        If given, each of the parsed criteria is checked against the generated difference report and if some of these
+        criteria is not met, the variable <b>XLT_CONDITION_FAILED</b> will be set to "true".
+    </p>
+    <p>
+        Criteria definition files are pure JSON that have only one top-level property named "criteria" which is an
+        array of objects that define the individual criteria.
+    </p>
+    <p>Each criterion should define the following properties:</p>
+    <ul>
+        <li>id - The (unique) ID of the criterion</li>
+        <li>condition - The criterion's condition as XPath expression</li>
+        <li>enabled - Whether or not the criterion is enabled</li>
+        <li>message - Failure message (optional)</li>
+    </ul>
+    <p>Example:</p>
+    <pre>
+  {
+    "criteria": [
+      {
+        "id": "MaxRequestRuntime",
+        "enabled": true,
+        "condition": "count(//request/max/relativeDifference[number()>10])=0",
+        "message": "Maximum request runtime exceeded 10%" 
+      },
+      {
+        "id": "P95RequestRuntime",
+        "enabled": true,
+        "condition": "not(//request/percentiles/p95/absoluteDifference[number()>1000])",
+        "message": "Request runtime (P95) increased by more than 1 second" 
+      },
+      {
+        "id": "NoRequestErrors",
+        "enabled": true,
+        "condition": "not(//request/errors/*[number() > 0]",
+        "message": "Erroneous requests encountered" 
+      }
+    ]
+  }
+    </pre>
+</div>

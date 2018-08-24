@@ -1,0 +1,32 @@
+<div>
+    <p>
+        Performs a load test with XLT and returns a result object that can be queried for details and passed to subsequent actions if desired.
+    </p>
+    <p>
+    The result object has the following fields:
+    <ul>
+        <li><b>runFailed</b> - (boolean) Indicates whether the build status is FAILED</li>
+        <li><b>conditionFailed</b> - (boolean) Indicates whether some criterion is not met</li>
+        <li><b>conditionError</b> - (boolean) Indicates whether some criterion caused an error</li>
+        <li><b>conditionCritical</b> - (boolean) Indicates whether the build is marked as critical according to the given <i>markCritical</i> option</li>
+        <li><b>conditionMessage</b> - (string) Summary message of all failed and erroneous criteria</li>
+        <li><b>reportUrl</b> - (string) XLT Report URL</li>
+        <li><b>diffReportUrl</b> - (string) XLT Difference Report URL</li>
+        <li><b>testFailures</b> - (list) Information about failed tests. Each object in the list has the following fields:
+            <ul>
+                <li><b>testCaseName</b> - (string) Name of the test</li>
+                <li><b>actionName</b> - (string) Name of the action where the error occurred</li>
+                <li><b>message</b> - (string) Error message</li>
+            </ul>
+        </li>
+        <li><b>criteriaFailures</b> - (list) Information about criteria whose condition is not met. Each object in this list has the following fields:
+            <ul>
+                <li><b>id</b> - (string) The criterion's ID</li>
+                <li><b>condition</b> - (string) The criterion's condition</li>
+                <li><b>message</b> - (string) Failure/error message</li>
+            </ul>
+        </li>
+        <li><b>criteriaErrors</b> - (list) Information about criteria whose evaluation caused an error. The objects have the same fields as those of <b>criteriaFailures</b>.</li>
+    </ul>
+    </p>
+</div>
