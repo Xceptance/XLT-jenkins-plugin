@@ -1268,7 +1268,7 @@ public class XltTask
                     // folder might not exist (e.g. no XML file copied)
                     if(tempReportCopy.exists())
                     {
-                        commandLine.add(reportDirectory.getRemote());
+                        commandLine.add(tempReportCopy.getRemote());
                         numberOfBuildsWithReports++;
                     }
                 }
