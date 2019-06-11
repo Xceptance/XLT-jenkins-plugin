@@ -705,6 +705,8 @@ public class XltTask
             }
         }
 
+        ec2Config.setUrlList(StringUtils.join(urls, "\n"));
+
         return urls;
     }
 
