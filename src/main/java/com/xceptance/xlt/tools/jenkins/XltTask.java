@@ -1034,13 +1034,6 @@ public class XltTask
     {
         listener.getLogger().println("-----------------------------------------------------------------\nRunning report generator ...\n");
 
-        FilePath resultSubFolder = getFirstSubFolder(getXltResultFolder(run, launcher));
-        if (resultSubFolder == null || resultSubFolder.list() == null || resultSubFolder.list().isEmpty())
-        {
-            throw new Exception("No results found at: " + getXltResultFolder(run, launcher).getRemote());
-        }
-        resultSubFolder.moveAllChildrenTo(getXltResultFolder(run, launcher));
-
         // build the master controller command line
         List<String> commandLine = new ArrayList<String>();
 
@@ -1077,16 +1070,24 @@ public class XltTask
     }
 
     private void saveResults(final Run<?, ?> run, final Launcher launcher, final TaskListener listener)
-        throws IOException, InterruptedException, BuildNodeGoneException
+        throws IOException, InterruptedException, BuildNodeGoneException, Exception
     {
         listener.getLogger().println("\n\n-----------------------------------------------------------------\nArchive results...\n");
 
         run.pickArtifactManager();
 
-        // save load test results and report (copy from node)
+        final FilePath resultFolder = getXltResultFolder(run, launcher);
+        final FilePath resultSubFolder = getFirstSubFolder(resultFolder);
+        if (resultSubFolder == null || resultSubFolder.list() == null || resultSubFolder.list().isEmpty())
+        {
+            throw new Exception("No results found at: " + resultFolder.getRemote());
+        }
+        resultSubFolder.moveAllChildrenTo(resultFolder);
+
+        // save load test results (copy from node)
         if (taskConfig.getArchiveResults())
         {
-            Helper.copyFolder(getXltResultFolder(run, launcher), getBuildResultFolder(run));
+            Helper.copyFolder(resultFolder, getBuildResultFolder(run));
         }
     }
 
