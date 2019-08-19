@@ -498,7 +498,7 @@ public class XltTask
         updateConfig();
     }
 
-    private void performPostTestSteps(final Run<?, ?> run, final Launcher launcher, final TaskListener listener, boolean artifactsSaved)
+    private void performPostTestSteps(final Run<?, ?> run, final Launcher launcher, final TaskListener listener, boolean resultsSaved, boolean reportsSaved)
     {
         // terminate Amazon's EC2 instances
         if (isEC2UsageEnabled())
@@ -515,7 +515,7 @@ public class XltTask
             }
         }
 
-        if (taskConfig.getCreateSummaryReport() && artifactsSaved)
+        if (taskConfig.getCreateSummaryReport() && resultsSaved)
         {
             try
             {
@@ -535,7 +535,7 @@ public class XltTask
             }
         }
 
-        if (taskConfig.getCreateTrendReport() && artifactsSaved)
+        if (taskConfig.getCreateTrendReport() && reportsSaved)
         {
             try
             {
@@ -704,6 +704,8 @@ public class XltTask
                 }
             }
         }
+
+        ec2Config.setUrlList(StringUtils.join(urls, "\n"));
 
         return urls;
     }
@@ -1032,13 +1034,6 @@ public class XltTask
     {
         listener.getLogger().println("-----------------------------------------------------------------\nRunning report generator ...\n");
 
-        FilePath resultSubFolder = getFirstSubFolder(getXltResultFolder(run, launcher));
-        if (resultSubFolder == null || resultSubFolder.list() == null || resultSubFolder.list().isEmpty())
-        {
-            throw new Exception("No results found at: " + getXltResultFolder(run, launcher).getRemote());
-        }
-        resultSubFolder.moveAllChildrenTo(getXltResultFolder(run, launcher));
-
         // build the master controller command line
         List<String> commandLine = new ArrayList<String>();
 
@@ -1074,22 +1069,43 @@ public class XltTask
         }
     }
 
-    private void saveArtifacts(final Run<?, ?> run, final Launcher launcher, final TaskListener listener)
-        throws IOException, InterruptedException, BuildNodeGoneException
+    private void saveResults(final Run<?, ?> run, final Launcher launcher, final TaskListener listener)
+        throws IOException, InterruptedException, BuildNodeGoneException, Exception
     {
-        listener.getLogger()
-                .println("\n\n-----------------------------------------------------------------\nArchive results and report...\n");
+        listener.getLogger().println("\n\n-----------------------------------------------------------------\nArchive results...\n");
 
         run.pickArtifactManager();
 
-        // save load test results and report (copy from node)
+        final FilePath resultFolder = getXltResultFolder(run, launcher);
+        final FilePath resultSubFolder = getFirstSubFolder(resultFolder);
+        if (resultSubFolder == null || resultSubFolder.list() == null || resultSubFolder.list().isEmpty())
+        {
+            throw new Exception("No results found at: " + resultFolder.getRemote());
+        }
+        resultSubFolder.moveAllChildrenTo(resultFolder);
+
+        // save load test results (copy from node)
         if (taskConfig.getArchiveResults())
         {
-            Helper.moveFolder(getXltResultFolder(run, launcher), getBuildResultFolder(run));
+            Helper.copyFolder(resultFolder, getBuildResultFolder(run));
         }
-        Helper.moveFolder(getXltReportFolder(run, launcher), getBuildReportFolder(run));
+    }
 
-        result.setReportUrl(getBuildReportURL(run));
+    private void saveReports(final Run<?, ?> run, final Launcher launcher, final TaskListener listener)
+        throws IOException, InterruptedException, BuildNodeGoneException
+    {
+        listener.getLogger().println("\n\n-----------------------------------------------------------------\nArchive report(s)...\n");
+
+        // take care of load test report
+        {
+            final FilePath reportFolder = getXltReportFolder(run, launcher);
+            if (reportFolder.exists())
+            {
+                Helper.moveFolder(reportFolder, getBuildReportFolder(run));
+
+                result.setReportUrl(getBuildReportURL(run));
+            }
+        }
 
         // take care of difference report
         {
@@ -1101,7 +1117,6 @@ public class XltTask
                 result.setDiffReportUrl(getBuildDiffReportURL(run));
             }
         }
-
     }
 
     private void createSummaryReport(final Run<?, ?> run, final TaskListener listener) throws Exception
@@ -1266,7 +1281,7 @@ public class XltTask
                     // copy all XML files to a temporary folder whose name is the number of the build
                     final FilePath tempReportCopy = copyReport(trendResultsFolder, reportDirectory, eachBuild.getNumber());
                     // folder might not exist (e.g. no XML file copied)
-                    if(tempReportCopy.exists())
+                    if (tempReportCopy.exists())
                     {
                         commandLine.add(tempReportCopy.getRemote());
                         numberOfBuildsWithReports++;
@@ -1478,7 +1493,7 @@ public class XltTask
             LOGGER.error("Cleanup failed: ", e);
         }
 
-        boolean artifactsSaved = false;
+        boolean reportsSaved = false, resultsSaved = false;
         try
         {
             copyXlt(run, launcher, listener);
@@ -1486,11 +1501,14 @@ public class XltTask
             configureAgentController(run, workspace, launcher, listener);
             runMasterController(run, launcher, workspace, listener);
 
+            saveResults(run, launcher, listener);
+            resultsSaved = true;
+
             createReport(run, launcher, listener);
             createDiffReport(run, launcher, workspace, listener);
 
-            saveArtifacts(run, launcher, listener);
-            artifactsSaved = true;
+            saveReports(run, launcher, listener);
+            reportsSaved = true;
 
             validateCriteria(run, listener);
         }
@@ -1506,7 +1524,7 @@ public class XltTask
         }
         finally
         {
-            performPostTestSteps(run, launcher, listener, artifactsSaved);
+            performPostTestSteps(run, launcher, listener, resultsSaved, reportsSaved);
 
             if (run.getResult() == Result.FAILURE)
             {
@@ -1514,7 +1532,7 @@ public class XltTask
             }
             publishBuildParameters(run);
 
-            if (artifactsSaved)
+            if (reportsSaved)
             {
                 publishChartData(run);
             }

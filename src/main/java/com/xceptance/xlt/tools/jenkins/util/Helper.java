@@ -161,11 +161,21 @@ public final class Helper
 
     public static void moveFolder(FilePath srcFolder, FilePath destFolder) throws IOException, InterruptedException
     {
+        duplicate(srcFolder, destFolder, true);
+    }
+
+    public static void copyFolder(FilePath srcFolder, FilePath destFolder) throws IOException, InterruptedException
+    {
+        duplicate(srcFolder, destFolder, false);
+    }
+
+    private static void duplicate(FilePath srcFolder, FilePath destFolder, boolean deleteOriginal) throws IOException, InterruptedException
+    {
         if (srcFolder != null && srcFolder.isDirectory() && destFolder != null)
         {
-            // move folder to save time
             srcFolder.copyRecursiveTo(destFolder);
-            srcFolder.deleteRecursive();
+            if (deleteOriginal)
+                srcFolder.deleteRecursive();
         }
     }
 
