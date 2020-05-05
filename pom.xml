@@ -122,6 +122,7 @@
                     <notimestamp>true</notimestamp>
                     <quiet>true</quiet>
                     <source>7</source>
+                    <skip>false</skip>
                 </configuration>
             </plugin>
             <plugin>
