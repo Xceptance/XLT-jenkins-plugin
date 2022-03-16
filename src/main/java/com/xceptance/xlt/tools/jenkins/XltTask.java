@@ -579,14 +579,14 @@ public class XltTask
         // delete any temporary directory with local XLT
         try
         {
-            FilePath tempProjectFolder = getTemporaryXltProjectFolder(run, launcher);
-            tempProjectFolder.deleteRecursive();
+            FilePath tempXltBuildFolder = getTemporaryXltBuildFolder(run, launcher);
+            tempXltBuildFolder.deleteRecursive();
 
-            FilePath tempFolder = getTemporaryXltBaseFolder(run, launcher);
-            if (tempFolder.exists() && (tempFolder.list() == null || tempFolder.list().isEmpty()))
-            {
-                tempFolder.delete();
-            }
+//            FilePath tempFolder = getTemporaryXltBaseFolder(run, launcher);
+//            if (tempFolder.exists() && (tempFolder.list() == null || tempFolder.list().isEmpty()))
+//            {
+//                tempFolder.delete();
+//            }
         }
         catch (Exception e)
         {
