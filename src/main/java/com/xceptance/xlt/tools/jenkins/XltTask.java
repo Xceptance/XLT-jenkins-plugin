@@ -579,14 +579,7 @@ public class XltTask
         // delete any temporary directory with local XLT
         try
         {
-            FilePath tempXltBuildFolder = getTemporaryXltBuildFolder(run, launcher);
-            tempXltBuildFolder.deleteRecursive();
-
-//            FilePath tempFolder = getTemporaryXltBaseFolder(run, launcher);
-//            if (tempFolder.exists() && (tempFolder.list() == null || tempFolder.list().isEmpty()))
-//            {
-//                tempFolder.delete();
-//            }
+            getTemporaryXltBuildFolder(run, launcher).deleteRecursive();
         }
         catch (Exception e)
         {
@@ -857,17 +850,6 @@ public class XltTask
             return new FilePath(getTestSuiteConfigFolder(workspace), testPropertiesFile);
         }
         return null;
-    }
-
-    private void initialCleanUp(final Run<?, ?> run, final Launcher launcher, final TaskListener listener)
-        throws IOException, InterruptedException, BuildNodeGoneException
-    {
-        listener.getLogger()
-                .println("-----------------------------------------------------------------\nCleaning up project directory ...\n");
-
-        getTemporaryXltProjectFolder(run, launcher).deleteRecursive();
-
-        listener.getLogger().println("\nFinished");
     }
 
     private void copyXlt(final Run<?, ?> run, final Launcher launcher, final TaskListener listener) throws Exception
@@ -1497,16 +1479,6 @@ public class XltTask
         }
 
         init();
-
-        try
-        {
-            initialCleanUp(run, launcher, listener);
-        }
-        catch (Exception e)
-        {
-            listener.getLogger().println("Cleanup failed: " + e.getMessage());
-            LOGGER.error("Cleanup failed: ", e);
-        }
 
         boolean reportsSaved = false, resultsSaved = false;
         try
