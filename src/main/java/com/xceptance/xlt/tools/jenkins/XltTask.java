@@ -81,6 +81,8 @@ public class XltTask
 
     private transient JSONObject critOutJSON;
 
+    private transient FilePath tempXltFolder;
+
     public XltTask(final LoadTestConfiguration cfg)
     {
         taskConfig = cfg;
@@ -165,22 +167,26 @@ public class XltTask
         return getBuildReportFolder(run).child("testreport.xml");
     }
 
-    private FilePath getXltResultFolder(final Run<?, ?> run, final Launcher launcher) throws BuildNodeGoneException
+    private FilePath getXltResultFolder(final Run<?, ?> run, final Launcher launcher)
+        throws BuildNodeGoneException, IOException, InterruptedException
     {
         return getTemporaryXltFolder(run, launcher).child(FOLDER_NAMES.ARTIFACT_RESULT);
     }
 
-    private FilePath getXltLogFolder(final Run<?, ?> run, final Launcher launcher) throws BuildNodeGoneException
+    private FilePath getXltLogFolder(final Run<?, ?> run, final Launcher launcher)
+        throws BuildNodeGoneException, IOException, InterruptedException
     {
         return getTemporaryXltFolder(run, launcher).child("log");
     }
 
-    private FilePath getXltReportFolder(final Run<?, ?> run, final Launcher launcher) throws BuildNodeGoneException
+    private FilePath getXltReportFolder(final Run<?, ?> run, final Launcher launcher)
+        throws BuildNodeGoneException, IOException, InterruptedException
     {
         return getTemporaryXltFolder(run, launcher).child(FOLDER_NAMES.ARTIFACT_REPORT);
     }
 
-    private FilePath getXltDiffReportFolder(final Run<?, ?> run, final Launcher launcher) throws BuildNodeGoneException
+    private FilePath getXltDiffReportFolder(final Run<?, ?> run, final Launcher launcher)
+        throws BuildNodeGoneException, IOException, InterruptedException
     {
         return getTemporaryXltFolder(run, launcher).child(FOLDER_NAMES.ARTIFACT_DIFFREPORT);
     }
@@ -285,19 +291,14 @@ public class XltTask
         return new FilePath(base, "tmp-xlt");
     }
 
-    private FilePath getTemporaryXltProjectFolder(final Run<?, ?> run, final Launcher launcher) throws BuildNodeGoneException
+    private FilePath getTemporaryXltFolder(final Run<?, ?> run, final Launcher launcher)
+        throws BuildNodeGoneException, IOException, InterruptedException
     {
-        return new FilePath(getTemporaryXltBaseFolder(run, launcher), run.getParent().getName());
-    }
-
-    private FilePath getTemporaryXltBuildFolder(final Run<?, ?> run, final Launcher launcher) throws BuildNodeGoneException
-    {
-        return new FilePath(getTemporaryXltProjectFolder(run, launcher), "" + run.getNumber());
-    }
-
-    private FilePath getTemporaryXltFolder(final Run<?, ?> run, final Launcher launcher) throws BuildNodeGoneException
-    {
-        return new FilePath(new FilePath(getTemporaryXltBuildFolder(run, launcher), taskConfig.getStepId()), "xlt");
+        if (tempXltFolder == null)
+        {
+            tempXltFolder = getTemporaryXltBaseFolder(run, launcher).createTempDir(run.getParent().getName(), null);
+        }
+        return tempXltFolder;
     }
 
     private FilePath getXltTemplateFilePath()
@@ -305,7 +306,8 @@ public class XltTask
         return Helper.resolvePath(taskConfig.getXltTemplateDir());
     }
 
-    private FilePath getXltBinFolder(final Run<?, ?> run, final Launcher launcher) throws BuildNodeGoneException
+    private FilePath getXltBinFolder(final Run<?, ?> run, final Launcher launcher)
+        throws BuildNodeGoneException, IOException, InterruptedException
     {
         return new FilePath(getTemporaryXltFolder(run, launcher), "bin");
     }
@@ -315,7 +317,8 @@ public class XltTask
         return new FilePath(getXltTemplateFilePath(), "bin");
     }
 
-    private FilePath getXltConfigFolder(final Run<?, ?> run, final Launcher launcher) throws BuildNodeGoneException
+    private FilePath getXltConfigFolder(final Run<?, ?> run, final Launcher launcher)
+        throws BuildNodeGoneException, IOException, InterruptedException
     {
         return new FilePath(getTemporaryXltFolder(run, launcher), "config");
     }
@@ -513,7 +516,8 @@ public class XltTask
         updateConfig();
     }
 
-    private void performPostTestSteps(final Run<?, ?> run, final Launcher launcher, final TaskListener listener, boolean resultsSaved, boolean reportsSaved)
+    private void performPostTestSteps(final Run<?, ?> run, final Launcher launcher, final TaskListener listener, boolean resultsSaved,
+                                      boolean reportsSaved)
     {
         // terminate Amazon's EC2 instances
         if (isEC2UsageEnabled())
@@ -576,17 +580,10 @@ public class XltTask
         }
 
         listener.getLogger().println("\n\n-----------------------------------------------------------------\nCleanup ...\n");
-        // delete any temporary directory with local XLT
+        // delete temporary directory with local XLT
         try
         {
-            FilePath tempProjectFolder = getTemporaryXltProjectFolder(run, launcher);
-            tempProjectFolder.deleteRecursive();
-
-            FilePath tempFolder = getTemporaryXltBaseFolder(run, launcher);
-            if (tempFolder.exists() && (tempFolder.list() == null || tempFolder.list().isEmpty()))
-            {
-                tempFolder.delete();
-            }
+            getTemporaryXltFolder(run, launcher).deleteRecursive();
         }
         catch (Exception e)
         {
@@ -859,17 +856,6 @@ public class XltTask
         return null;
     }
 
-    private void initialCleanUp(final Run<?, ?> run, final Launcher launcher, final TaskListener listener)
-        throws IOException, InterruptedException, BuildNodeGoneException
-    {
-        listener.getLogger()
-                .println("-----------------------------------------------------------------\nCleaning up project directory ...\n");
-
-        getTemporaryXltProjectFolder(run, launcher).deleteRecursive();
-
-        listener.getLogger().println("\nFinished");
-    }
-
     private void copyXlt(final Run<?, ?> run, final Launcher launcher, final TaskListener listener) throws Exception
     {
         listener.getLogger().println("-----------------------------------------------------------------\nCopying XLT ...\n");
@@ -897,7 +883,7 @@ public class XltTask
             throw new Exception("No \"mastercontroller\" script found for path: " + new FilePath(srcDir, "bin").getRemote());
         }
 
-        // the target directory in the project folder
+        // the target directory
         FilePath destDir = getTemporaryXltFolder(run, launcher);
         listener.getLogger().println("Target directory: " + destDir.getRemote());
 
@@ -1497,16 +1483,6 @@ public class XltTask
         }
 
         init();
-
-        try
-        {
-            initialCleanUp(run, launcher, listener);
-        }
-        catch (Exception e)
-        {
-            listener.getLogger().println("Cleanup failed: " + e.getMessage());
-            LOGGER.error("Cleanup failed: ", e);
-        }
 
         boolean reportsSaved = false, resultsSaved = false;
         try
