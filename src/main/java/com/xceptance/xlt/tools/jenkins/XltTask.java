@@ -296,7 +296,11 @@ public class XltTask
     {
         if (tempXltFolder == null)
         {
-            tempXltFolder = getTemporaryXltBaseFolder(run, launcher).createTempDir(run.getParent().getName(), null);
+            // ensure the base folder exists before we attempt to create a temp dir in it
+            final FilePath tempXltBaseFolder = getTemporaryXltBaseFolder(run, launcher);
+            tempXltBaseFolder.mkdirs();
+
+            tempXltFolder = tempXltBaseFolder.createTempDir(run.getParent().getName(), null);
         }
         return tempXltFolder;
     }
