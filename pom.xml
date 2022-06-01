@@ -271,7 +271,7 @@
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>script-security</artifactId>
-            <version>1.26</version>
+            <version>1.56</version>
         </dependency>
         <!-- dependencies on Jenkins Pipeline plugins (TEST ONLY) -->
         <dependency>
